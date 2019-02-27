@@ -182,3 +182,22 @@ loadSimPara = function(modelName, paras, cond){
   colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"))
   return(expPara)
 }
+
+loadSimPara_ = function(modelName, paras, cond){
+  nE = length(paras) + 2
+  load(sprintf("genData/simulation/%s/simParas.RData", modelName))
+  n = nComb
+  nE = length(paras)
+  expPara = array(NA, dim = c(nComb, nRep, nE))
+  for(i in 1 : n){
+    expPara_ = matrix(NA, nRep, nE)
+    for(r in 1 : nRep){
+      fileName = sprintf("genData/simModelFitting/%s/%s_s%d_r%d_summary.txt",
+                         modelName, cond, i, r)
+      junk = read.csv(fileName, header = F)
+      expPara_[r, ] = junk[1:nE,1]
+    }
+    expPara[i, , ] = expPara_
+  }
+  return(expPara)
+}

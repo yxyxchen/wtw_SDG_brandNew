@@ -3,6 +3,7 @@ library("ggplot2")
 library("Hmisc")
 source("subFxs/analysisFxs.R")
 source("subFxs/helpFxs.R")
+load("wtwSettings.RData")
 dir.create("figures/simDataAnalysis")
 dirName = "genData/simulation/full_model"
 load(sprintf("%s/trialHPData.RData", dirName))
@@ -91,5 +92,40 @@ for(i in 1 : nPara){
   fileName = sprintf("figures/simDataAnalysis/recovery_%s_%s.pdf", cond, para)
   ggsave(fileName, width = 4, height = 4)
 }
+
+## look at corrletion
+modelName = "full_model"
+paras = getParas(modelName )
+nPara = length(paras)
+load(sprintf("genData/simulation/%s/simParas.RData", modelName))
+for(c in 1:2){
+  cond = conditions[c]
+  condColor = conditionColors[c]
+  simPara_ = loadSimPara_(modelName, paras, cond)
+  simPara = matrix(simPara_, 810, 4)
+  colnames(simPara) = paras
+  simPara = data.frame(simPara)
+  if(c == 1){
+    simParaHP = simPara
+  }else{
+    simParaLP = simPara
+  }
+}
+simPara = rbind(simParaHP, simParaLP)
+simPara = as.data.frame(simPara)
+colnames(simPara) = paras
+simPara$condition = rep(c("HP", "LP"), each = nrow(simParaHP))
+for(i in 1 : nPara){
+  paraX = paras[i]
+  for(j in i : nPara){
+    paraY = paras[j]
+    ggplot(simPara, aes_string(paraX, paraY, color = "condition")) +
+      geom_point() + facet_grid(~condition) +
+      scale_color_manual(values = conditionColors)
+  }
+  
+
+}
+
 
 
