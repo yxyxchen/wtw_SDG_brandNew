@@ -49,7 +49,7 @@ expModelFitting = function(modelName, pars){
   #     modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
   # } 
 
-  for(i in 2 : n){
+  for(i in 1 : n){
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
     thisTrialData = thisTrialData[thisTrialData$blockNum == 1,]

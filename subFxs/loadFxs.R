@@ -155,49 +155,26 @@ loadExpParaMedian = function(modelName, paras, id){
   return(expParaMedian)
 }
 
-loadSimPara = function(modelName, paras, cond){
-  nE = length(paras) + 2
-  load(sprintf("genData/simulation/%s/simParas.RData", modelName))
-  n = nComb
-  nE = (length(paras) + 2) 
-  expPara = matrix(NA, n, nE * 4)
-  for(i in 1 : n){
-    expPara_ = matrix(NA, nRep, nE * 4)
-    for(r in 1 : nRep){
-      fileName = sprintf("genData/simModelFitting/%s/%s_s%d_r%d_summary.txt",
-                         modelName, cond, i, r)
-      junk = read.csv(fileName, header = F)
-      expPara_[r, 1:nE] = junk[,1]
-      expPara_[r, (nE + 1) : (2 * nE)] = junk[,2]
-      expPara_[r, (2*nE + 1) : (3 * nE)] = junk[,9]
-      expPara_[r, (3 * nE + 1) : (4 * nE)] = junk[,10]
-    }
-    expPara[i, 1:nE] = apply(expPara_[, 1:nE], MARGIN = 2, mean)
-    expPara[i, (nE + 1) : (2 * nE)] = apply(expPara_[, (nE + 1) : (2 * nE)], MARGIN = 2, mean)
-    expPara[i, (2*nE + 1) : (3 * nE)] = apply(expPara_[, (nE + 1) : (2 * nE)], MARGIN = 2, mean)
-    expPara[i, (3 * nE + 1) : (4 * nE)] = apply(expPara_[, (nE + 1) : (2 * nE)], MARGIN = 2, mean)
-  }
-  expPara = data.frame(expPara)
-  junk = c(paras, "LL_all", "lp__")
-  colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"))
-  return(expPara)
-}
 
 loadSimPara_ = function(modelName, paras, cond){
   nE = length(paras) + 2
   load(sprintf("genData/simulation/%s/simParas.RData", modelName))
   n = nComb
   nE = length(paras)
-  expPara = array(NA, dim = c(nComb, nRep, nE))
+  expPara = array(NA, dim = c(nComb, nRep, nE*5))
   for(i in 1 : n){
-    expPara_ = matrix(NA, nRep, nE)
+    expPara_ = matrix(NA, nRep, nE*5)
     for(r in 1 : nRep){
       fileName = sprintf("genData/simModelFitting/%s/%s_s%d_r%d_summary.txt",
                          modelName, cond, i, r)
       junk = read.csv(fileName, header = F)
-      expPara_[r, ] = junk[1:nE,1]
+      expPara_[r, 1:nE] = junk[1:nE,1]
+      expPara_[r, (nE + 1) : (2 * nE)] = junk[1:nE,2]
+      expPara_[r, (2*nE + 1) : (3 * nE)] = junk[1:nE,9]
+      expPara_[r, (3 * nE + 1) : (4 * nE)] = junk[1:nE,10]
+      expPara_[r, (4 * nE + 1) : (5 * nE)] = paraComb[i,1:4]
     }
-    expPara[i, , ] = expPara_
+    expPara[i, ,] = expPara_
   }
   return(expPara)
 }
