@@ -5,6 +5,8 @@ getParas = function(modelName){
   else if(str_detect(modelName, "reduce_one_phi")) paras = c("tau", "gamma", "QwaitIni")
   else if(str_detect(modelName, "reduce_one_gamma")) paras = c("phi", "tau", "QwaitIni")
   else if(modelName == "baseline") paras = c("waitRate")
+  else if(str_detect(modelName, "tau")) paras = c("phi", "gamma", "QwaitIni")
+  else if(str_detect(modelName, "no_learning_2")) paras = c("Tau")
   else return("wrong model name")
   return(paras)
 }

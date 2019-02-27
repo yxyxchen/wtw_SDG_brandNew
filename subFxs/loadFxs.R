@@ -143,6 +143,18 @@ loadExpParaExtra = function(modelName, paras){
   return(outputs)
 }
 
+# for each sub
+loadExpParaMedian = function(modelName, paras, id){
+  nE = length(paras) + 2
+  load("genData/expDataAnalysis/blockData.RData")
+  nE = length(paras) + 1
+  expParaMedian = vector(length = nE)
+    fileName = sprintf("genData/expModelFitting/%s/s%d.txt", modelName, id)
+    junk = read.csv(fileName, header = F)
+    expParaMedian  = apply(junk[,1:nE], MARGIN = 2, median)
+  return(expParaMedian)
+}
+
 loadSimPara = function(modelName, paras, cond){
   nE = length(paras) + 2
   load(sprintf("genData/simulation/%s/simParas.RData", modelName))

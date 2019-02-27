@@ -9,7 +9,7 @@ source("subFxs/helpFxs.R")
 modelNames = c("baseline", "reduce_one_phi", "reduce_one_gamma",
                "reduce_one_QwaitIni", "reduce_two_QwaitIni",
                "full_model")
-modelNames = c("reduce_two_QwaitIni",
+modelNames = c("reduce_one_tau",
                "full_model")
 nModel = length(modelNames)
 

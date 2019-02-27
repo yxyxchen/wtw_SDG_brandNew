@@ -12,6 +12,7 @@ expModelFitting = function(modelName, pars){
   # source scripts
   source('subFxs/modelFittingFxs.R') # for fitting single case 
   source('subFxs/loadFxs.R') # for load data
+  source("subFxs/helpFxs.R")
   load("wtwSettings.RData")
   library("coda") # calculate psr in modelFittingFxs
   # compile the stan model 
@@ -30,19 +31,43 @@ expModelFitting = function(modelName, pars){
   load("genData/expDataAnalysis/blockData.RData")
   idList = unique(blockData$id) 
   n = length(idList)
+  expPara = loadExpPara("full_model", getParas("full_model"))
+  useID = getUseID(blockData, expPara, getParas("full_model"))
 
-  # loop over suvject
+  # # loop over suvject
+  # for(i in 1 : n){
+  #     thisID = idList[[i]]
+  #     thisTrialData = trialData[[thisID]]
+  #     thisTrialData = thisTrialData[thisTrialData$blockNum == 1,]
+  #     timeWaited = thisTrialData$timeWaited
+  #     scheduledWait = thisTrialData$scheduledWait
+  #     trialEarnings = thisTrialData$trialEarnings
+  #     timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
+  #     cond = unique(thisTrialData$condition)
+  #     wIni = ifelse(cond == "HP", wInisTheory[1], wInisTheory[2]) # wIni is the theoratical initial values 
+  #     fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
+  #     modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
+  # } 
+
   for(i in 2 : n){
-      thisID = idList[[i]]
-      thisTrialData = trialData[[thisID]]
-      thisTrialData = thisTrialData[thisTrialData$blockNum == 1,]
-      timeWaited = thisTrialData$timeWaited
-      scheduledWait = thisTrialData$scheduledWait
-      trialEarnings = thisTrialData$trialEarnings
-      timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
-      cond = unique(thisTrialData$condition)
-      wIni = ifelse(cond == "HP", wInisTheory[1], wInisTheory[2]) # wIni is the theoratical initial values 
-      fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
-      modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, pars, model)
+    thisID = idList[[i]]
+    thisTrialData = trialData[[thisID]]
+    thisTrialData = thisTrialData[thisTrialData$blockNum == 1,]
+    timeWaited = thisTrialData$timeWaited
+    scheduledWait = thisTrialData$scheduledWait
+    trialEarnings = thisTrialData$trialEarnings
+    timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
+    cond = unique(thisTrialData$condition)
+    wIni = ifelse(cond == "HP", wInisTheory[1], wInisTheory[2]) # wIni is the theoratical initial values
+    # load paras in the full_model
+    nE = length(getParas("full_model")) 
+    expParaMedian = vector(length = nE)
+    fileName = sprintf("genData/expModelFitting/%s/s%d.txt", "full_model", thisID)
+    junk = read.csv(fileName, header = F)
+    expParaMedian  = apply(junk[,1:nE], MARGIN = 2, median)
+    
+    # fitting
+    fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
+    modelFittingNo(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model, expParaMedian)
   } 
 }
