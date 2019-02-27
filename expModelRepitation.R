@@ -33,8 +33,7 @@ allIDs = hdrData$ID
 expTrialData = allData$trialData       
 n = length(idList)
 
-# tempt
-load("scheduledWait.RData")
+
 # simluation 
 set.seed(231)
 repModelFun = getRepModelFun(modelName)
@@ -46,14 +45,11 @@ repNo = matrix(1 : (n * nRep), nrow = n, ncol = nRep)
 for(sIdx in 1 : n){
   id = idList[[sIdx]]
   #para = as.double(expPara[sIdx, 1 : length(pars)])
-  #para = as.double(expParaMedian[sIdx, 1 : length(pars)])
   paraList = read.table(sprintf("genData/expModelFitting/%s/s%d.txt", modelName, id),sep = ",", row.names = NULL)
-  #cond = unique(blockData$condition[blockData$id == id])
-  cond = "HP"
-  #thisExpTrialData = expTrialData[[id]]
-  #thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
-  #scheduledWait = thisExpTrialData$scheduledWait
-  scheduledWait = scheduledWait.HP
+  cond = unique(blockData$condition[blockData$id == id])
+  thisExpTrialData = expTrialData[[id]]
+  thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
+  scheduledWait = thisExpTrialData$scheduledWait
   for(rIdx in 1 : nRep){
     para = as.double(paraList[sample(1 : nrow(paraList), 1), 1 : length(pars)])
     tempt = repModelFun(para, cond, scheduledWait)
@@ -75,14 +71,12 @@ kmOnGridRep_ = vector(mode = "list", length = n)
 kmOnGridRepSd_ = vector(mode = "list", length = n)
 for(sIdx in 1 : n){
   id = idList[[sIdx]]
-  #thisExpTrialData = expTrialData[[id]]
-  #thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ] 
-  #tMax = ifelse( unique(thisExpTrialData$condition) == "HP", tMaxs[1], tMaxs[2])
-  tMax = 16
+  thisExpTrialData = expTrialData[[id]]
+  thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ] 
+  tMax = ifelse( unique(thisExpTrialData$condition) == "HP", tMaxs[1], tMaxs[2])
   kmGrid = seq(0, tMax, by=0.1) 
   label = "asda"
-  #nTrial = nrow(thisExpTrialData)
-  nTrial = 300
+  nTrial = nrow(thisExpTrialData)
   # initialize
   timeWaitedMatrix = matrix(0, nTrial, nRep)
   kmOnGridMatrix = matrix(0, length(kmGrid), nRep)
@@ -108,13 +102,11 @@ plotData$AUCRep = apply(AUCRep_, MARGIN = 1, FUN = mean)
 plotData$AUCRepSd = apply(AUCRep_, MARGIN = 1, FUN = sd)
 plotData$AUCRepMin = plotData$AUCRep - plotData$AUCRepSd 
 plotData$AUCRepMax = plotData$AUCRep + plotData$AUCRepSd 
-ggplot(plotData,aes(AUCRep)) + geom_histogram(bins = 6, fill = conditionColors[2]) + saveTheme + xlab("AUC Rep by Individual Paras") +
-  saveTheme
-ggsave("AUCRep_LP.pdf", width = 6, height = 4)
 AUCSummary = plotData
 ggplot(plotData[plotData$id %in% useID, ],
        aes(AUC, AUCRep)) +  geom_errorbar(aes(ymin = AUCRepMin, ymax = AUCRepMax), color = "grey")  + geom_point() + facet_grid(~condition) + 
-  geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(-2, 45)) + ylim(c(-2, 45))
+  geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(-2, 45)) + ylim(c(-2, 45)) +
+  ylab("Predicted AUC / min") + xlab("AUC / min")
 fileName = sprintf("figures/expModelRepitation/AUC_AUCRep_%s.pdf", modelName) 
 ggsave(filename = fileName,  width = 6, height = 4)
 

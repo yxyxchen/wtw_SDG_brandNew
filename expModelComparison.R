@@ -6,7 +6,11 @@ library("ggplot2")
 source("subFxs/helpFxs.R")
 
 # load model names
-modelNames = c("reduce_single_phi", "reduce_single_gamma", "cons_partFlex_gamma")
+modelNames = c("baseline", "reduce_one_phi", "reduce_one_gamma",
+               "reduce_one_QwaitIni", "reduce_two_QwaitIni",
+               "full_model")
+modelNames = c("reduce_two_QwaitIni",
+               "full_model")
 nModel = length(modelNames)
 
 # load experimental data
@@ -21,12 +25,17 @@ useID = idList
 source("subFxs/loadFxs.R")
 for(i in 1 : nModel){
   modelName = modelNames[i]
-  expPara = loadExpPara(modelName, getPars(modelName))
-  pars = getPars(modelName)
+  expPara = loadExpPara(modelName, getParas(modelName))
+  pars = getParas(modelName)
   RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(pars)]
   EffeCols = which(str_detect(colnames(expPara), "Effe"))[1 : length(pars)]
-  useID_[[i]] = idList[apply(expPara[,RhatCols] < 1.1, MARGIN = 1, sum) == length(pars) &
-                   apply(expPara[,EffeCols] >100, MARGIN = 1, sum) == length(pars)]
+  if(length(pars) <= 1){
+    useID_[[i]]  = idList[expPara[,RhatCols]<1.1 & expPara[,EffeCols] > 100]
+  }else{
+    useID_[[i]] = idList[apply(expPara[,RhatCols] < 1.1, MARGIN = 1, sum) == length(pars) &
+                           apply(expPara[,EffeCols] >100, MARGIN = 1, sum) == length(pars)]
+    
+  }
   useID = idList[idList %in% useID_[[i]] & idList %in% useID]
 }
 nUse = length(useID)
@@ -67,6 +76,8 @@ for(m in 1 : nModel){
     logLik_[sIdx, m] = paraSummary[ nrow(paraSummary) - 1, 1]
   }
 }
+waic_ = -2 * logEvidence_
+mean(waic_[,1] - waic_[,2])
 f= "genData/expModelFitting/logEvidenceList.csv"
 write.table(file = f, logEvidence_, sep = ",", col.names = F, row.names = F)
 

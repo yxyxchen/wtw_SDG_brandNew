@@ -2,8 +2,9 @@ library("stringr")
 getParas = function(modelName){
   if(str_detect(modelName, "full_model")) paras = c("phi", "tau", "gamma", "QwaitIni")
   else if(str_detect(modelName, "QwaitIni")) paras = c("phi", "tau", "gamma")
-  else if(str_detect(modelName, "reduce_single_phi")) paras = c("tau", "gamma", "QwaitIni")
-  else if(str_detect(modelName, "reduce_single_gamma")) paras = c("phi", "tau", "QwaitIni")
+  else if(str_detect(modelName, "reduce_one_phi")) paras = c("tau", "gamma", "QwaitIni")
+  else if(str_detect(modelName, "reduce_one_gamma")) paras = c("phi", "tau", "QwaitIni")
+  else if(modelName == "baseline") paras = c("waitRate")
   else return("wrong model name")
   return(paras)
 }

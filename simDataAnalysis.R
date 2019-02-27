@@ -58,4 +58,38 @@ for(c in 1 : 2){
   }
 }
 
+## look at recovery
+modelName = "full_model"
+paras = getParas(modelName )
+load(sprintf("genData/simulation/%s/simParas.RData", modelName))
+c = 1
+cond = conditions[c]
+condColor = conditionColors[c]
+simPara = loadSimPara(modelName, paras, cond)
+colnames(paraComb) = paste0("real", paras)
+nPara = length(paras)
+for(i in 1 : nPara){
+  para = paras[i]
+  realName = sprintf("real%s", para)
+  tempt = data.frame(paraComb, simPara)
+  tempt1 = tempt %>% group_by_at(vars(realName)) %>% summarise(mu = mean(get(para)))
+  tempt2 = tempt %>% group_by_at(vars(realName)) %>% summarise(std = sd(get(para)))
+  plotData = data.frame(tempt1, std = tempt2$std) 
+  plotData$ymin = plotData$mu - plotData$std
+  plotData$ymax = plotData$mu + plotData$std
+  if(para == "phi" || para == "gamma"){
+    wid = 0.01
+  }else if(para == "tau" ){
+    wid = 2
+  }else wid = 0.5
+  
+  ggplot(plotData, aes_string(realName, "mu")) +
+    geom_bar(stat = "identity", fill = condColor,color = condColor) +
+    saveTheme + xlab(capitalize(para)) + ylab("Phi estimation")  +
+    geom_errorbar(aes(ymin = ymin, ymax = ymax), width = wid) +
+    geom_point(aes_string(realName, realName), shape = 17, size = 5, fill = "black")
+  fileName = sprintf("figures/simDataAnalysis/recovery_%s_%s.pdf", cond, para)
+  ggsave(fileName, width = 4, height = 4)
+}
+
 
