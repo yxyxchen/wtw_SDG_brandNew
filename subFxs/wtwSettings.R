@@ -103,8 +103,8 @@ for(c in 1 : 2){
   wInisTheory[c] = junk
 }
 wInis = vector(length = 2)
-wInis[1] = 5 # value of waiting, since participants didn't know differences in conditions 
-wInis[2] = 4 # value of quitting, ensuring waiting first.
+wInis[1] = 3 # value of waiting, since participants didn't know differences in conditions 
+wInis[2] = 2 # value of quitting, ensuring waiting first.
 
 
 

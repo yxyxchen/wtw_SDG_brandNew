@@ -22,7 +22,7 @@ nBlock = 3
 cat('Analyzing data for n','=',n,'subjects.\n')
 
 # control which individual-level plots to generate
-plotTrialwiseData = T
+plotTrialwiseData = F
 plotKMSC = F
 plotWTW = F
 plotTimeEarnings = F   # no good effect 
@@ -38,7 +38,7 @@ kmOnGrid_ = vector(mode = "list", length = n * nBlock)
 # descriptive statistics for individual subjects and blocks
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
-  if(blockData[blockData$id == thisID, "AUC"] > 20 & blockData$condition[blockData$id == thisID] == "LP"){
+  #if(blockData[blockData$id == thisID, "AUC"] > 20 & blockData$condition[blockData$id == thisID] == "LP"){
   for (bkIdx in 1: 1){
     # select data 
     thisTrialData = trialData[[thisID]]
@@ -90,7 +90,7 @@ for (sIdx in 1 : n) {
       graphics.off()
     }
   } # loop over blocks
-  }
+  #}
 }
 save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridBlock.RData')
 
