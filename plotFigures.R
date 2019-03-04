@@ -77,3 +77,25 @@ plotData$tau = as.factor(plotData$tau)
 ggplot(plotData, aes(x, y, color = tau)) + geom_point() + scale_color_manual(name = bquote(tau), values = c("#74a9cf",
   "#2b8cbe", "#045a8d")) + saveTheme + ylab(bquote(P[t] (wait))) + xlab(bquote(Q[t] (wait, s) - Q(quit)))
 ggsave(filename = "figures/plotFigures/softMax.pdf", width = 6, height = 4) 
+
+## plot samples
+set.seed(123)
+len = 10
+seq_ = matrix(NA, len, 3)
+for(c in 1:2){
+  cond = conditions[c]
+  conditionColor = conditionColors[c]
+  for(i in 1:3){
+    for(j in 1 : len)
+      seq_[j,i] = drawSample(cond)
+  }
+  plotData = data.frame(delay = as.vector(seq_), seq = factor(rep(1:3, len)),
+                        trial = rep(1 : len, 3))
+  # ggplot(plotData, aes(trial, delay, color = seq)) + geom_point() +
+  #   xlab("Trial num") + ylab("Delay / sec")+ saveTheme + geom_line() +
+  #   scale_x_continuous(breaks = seq(1, 10, by = 1))
+  ggplot(plotData, aes( delay)) + geom_histogram(bins = 5, fill = conditionColor) +
+    xlab("Delay / sec") + ylab("Count")+ saveTheme + facet_grid(~seq)
+  ggsave(sprintf("figures/sample_%s.pdf", cond), width = 9, height = 3)
+}
+

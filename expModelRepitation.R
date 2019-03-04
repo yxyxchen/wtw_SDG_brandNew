@@ -12,7 +12,7 @@ load("wtwSettings.RData")
 load("genData/expDataAnalysis/kmOnGrid.RData")
 source("subFxs/helpFxs.R")
 # inputs
-modelName = "full_model"
+modelName = "cons_arbitrary"
 pars = getParas(modelName)
 # load expPara
 expPara = loadExpPara(modelName, pars)

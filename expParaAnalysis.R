@@ -152,3 +152,13 @@ for(i in 1 : nPara){
     ggsave(fileName, width = 6, height = 4)
   }
 }
+
+
+# full_model
+modelName = "cons_arbitrary"
+paras = c("phi", "tau", "gamma")
+expPara = loadExpPara(modelName, paras)
+useID = getUseID(blockData, expPara, paras)
+plotParaAUC(expPara, "phi", blockData, useID)
+plotParaAUC(expPara, "tau", blockData, useID)
+plotParaAUC(expPara, "gamma", blockData, useID)
