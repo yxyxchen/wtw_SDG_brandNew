@@ -16,8 +16,8 @@ getSimModelFun = function(modelName){
   return(simModelFun)
 }
 
-################ monte ######################
-full_model = function(para, cond, nBlock){
+################ full_model ######################
+full_model = function(para, cond, scheduledWait, nBlock){
   # parse para
   phi = para[1]
   tau = para[2]
@@ -173,3 +173,27 @@ simulate = function(modelName, nBlock, nRep){
     }
   }
 }
+
+################ R_learning ######################
+R_learning = function(para, cond, nBlock){
+  # parse para
+  phi1 = para[1]
+  phi2 = para[2]
+  tau = para[3]
+  QwaitIni = para[4]
+  costIni = para[5]
+  
+  # determine simBlockSecs
+  simBlockSecs = blockSecs * nBlock
+  
+  # determine parameters for this condition
+  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  timeTicks = seq(0, tMax, by = stepDuration)
+  nTimeStep = tMax / stepDuration
+}
+
+
+
+
+
+
