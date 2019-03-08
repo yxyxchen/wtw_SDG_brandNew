@@ -1,6 +1,8 @@
 # be careful to always to use id in code, instead of expTrialData
 library("ggplot2")
 library(stringr)
+library("dplyr")
+library("tidyr")
 source("subFxs/plotThemes.R")
 load("genData/expDataAnalysis/blockData.RData")
 source("subFxs/taskFxs.R") # used in repetition
@@ -11,8 +13,9 @@ source("subFxs/loadFxs.R") #
 load("wtwSettings.RData")
 load("genData/expDataAnalysis/kmOnGrid.RData")
 source("subFxs/helpFxs.R")
+
 # inputs
-modelName = "cons_arbitrary"
+modelName = "full_model"
 pars = getParas(modelName)
 # load expPara
 expPara = loadExpPara(modelName, pars)
@@ -176,7 +179,7 @@ for(sIdx in 20 : n){
   #}
 }
 
-# simluation for sequences
+######### simluation for sequences
 expPara$condition = blockData$condition[blockData$blockNum == 1]
 tempt = summarise(group_by(expPara, condition), phi = mean(phi), tau = mean(tau),
                   gamma = mean(gamma), QwaitIni = mean(QwaitIni))
@@ -258,4 +261,13 @@ plotData$AUCRepMax = plotData$AUCRep + plotData$AUCRepSd
 ggplot(plotData[plotData$id %in% useID, ],
        aes(AUC, AUCRep)) +  geom_errorbar(aes(ymin = AUCRepMin, ymax = AUCRepMax), color = "grey")  + geom_point() + facet_grid(~condition) + 
   geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(0, 40)) + ylim(c(0, 40))
+
+
+[which(plotData$AUCRep > 38)
+
+
+
+
+
+
 
