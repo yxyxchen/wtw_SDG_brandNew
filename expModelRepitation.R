@@ -1,4 +1,4 @@
-# be careful to always to use id in code, instead of expTrialData
+ # be careful to always to use id in code, instead of expTrialData
 library("ggplot2")
 library(stringr)
 library("dplyr")
