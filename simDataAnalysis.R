@@ -6,7 +6,7 @@ source("subFxs/helpFxs.R")
 source("subFxs/loadFxs.R")
 load("wtwSettings.RData")
 
-modelName = "R_learning"
+modelName = "R_learning2"
 dir.create("figures/simDataAnalysis")
 dirName = sprintf("genData/simulation/%s", modelName)
 load(sprintf("%s/trialHPData.RData", dirName))
@@ -38,7 +38,7 @@ for(c in 1 : 2){
   if(cond == "HP") AUCHP = AUC else AUCLP = AUC
 }
 
-paras = getParas("R_learning")
+paras = getParas("R_learning2")
 nPara = length(paras)
 for(c in 1 : 2){
   cond = conditions[c]
@@ -63,6 +63,20 @@ for(c in 1 : 2){
   }
 }
 
+# look at actions
+trialData = trialHPData
+paraTable = data.frame(phi1 = c(0.02, 0.05, 0.08), phi2 = c(0.02, 0.05, 0.08),tau = c(5, 10, 15))
+paraComb = getParaComb(paraTable)
+nTimeStep = 40
+for(i in 1 : nComb){
+  thisTrialData = trialData[[i]]
+  actionValueViewer(thisTrialData$vaWaits, thisTrialData$vaRewardRates, thisTrialData)
+  # plotData = data.frame(time = (1 : nTimeStep) * stepDuration, Qwait = thisTrialData$vaWaits[,50])
+  # p=ggplot(plotData, aes(time, Qwait)) + ggtitle(paste(paraComb[i,], collapse = " ")) + geom_point()
+  # print(p)
+  #print(mean(thisTrialData$trialEarnings / (thisTrialData$timeWaited * 2  + 4 )))
+  readline("continue")
+}
 
 
 ## look at corrletion

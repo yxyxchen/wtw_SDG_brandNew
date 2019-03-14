@@ -8,6 +8,17 @@ source("subFxs/taskFxs.R")
 source("subFxs/helpFxs.R")
 source("subFxs/plotThemes.R")
 
+# simulated scheduledWait
+set.seed(123)
+for(c in 1 : 2){
+  cond  = conditions[c]
+  if(cond == "HP"){
+    scheduledWaitHPlist = lapply(1 : nRep, function(i) unlist(lapply(1:50, function(x) drawSample(cond))))
+  }else{
+    scheduledWaitLPlist = lapply(1 : nRep, function(i) unlist(lapply(1:50, function(x) drawSample(cond))))
+  }
+}
+
 # define functions
 simulate = function(modelName, nBlock, nRep, paraTable){
   dir.create("genData/simulation")
@@ -25,18 +36,14 @@ simulate = function(modelName, nBlock, nRep, paraTable){
   # loop over conditions
   for(condIdx in 1 : 2){
     cond = conditions[condIdx];
+    if(cond == "HP") scheduledWaitList = scheduledWaitHPlist else scheduledWaitList = scheduledWaitLPlist
     # loop over repetions 
     for(h in 1 : nrow(paraComb)){
-      para = paraComb[h,];
+      para = as.double(paraComb[h,]);
       # calculate wIni
       for(j in 1 : nRep ){
-        set.seed(j)
-        scheduledWait = unlist(lapply(1:50, function(x) drawSample(cond)))
-        
-        para = c(0.1, 0.2, 1)
+        scheduledWait = scheduledWaitList[[j]]
         tempt =repModelFun(para, cond, scheduledWait)
-        trialPlots(tempt, "")
-        
         trialData[[simNo[h, j]]] = tempt
       }  
     }
@@ -54,7 +61,6 @@ simulate = function(modelName, nBlock, nRep, paraTable){
 }
 
 
-
 # simulate
 modelName = "full_model" 
 nBlock = 1
@@ -64,10 +70,10 @@ paraTable = data.frame(phi = c(0.02, 0.05, 0.08), tau = c(5, 10, 15),
 simulate(modelName, nBlock, nRep, paraTable)
 
 
-modelName = "R_learning" 
+modelName = "R_learning2" 
 nBlock = 1
 nRep = 10
-paraTable = data.frame(phi1 = c(0.02, 0.05, 0.08), phi2 = c(0.02, 0.05, 0.08), tau = c(5, 10, 15))
+paraTable = data.frame(phi1 = c(0.02, 0.05, 0.08), phi2 = c(0.02, 0.05, 0.08),tau = c(5, 10, 15))
 simulate(modelName, nBlock, nRep, paraTable)
 
 
