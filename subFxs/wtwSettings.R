@@ -107,6 +107,93 @@ wInis[1] = 3 # value of waiting, since participants didn't know differences in c
 wInis[2] = 2 # value of quitting, ensuring waiting first.
 
 
+# calculate action value in the R learning, given the policy is always wait 
+# remember, here the average reward is for per 0.1s, namely per tick, not per s
+n = length(trialTicks$HP)
+HP = unlist(lapply(1 : (n - 1), function(i){
+  values = tokenValue - (trialTicks$HP[i : (n - 1)] - 0.1 * i + 0.1 + iti) *  rewardRate$HP[n]
+  weights = rewardDelayPDF$HP[(i+1) : n]
+  sum(values * weights)  / sum(weights)
+})) / 0.1
+
+
+n = length(trialTicks$LP)
+LP = unlist(lapply(1 : (n - 1), function(i){
+  values = tokenValue - (trialTicks$LP[i : (n - 1)] - 0.1 * i + 0.1 + iti) *  rewardRate$LP[n]
+  weights = rewardDelayPDF$LP[(i+1) : n]
+  sum(values * weights)  / sum(weights)
+})) / 0.1
+
+tList = seq(5, 20, by = 5)
+nT = length(tList)
+HP_ = vector(mode = "list", length = nT)
+HPQquit_ = vector(mode = "list", length = nT)
+for(h in 1: nT){
+  t =  tList[h]
+  n = length(trialTicks$HP)
+  HP = unlist(lapply(1 : (t / 0.1), function(i){
+    values = rep(-rewardRate$HP[t / 0.1 + 1] *  (t -  0.1 * i + iti), n - i)# when get no rewards, wait for vein for (t - 0.1 * i) gap duration
+    values[1 : (t / 0.1 + 1 - i)] = tokenValue - (0.1 * (0 : (t / 0.1 - i)) + iti)* rewardRate$HP[t / 0.1 + 1]
+    
+    weights = rewardDelayPDF$HP[(i + 1) : n] # rewardDelays for i : (n-1) gap = (i + 1) : n tick
+    sum(values * weights)  / sum(weights)
+  })) / 0.1
+  meanTimeOutIti = sum(pmin(trialTicks$HP, t) * rewardDelayPDF$HP)
+  HPQuit = rep(HP[1] * (meanTimeOutIti + iti) / (meanTimeOutIti + iti*2), length(HP))
+  HP_[[h]] = HP
+  HPQquit_[[h]] = HPQuit
+}
+plotData = data.frame(Qwait = unlist(HP_), Qquit = unlist(HPQquit_), threshold = factor(rep(tList, times = unlist(lapply(HP_, length)))),
+           time = unlist(lapply(1 : nT, function(i )seq(0.1, tList[i], by = 0.1))))
+plotData = gather(plotData, action, value, -c("time", "threshold"))
+ggplot(plotData, aes(time, value,  color = action)) + geom_point() + facet_grid(~threshold)
+
+
+
+# LP
+tList = c(2, 4, 10)
+nT = length(tList)
+LP_ = vector(mode = "list", length = nT)
+LPQquit_ = vector(mode = "list", length = nT)
+for(h in 1: nT){
+  t =  tList[h]
+  n = length(trialTicks$LP)
+  LP = unlist(lapply(1 : (t / 0.1), function(i){
+    values = rep(-rewardRate$LP[t / 0.1 + 1] *  (t -  0.1 * i + iti), n - i)# when get no rewards, wait for vein for (t - 0.1 * i) gap duration
+    values[1 : (t / 0.1 + 1 - i)] = tokenValue - (0.1 * (0 : (t / 0.1 - i)) + iti)* rewardRate$LP[t / 0.1 + 1]
+    
+    weights = rewardDelayPDF$LP[(i + 1) : n] # rewardDelays for i : (n-1) gap = (i + 1) : n tick
+    sum(values * weights)  / sum(weights)
+  })) / 0.1
+  meanTimeOutIti = sum(pmin(trialTicks$LP, t) * rewardDelayPDF$LP)
+  LPQuit = rep(LP[1] * (meanTimeOutIti + iti) / (meanTimeOutIti + iti*2), length(LP))
+  LP_[[h]] = LP
+  LPQquit_[[h]] = LPQuit
+}
+plotData = data.frame(Qwait = unlist(LP_), Qquit = unlist(LPQquit_), threshold = factor(rep(tList, times = unlist(lapply(LP_, length)))),
+                      time = unlist(lapply(1 : nT, function(i )seq(0.1, tList[i], by = 0.1))))
+plotData = gather(plotData, action, value, -c("time", "threshold"))
+ggplot(plotData, aes(time, value,  color = action)) + geom_point() + facet_grid(~threshold)
+
+
+# calculate rewardRate from another way.
+for(t in 0.1 : 20){
+  n = length(trialTicks$HP)
+  statProbHP = unlist(lapply(1 : (n-1), function(i) {
+    sum(rewardDelayPDF$HP[(i+1): n]) / sum(rewardDelayPDF$HP[2:n] * (1 : (n-1)))
+  }))
+  thisStatProbHP = statProbHP[1 : (t / 0.1)] / sum(statProbHP[1 : (t / 0.1)] )
+  
+  rHP = unlist(lapply(1 : (t / 0.1), function(i) {
+    rewardDelayPDF$HP[i+1] / sum(rewardDelayPDF$HP[(i+1): n]) 
+  }))
+  
+  meanTimeOutIti = sum(pmin(trialTicks$HP, t) * rewardDelayPDF$HP)
+  (sum(rHP * thisStatProbHP * tokenValue) * meanTimeOutIti * 10) / (meanTimeOutIti + 2)
+}
+
+
+
 
 # library(ggplot2)
 # source('plotThemes.R')
