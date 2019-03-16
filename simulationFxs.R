@@ -17,7 +17,7 @@ getSimModelFun = function(modelName){
 }
 
 ################ full_model ######################
-full_model = function(para, cond, scheduledWait, nBlock){
+full_model = function(para, cond, nBlock){
   # parse para
   phi = para[1]
   tau = para[2]
@@ -134,45 +134,6 @@ full_model = function(para, cond, scheduledWait, nBlock){
 } #end of the function
 
 
-simulate = function(modelName, nBlock, nRep){
-  dir.create("genData/simulation")
-  dir.create(sprintf("genData/simulation/%s", modelName))
-  # choose modelFun
-  simModelFun = getSimModelFun(modelName)
-  
-  # determine paraComb
-  paraTable = data.frame(phi = c(0.02, 0.05, 0.08), tau = c(5, 10, 15),
-                         gamma = c(0.85, 0.90, 0.95), QwaitIni = c(2, 3, 4))
-  paraComb = getParaComb(paraTable)
-  nComb = nrow(paraTable) ^ ncol(paraTable)
-  simNo = matrix(seq(1 : nComb * nRep), nrow = nComb, ncol = nRep)
-  save("paraComb", "nComb", "nRep", "simNo", file = sprintf("genData/simulation/%s/simParas.RData", modelName))
-  # initialize outputs
-  trialData = vector(length = nComb * nRep, mode ='list')
-  # loop over conditions
-  for(condIdx in 1 : 2){
-    cond = conditions[condIdx];
-    # loop over repetions 
-    for(h in 1 : nrow(paraComb)){
-      para = paraComb[h,];
-      # calculate wIni
-      for(j in 1 : nRep ){
-        tempt = simModelFun(para, cond, nBlock)
-        trialData[[simNo[h, j]]] = tempt
-      }  
-    }
-    # save 
-    if(cond == "HP"){
-      trialHPData = trialData
-      fileName = sprintf('genData/simulation/%s/trialHPData.RData', modelName)
-      save(trialHPData,file = fileName)
-    }else{
-      trialLPData = trialData
-      fileName =  sprintf('genData/simulation/%s/trialLPData.RData', modelName)
-      save(trialLPData,file = fileName)
-    }
-  }
-}
 
 ################ R_learning ######################
 R_learning = function(para, cond, nBlock){
@@ -191,6 +152,7 @@ R_learning = function(para, cond, nBlock){
   timeTicks = seq(0, tMax, by = stepDuration)
   nTimeStep = tMax / stepDuration
 }
+
 
 
 

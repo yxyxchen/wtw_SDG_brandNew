@@ -5,13 +5,17 @@ source("subFxs/analysisFxs.R")
 source("subFxs/helpFxs.R")
 source("subFxs/loadFxs.R")
 load("wtwSettings.RData")
+
+modelName = "R_learning2"
 dir.create("figures/simDataAnalysis")
-dirName = "genData/simulation/full_model"
+dirName = sprintf("genData/simulation/%s", modelName)
 load(sprintf("%s/trialHPData.RData", dirName))
 load(sprintf("%s/trialLPData.RData", dirName))
 load(sprintf("%s/simParas.RData", dirName))
 source("subFxs/plotThemes.R")
-
+dir.create("figures/simDataAnalysis")
+dirName = sprintf("figures/simDataAnalysis/%s", modelName)
+dir.create(dirName)
 for(c in 1 : 2){
   cond = conditions[c]
   if(cond == "HP") trialData = trialHPData else trialData = trialLPData
@@ -34,10 +38,8 @@ for(c in 1 : 2){
   if(cond == "HP") AUCHP = AUC else AUCLP = AUC
 }
 
-paras = getParas("full_model")
+paras = getParas("R_learning2")
 nPara = length(paras)
-for(c in 1 : 2)
-
 for(c in 1 : 2){
   cond = conditions[c]
   condColor = conditionColors[c]
@@ -56,11 +58,25 @@ for(c in 1 : 2){
       geom_bar(stat = "identity", color = condColor, fill = condColor) +
       saveTheme + xlab(capitalize(para)) + ylab("AUC / min") + ylim(c(-3, ylimit)) +
       geom_errorbar(aes(ymin = ymin, ymax = ymax), width = 0.2)
-    fileName = sprintf("figures/simDataAnalysis/AUC_%s_%s.pdf", cond, para)
+    fileName = sprintf("figures/simDataAnalysis/%s/AUC_%s_%s.pdf", modelName, cond, para)
     ggsave(fileName, width = 3, height = 4)
   }
 }
 
+# look at actions
+trialData = trialHPData
+paraTable = data.frame(phi1 = c(0.02, 0.05, 0.08), phi2 = c(0.02, 0.05, 0.08),tau = c(5, 10, 15))
+paraComb = getParaComb(paraTable)
+nTimeStep = 40
+for(i in 1 : nComb){
+  thisTrialData = trialData[[i]]
+  actionValueViewer(thisTrialData$vaWaits, thisTrialData$vaRewardRates, thisTrialData)
+  # plotData = data.frame(time = (1 : nTimeStep) * stepDuration, Qwait = thisTrialData$vaWaits[,50])
+  # p=ggplot(plotData, aes(time, Qwait)) + ggtitle(paste(paraComb[i,], collapse = " ")) + geom_point()
+  # print(p)
+  #print(mean(thisTrialData$trialEarnings / (thisTrialData$timeWaited * 2  + 4 )))
+  readline("continue")
+}
 
 
 ## look at corrletion
