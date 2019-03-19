@@ -106,6 +106,168 @@ wInis = vector(length = 2)
 wInis[1] = 3 # value of waiting, since participants didn't know differences in conditions 
 wInis[2] = 2 # value of quitting, ensuring waiting first.
 
+# calculate action value in the Q learning 
+getMeanReward= function(gapIdx, quitAfter, gammaPerStep){
+  gamma = gammaPerStep^2 # discount per 1s
+  nGap = length(trialTicks$HP) - 1
+  nTick =  length(trialTicks$HP) 
+  tickIdx = gapIdx + 1
+  quitGap = quitAfter / 0.1
+  quitTick = quitGap  + 1
+  if(quitTick < tickIdx){
+    meanRewardDiscount = NaN
+    meanRewardTime = NaN
+  }else{
+    meanRewardDiscount =sum(gamma ^ (seq(0, quitGap - gapIdx) * 0.1 + 0.1) * rewardDelayPDF$HP[tickIdx : quitTick]) /
+      sum(rewardDelayPDF$HP[tickIdx : quitTick])
+    meanRewardTime = sum((seq(0, quitGap - gapIdx) * 0.1 + 0.1) * rewardDelayPDF$HP[tickIdx : quitTick]) /
+      sum(rewardDelayPDF$HP[tickIdx : quitTick])
+  }
+  meanReward = list("discount" = meanRewardDiscount,
+                    "time" = meanRewardTime)
+  return(meanReward)
+}
+
+getMeanWait = function(gapIdx, quitAfter, gammaPerStep){
+  gamma = gammaPerStep^2 # discount per 1s
+  nGap = length(trialTicks$HP) - 1
+  nTick =  length(trialTicks$HP) 
+  tickIdx = gapIdx + 1
+  quitGap = quitAfter / 0.1
+  quitTick = quitGap  + 1
+  if(quitTick < tickIdx){
+    meanWaitDiscount = NaN
+    meanWaitTime = NaN
+  }else{
+    meanWaitDiscount =sum(gamma ^ pmin(seq(0, nGap - gapIdx) * 0.1 + 0.1, quitAfter - gapIdx * 0.1 + 0.1) * rewardDelayPDF$HP[tickIdx : nTick]) /
+      sum(rewardDelayPDF$HP[tickIdx : nTick]) 
+    meanWaitTime = sum(pmin(seq(0, nGap - gapIdx) * 0.1 + 0.1, quitAfter - gapIdx * 0.1 + 0.1) * rewardDelayPDF$HP[tickIdx : nTick]) /
+      sum(rewardDelayPDF$HP[tickIdx : nTick])
+  }
+  meanWait = list("discount" = meanWaitDiscount,
+                  "time" = meanWaitTime)
+  return(meanWait)
+}
+
+getPreward = function(gapIdx, quitAfter, gammaPerStep){
+  gamma = gammaPerStep^2 # discount per 1s
+  nGap = length(trialTicks$HP) - 1
+  nTick =  length(trialTicks$HP) 
+  tickIdx = gapIdx + 1
+  quitGap = quitAfter / 0.1
+  quitTick = quitGap  + 1 
+  pReward = (rewardDelayCDF$HP[quitTick] - rewardDelayCDF$HP[tickIdx - 1]) / (1 - rewardDelayCDF$HP[tickIdx - 1])
+  return(pReward)
+}
+
+
+
+# calculate Qwait for inf trials
+gammaPerStep = 0.99 # discount per 0.5s 
+nGap = length(trialTicks$HP) - 1
+nTick =  length(trialTicks$HP) 
+Qquit_ = vector(length = nGap)
+Qwait_ = vector(mode = "list", length = nTick)
+Qwait_[[1]] = NaN
+# t means quitting after t
+for(quitTick in 1 : nTick){
+  quitAfter = 0.1 * (quitTick-1)
+  meanReward = getMeanReward (1, quitAfter, gammaPerStep)
+  meanRewardDiscount =  meanReward$discount * gamma ^ iti
+  meanWait = getMeanWait(1, quitAfter, gammaPerStep) 
+  meanWaitDiscount =  meanWait$discount * gamma ^ iti
+  pReward = getPreward(1, quitAfter, gammaPerStep)
+  Qquit =  pReward * tokenValue * meanRewardDiscount / (1 - meanWaitDiscount)
+  # Qquit =  sum(pReward * tokenValue * meanRewardDiscount * meanWaitDiscount ^ (0 : 10))
+  Qquit_[quitTick] = Qquit
+  if(quitTick > 1) {
+    Qwait = vector(length = (quitTick - 1))
+    for(j in 1 :  (quitTick - 1)){
+      meanReward = getMeanReward(j, quitAfter, gammaPerStep)
+      meanWait = getMeanWait(j, quitAfter, gammaPerStep)
+      meanRewardDiscount = meanReward$discount
+      meanWaitDiscount = meanWait$discount
+      pReward = getPreward(j, quitAfter, gammaPerStep)
+      Qwait[j] = tokenValue * meanRewardDiscount * pReward + Qquit * meanWaitDiscount
+    }
+    Qwait_[[quitTick]] = Qwait
+  }
+}
+plot(Qquit_)
+
+plotData = data.frame(Qwait = unlist(Qwait_), Qquit = rep(Qquit_, times = sapply(1 : nTick, function(i) length(Qwait_[[i]]))),
+                      threshold = rep(trialTicks$HP, times = sapply(1 : nTick, function(i) length(Qwait_[[i]]))),
+                      time = c(NaN, unlist(sapply(1 : nGap, function(i) seq(0.1, i * 0.1, by = 0.1)))))
+library("ggplot2")
+library("dplyr")
+library("tidyr")
+plotData = gather(plotData, action, value, -c("time", "threshold"))
+ggplot(plotData[plotData$threshold == 1,], aes(time, value, color = action))+
+  geom_point()
+
+quitAfter = 20
+nGap = quitAfter / 0.1
+meanRewardTime_ = vector(length = nGap)
+pReward_ = vector(length = nGap)
+for(i in 1 : nGap){
+  junk = getMeanReward(i, quitAfter, gammaPerStep)
+  meanRewardTime_[i] = junk$time
+  pReward_[i]= getPreward(i, quitAfter, gammaPerStep)
+}
+plot(tempt)
+plot(pReward_)
+# calculate action value in the R learning, given the policy is always wait 
+# remember, here the average reward is for per 0.1s, namely per tick, not per s
+Qq
+
+
+
+
+
+
+# LP                                                       
+tList = c(2, 4, 10)
+nT = length(tList)
+LP_ = vector(mode = "list", length = nT)
+LPQquit_ = vector(mode = "list", length = nT)
+for(h in 1: nT){
+  t =  tList[h]
+  n = length(trialTicks$LP)
+  LP = unlist(lapply(1 : (t / 0.1), function(i){
+    values = rep(-rewardRate$LP[t / 0.1 + 1] *  (t -  0.1 * i + iti), n - i)# when get no rewards, wait for vein for (t - 0.1 * i) gap duration
+    values[1 : (t / 0.1 + 1 - i)] = tokenValue - (0.1 * (0 : (t / 0.1 - i)) + iti)* rewardRate$LP[t / 0.1 + 1]
+    
+    weights = rewardDelayPDF$LP[(i + 1) : n] # rewardDelays for i : (n-1) gap = (i + 1) : n tick
+    sum(values * weights)  / sum(weights)
+  })) / 0.1
+  meanTimeOutIti = sum(pmin(trialTicks$LP, t) * rewardDelayPDF$LP)
+  LPQuit = rep(LP[1] * (meanTimeOutIti + iti) / (meanTimeOutIti + iti*2), length(LP))
+  LP_[[h]] = LP
+  LPQquit_[[h]] = LPQuit
+}
+plotData = data.frame(Qwait = unlist(LP_), Qquit = unlist(LPQquit_), threshold = factor(rep(tList, times = unlist(lapply(LP_, length)))),
+                      time = unlist(lapply(1 : nT, function(i )seq(0.1, tList[i], by = 0.1))))
+plotData = gather(plotData, action, value, -c("time", "threshold"))
+ggplot(plotData, aes(time, value,  color = action)) + geom_point() + facet_grid(~threshold)
+
+
+# calculate rewardRate from another way.
+for(t in 0.1 : 20){
+  n = length(trialTicks$HP)
+  statProbHP = unlist(lapply(1 : (n-1), function(i) {
+    sum(rewardDelayPDF$HP[(i+1): n]) / sum(rewardDelayPDF$HP[2:n] * (1 : (n-1)))
+  }))
+  thisStatProbHP = statProbHP[1 : (t / 0.1)] / sum(statProbHP[1 : (t / 0.1)] )
+  
+  rHP = unlist(lapply(1 : (t / 0.1), function(i) {
+    rewardDelayPDF$HP[i+1] / sum(rewardDelayPDF$HP[(i+1): n]) 
+  }))
+  
+  meanTimeOutIti = sum(pmin(trialGapValues$HP, t) * rewardDelayPDF$HP)
+  (sum(rHP * thisStatProbHP * tokenValue) * meanTimeOutIti * 10) / (meanTimeOutIti + 2)
+}
+
+
 
 # calculate action value in the R learning, given the policy is always wait 
 # remember, here the average reward is for per 0.1s, namely per tick, not per s
