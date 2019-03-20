@@ -58,9 +58,10 @@ rewardDelayPDF = list(
   "LP" = LP
 )
 
+# assume the rewards happen at the end of the gap
 # E(t_reward | t_reward <= T) 
-HP = cumsum((trialGapValues$HP - stepDuration / 2) * rewardDelayPDF$HP) / cumsum(rewardDelayPDF$HP)
-LP = cumsum((trialGapValues$LP - stepDuration / 2) * rewardDelayPDF$LP) / cumsum(rewardDelayPDF$LP)
+HP = cumsum((trialGapValues$HP) * rewardDelayPDF$HP) / cumsum(rewardDelayPDF$HP)
+LP = cumsum((trialGapValues$LP) * rewardDelayPDF$LP) / cumsum(rewardDelayPDF$LP)
 # no reward arrives before the first reward timing, so points before that turn to NAN
 meanRewardDelay = list('HP' = HP, 'LP' = LP)
 
@@ -89,9 +90,9 @@ getMeanRewardDelay = function(gapIdx, quitAfter, gammaPerStep){
     discount = NaN
     discount = NaN
   }else{
-    discount =sum(gamma ^ (seq(0, quitGap - gapIdx) * stepDuration + stepDuration / 2) * rewardDelayPDF$HP[gapIdx : quitGap]) /
+    discount =sum(gamma ^ (seq(0, quitGap - gapIdx) * stepDuration + stepDuration) * rewardDelayPDF$HP[gapIdx : quitGap]) /
       sum(rewardDelayPDF$HP[gapIdx : quitGap])
-    time = sum((seq(0, quitGap - gapIdx) * stepDuration + stepDuration / 2) * rewardDelayPDF$HP[gapIdx : quitGap]) /
+    time = sum((seq(0, quitGap - gapIdx) * stepDuration + stepDuration) * rewardDelayPDF$HP[gapIdx : quitGap]) /
       sum(rewardDelayPDF$HP[gapIdx : quitGap])
   }
   meanRewardDelay = list(discount = discount, time = time)
@@ -109,10 +110,10 @@ getMeanWaitDelay = function(gapIdx, quitAfter, gammaPerStep){
     discount = NaN
     time = NaN
   }else{
-    discount =sum(gamma ^ pmin(seq(0, nGap - gapIdx) * stepDuration + stepDuration / 2, quitAfter - gapIdx * stepDuration + stepDuration)
+    discount =sum(gamma ^ pmin(seq(0, nGap - gapIdx) * stepDuration + stepDuration, quitAfter - gapIdx * stepDuration + stepDuration)
                   * rewardDelayPDF$HP[gapIdx : nGap]) /
       sum(rewardDelayPDF$HP[gapIdx : nGap]) 
-    time = sum(pmin(seq(0, nGap - gapIdx) * stepDuration + stepDuration / 2, quitAfter - gapIdx * stepDuration + stepDuration) * rewardDelayPDF$HP[gapIdx : nGap]) /
+    time = sum(pmin(seq(0, nGap - gapIdx) * stepDuration + stepDuration, quitAfter - gapIdx * stepDuration + stepDuration) * rewardDelayPDF$HP[gapIdx : nGap]) /
       sum(rewardDelayPDF$HP[gapIdx : nGap])
   }
   meanWaitDelay = list(discount = discount, time = time)
@@ -165,32 +166,8 @@ library("ggplot2")
 library("dplyr")
 library("tidyr")
 source("subFxs/plotThemes.R")
-plotData = data.frame(time = trialGapValues$HP, Qquit = Qquit_)
-ggplot(plotData, aes(time, Qquit)) + geom_point()
-plotData = data.frame(Qwait = unlist(Qwait_), Qquit = rep(Qquit_, times = sapply(1 : nGap, function(i) length(Qwait_[[i]]))),
-                      threshold = rep(trialGapValues$HP, times = sapply(1 : nGap, function(i) length(Qwait_[[i]]))),
-                      time = c(unlist(sapply(1 : nGap, function(i) seq(stepDuration, i * stepDuration, by = stepDuration)))))
-plotData = gather(plotData, action, value, -c("time", "threshold"))
-ggplot(plotData[plotData$threshold %in% c(2, 4, 10, 20),], aes(time, value, color = action))+
-  geom_point(size = 0.5) + facet_grid(~threshold) + saveTheme
-ggsave("plot.pdf", width = 10, height = 2.5)
 
-# #Calculate QHP by 
-# nGap = length(trialGapValues$HP)
-# QHP = vector(length = length(nGap))
-# for(lastWaitGap in 1 : nGap){
-#   quitAfter = lastWaitGap * stepDuration 
-#   nAllActions = sum(rewardDelayPDF$HP * (pmin(1 : nGap, lastWaitGap) + 1)) # +1 to add the final quitting action
-#   UquitHP = 1 / nAllActions
-#   # Prob of Q(s, wait)
-#   UwaitHP = unlist(lapply(1 : lastWaitGap, function(i) {
-#     nThisAction = sum(rewardDelayPDF$HP[i:nGap])
-#     nThisAction / nAllActions
-#   }))
-#   QHP[[lastWaitGap]] =  sum(UwaitHP * Qwait_[[lastWaitGap]]) + UquitHP * Qquit_[[lastWaitGap]] 
-# }
-
-# calculate steady state by transition matrixs
+# ok there are the same
 nGap = length(trialGapValues$HP)
 QHP = vector(length = length(nGap))
 for(lastWaitGap in 1 : nGap){
@@ -214,54 +191,9 @@ for(lastWaitGap in 1 : nGap){
 }
 
 
-# calculate Rt
-# since we compare Rt to average reward persecond, each state should have the same duration
-nQuitGap = iti / stepDuration
+nQuitGap = 20
 Rt = vector(length = length(trialGapValues$HP))
-Rstep = vector(length = length(trialGapValues$HP))
-for(lastWaitGap in 1 : nGap){
-  # define the transition matrix
-  trans = matrix(rep(0, length = (lastWaitGap + nQuitGap)^2), nrow = lastWaitGap + nQuitGap)
-  if(lastWaitGap > 1) trans[1 : (lastWaitGap - 1), lastWaitGap + 1]  =
-      unlist(lapply(1:(lastWaitGap-1), function(i) rewardDelayPDF$HP[i] / sum(rewardDelayPDF$HP[i : nGap])))
-  trans[lastWaitGap, lastWaitGap + 1] = 1
-  if(lastWaitGap > 1) for(i in 1 : (lastWaitGap - 1)) trans[i, i+1] = 1 - trans[i, lastWaitGap + 1]
-  if(nQuitGap > 1) for(i in (lastWaitGap+1) : (lastWaitGap + nQuitGap-1)) trans[i, i + 1] = 1
-  trans[lastWaitGap + nQuitGap, 1] = 1
-  # calculate the steady states
-  n = ncol(trans)
-  A = t(trans - diag(n))
-  A = rbind(A, rep(1, n))
-  b = c(rep(0, n), 1)
-  UHP = qr.solve(A, b)
-  rHP = c(unlist(lapply(1 : lastWaitGap, function(i) {
-    rewardDelayPDF$HP[i] / sum(rewardDelayPDF$HP[i: nGap]) 
-  })), rep(0, nQuitGap))
-  timeInGaps = c(unlist(lapply(1 : lastWaitGap, function(i) {
-    junk = rewardDelayPDF$HP[i] / sum(rewardDelayPDF$HP[i : nGap])
-    junk * stepDuration / 2 + (1 - junk) * stepDuration
-  })), rep(stepDuration, nQuitGap))
-  discountInGaps = c(unlist(lapply(1 : lastWaitGap, function(i) {
-    junk = rewardDelayPDF$HP[i] / sum(rewardDelayPDF$HP[i : nGap])
-    junk * gamma ^ (stepDuration / 2) + (1 - junk) * gamma ^ stepDuration
-  })), rep(gamma ^ stepDuration, nQuitGap))
-  
-  meanTimePerAction = sum(UHP * timeInGaps)
-  meanDiscountPerAction = sum(UHP * discountInGaps)
-  Rt[lastWaitGap] = sum(UHP * rHP * 10) / meanTimePerAction
-} 
-# I suppose it was because we can not get exactly the same 
-plotData = data.frame(time = trialGapValues$HP, Qquit = rewardRate$HP)
-ggplot(plotData, aes(time, Qquit)) + geom_point() + saveTheme
-ggsave("plot.pdf", width = 3, height = 3)
-
-# check Qwait[t] = Qwait[t+1] + ...
-pR =  0.005 
-10 * gamma ^ 0.05 * pR + gamma^0.1 * Qwait[2] * (1 - pR) + gamma^0.05 *  Qquit * pR
-
-
-nQuitGap = 1
-Rt = vector(length = length(trialGapValues$HP))
+Rstep= vector(length = length(trialGapValues$HP))
 for(lastWaitGap in 1 : nGap){
   # define the transition matrix
   trans = matrix(rep(0, length = (lastWaitGap + nQuitGap)^2), nrow = lastWaitGap + nQuitGap)
@@ -282,13 +214,14 @@ for(lastWaitGap in 1 : nGap){
   })), rep(0, nQuitGap))
   timeInGaps = c(unlist(lapply(1 : lastWaitGap, function(i) {
     junk = rewardDelayPDF$HP[i] / sum(rewardDelayPDF$HP[i : nGap])
-    junk * stepDuration / 2 + (1 - junk) * stepDuration
-  })), rep(iti, nQuitGap))
-  rHP = rHP / timeInGaps # probability that you get reward every seconds
+    junk * stepDuration + (1 - junk) * stepDuration
+  })), rep(iti / nQuitGap, nQuitGap))
   meanTimePerAction = sum(UHP * timeInGaps)
   Rt[lastWaitGap] = sum(UHP * rHP * 10) / meanTimePerAction
+  Rstep[lastWaitGap] = sum(UHP * rHP * 10)
 }
+
 plot(Rt / rewardRate$HP)
 
 
-
+Rstep[200] * gamma ^ stepDuration / (1 - gamma ^ stepDuration)
