@@ -222,6 +222,21 @@ for(lastWaitGap in 1 : nGap){
 }
 
 plot(Rt / rewardRate$HP)
-
-
 Rstep[200] * gamma ^ stepDuration / (1 - gamma ^ stepDuration)
+
+# plot state values
+tau = 10
+nGap = length(trialGapValues$HP)
+waitRate_ = vector(mode = "list", length = nGap)
+stateValueHP_ = vector(mode = "list", length = nGap)
+for(lastWaitGap in 1 : nGap){
+  Qwait = Qwait_[[lastWaitGap]]
+  Qquit = Qquit_[[lastWaitGap]]
+  waitRate = unlist(lapply(1 : lastWaitGap, function(i) exp(tau * Qwait[i]) / sum(exp(tau * Qwait[i]), exp(tau * Qquit))))
+  stateValueHP = unlist(lapply(1 : lastWaitGap, function(i) waitRate[i] * Qwait[i] + (1 - waitRate[i]) * Qquit))
+  stateValueHP_[[lastWaitGap]] = stateValueHP
+}
+
+
+
+
