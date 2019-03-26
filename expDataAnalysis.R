@@ -18,8 +18,7 @@ trialData = allData$trialData
 # list with a named element for each subject ID.
 allIDs = hdrData$ID                   # column of subject IDs
 n = length(allIDs)                    # n
-nBlock = 3
-cat('Analyzing data for n','=',n,'subjects.\n')
+cat('Analyzing data for',n,'subjects.\n')
 
 # control which individual-level plots to generate
 plotTrialwiseData = F
