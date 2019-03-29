@@ -12,6 +12,7 @@ tGrid = seq(0, blockSecs, stepDuration) # use stepDu
 
 ######### reward variable ########
 tokenValue = 30 #value of the token
+loseValue = 0
 stepDuration = 0.5
 ########## supporting vairbales ########
 # time ticks within a trial for timeEarnings or wtw analysis
@@ -106,10 +107,13 @@ wInis = vector(length = 2)
 wInis[1] = 3 # value of waiting, since participants didn't know differences in conditions 
 wInis[2] = 2 # value of quitting, ensuring waiting first.
 
-load("genData/expDataAnalysis/subData.RData")
+load("genData/expDataAnalysis/blockData.RData")
 modelName = "full_model"
+source("subFxs/helpFxs.R")
+source("subFxs/loadFxs.R")
 paras = getParas(modelName)
 expPara = loadExpPara(modelName, paras)
+
 idList = unique(blockData$id)
 useID = getUseID(blockData, expPara, paras)
 # load expPara
@@ -124,4 +128,4 @@ paraColors = list("phi" = "#78AB05","tau" = "#D9541A", "gamma" = "deepskyblue4",
 save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", "tGrid", 
      "tokenValue", "stepDuration", "trialTicks", "pareto", "rewardDelayCDF", 
      "rewardDelayPDF", "meanRewardDelay", "rewardRate", "optimRewardRates", 
-     "optimWaitTimes", "wInis", "wInisTheory", "wInisExp", "paraColors", file = "wtwSettings.RData")
+     "optimWaitTimes", "wInis", "wInisTheory", "wInisExp", "paraColors", "loseValue", file = "wtwSettings.RData")

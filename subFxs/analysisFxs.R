@@ -18,8 +18,8 @@ scheduledDelays <- function(blockData,blockLabel) {
 # plot trialwise responses in detail
 trialPlots <- function(blockData,blockLabel) {
   # vectors to be plotted
-  rwdIdx = blockData$trialEarnings != 0
-  quitIdx = blockData$trialEarnings == 0
+  rwdIdx = blockData$trialEarnings > loseValue
+  quitIdx = blockData$trialEarnings <= loseValue
   rwdTrialNo = blockData$trialNum[rwdIdx]
   quitTrialNo = blockData$trialNum[quitIdx]
   rwdSchedDelay = blockData$scheduledWait[rwdIdx]
