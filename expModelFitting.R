@@ -1,4 +1,7 @@
-expModelFitting = function(modelName, pars){
+# this script fits the RL model for each participant
+# using Rstan
+expModelFitting = function(modelName, paras){
+  # create outfiles
   dir.create("genData")
   dir.create("genData/expModelFitting")
   dir.create(sprintf("genData/expModelFitting/%s", modelName))
@@ -29,16 +32,18 @@ expModelFitting = function(modelName, pars){
   
   # extract input arguments from no stree subjects 
   load("genData/expDataAnalysis/blockData.RData")
-  idList = unique(blockData$id) 
-  n = length(idList)
-  expPara = loadExpPara("full_model", getParas("full_model"))
-  useID = getUseID(blockData, expPara, getParas("full_model"))
+  idList = unique(blockData$id)
+  # n = length(idList)
+  # expPara = loadExpPara("full_model", getParas("full_model"))
+  # useID = getUseID(blockData, expPara, getParas("full_model"))
 
   # loop over suvject
-  for(i in 2 : n){
+  for(i in 1 : n){
       thisID = idList[[i]]
       thisTrialData = trialData[[thisID]]
       thisTrialData = thisTrialData[thisTrialData$blockNum == 1,]
+      # delete the last trial, since the decision is interuptted
+      thisTrialData = thisTrialData[1 : (nrow(thisTrialData) - 1),]
       timeWaited = thisTrialData$timeWaited
       scheduledWait = thisTrialData$scheduledWait
       trialEarnings = thisTrialData$trialEarnings
