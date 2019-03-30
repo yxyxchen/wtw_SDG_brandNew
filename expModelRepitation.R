@@ -1,21 +1,25 @@
  # be careful to always to use id in code, instead of expTrialData
 library("ggplot2")
-library(stringr)
+library("stringr")
 library("dplyr")
 library("tidyr")
 source("subFxs/plotThemes.R")
+
+source("subFxs/helpFxs.R")
+source("subFxs/loadFxs.R") 
+
 load("genData/expDataAnalysis/blockData.RData")
 source("subFxs/taskFxs.R") # used in repetition
 source("subFxs/repetitionFxs.R")
 source("subFxs/analysisFxs.R") # for analysis
 load("wtwSettings.RData") # used in repetition
-source("subFxs/loadFxs.R") # 
+
 load("wtwSettings.RData")
 load("genData/expDataAnalysis/kmOnGrid.RData")
-source("subFxs/helpFxs.R")
+
 
 # inputs
-modelName = "full_model"
+modelName = "monteRatio"
 pars = getParas(modelName)
 # load expPara
 expPara = loadExpPara(modelName, pars)
