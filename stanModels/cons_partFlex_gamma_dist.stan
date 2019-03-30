@@ -1,3 +1,5 @@
+# this script uses a different loss function
+# the distance to the original durations.
 data {
   // depending on the condition
   real wInis[2];

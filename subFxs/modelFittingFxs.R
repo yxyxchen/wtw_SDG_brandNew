@@ -5,18 +5,22 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
   condIdx = ifelse(cond =="HP", 1, 2)
   nChain = 4
   nIter = 5000
-  nTimeStep = tMax / stepDuration
-  nTimePoints = round(ifelse(trialEarnings >0, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1))
-  nScheduledWaitPoints = ceiling(scheduledWait / stepDuration)
+  nTimeSteps = tMax / stepDuration
+  # if gets the reward, then make waiting decisions for ceiling(timeWaited/stepDuration) steps
+  # if doesn't get the reward, then make waiting decisions for floor(timeWaited/stepDuration) steps
+  # and quit at floor(timeWaited/stepDuration) + 1 steps 
+  nActionsPerTrial = round(ifelse(trialEarnings >0, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1))
+  # If using the least distance loss function
+  # nScheduledWaitPoints = ceiling(scheduledWait / stepDuration)
   data_list <- list(tMax = tMax,
-                    nScheduledWaitPoints = nScheduledWaitPoints,
+                    # nScheduledWaitPoints = nScheduledWaitPoints,
                     wIni = wIni,
                     wInis = wInis,
-                    nTimeStep = nTimeStep,
+                    nTimeSteps = nTimeSteps,
                     N = length(timeWaited),
                     timeWaited = timeWaited,
                     trialEarnings = trialEarnings,
-                    nTimePoints = nTimePoints)
+                    nActionsPerTrial = nActionsPerTrial)
   # init = list(list('phi' = 0.5, 'tau' = 15, 'gamma' = 0.5),
   #             list('phi' = 0.1, 'tau' = 5, 'gamma' = 0.1))
   fit = sampling(object = model, data = data_list, cores = min(nChain, 3), chains = nChain,

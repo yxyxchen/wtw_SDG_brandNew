@@ -4,14 +4,14 @@ conditions = c("HP", "LP")
 conditionColors = c("#008837", "#7b3294")
 
 ######## timing variables ########
-tMaxs = c(16, 30) # trial durations
+tMaxs = c(20, 40) # trial durations
 blockMins = 7 # block duration in mins
 blockSecs = blockMins * 60 # block duration in secs
 iti = 2 # iti duration in secs
 tGrid = seq(0, blockSecs, stepDuration) # use stepDu 
 
 ######### reward variable ########
-tokenValue = 30 #value of the token
+tokenValue = 10 #value of the token
 loseValue = 0
 stepDuration = 0.5
 ########## supporting vairbales ########
@@ -107,6 +107,7 @@ wInis = vector(length = 2)
 wInis[1] = 3 # value of waiting, since participants didn't know differences in conditions 
 wInis[2] = 2 # value of quitting, ensuring waiting first.
 
+load("genData/expDataAnalysis/subData.RData")
 load("genData/expDataAnalysis/blockData.RData")
 modelName = "full_model"
 source("subFxs/helpFxs.R")
