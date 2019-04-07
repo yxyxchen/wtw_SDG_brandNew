@@ -245,6 +245,7 @@ plot(Rstep * gamma ^ stepDuration / (1 - gamma ^ stepDuration) / QHP)
 stepDuration = 0.001
 QHPAp = rewardRate$HP * stepDuration * gamma ^ stepDuration / (1 - gamma ^ stepDuration)
 
+QHPAp[[200]]
 
 
-
+                                 

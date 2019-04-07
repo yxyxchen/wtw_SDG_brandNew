@@ -2,32 +2,38 @@
 getRepModelFun = function(modelName){
   if(modelName == "full_model"){
     repModelFun = full_model
-  }else if(modelName == "monteRatio"){
-    repModelFun = monteRatio
-  }else if(modelName == "curiosityTrial"){
-    repModelFun = curiosityTrial
-  }else{
+  }else if(modelName == "reduce_one_QwaitIni"){
+    repModelFun = reduce_one_QwaitIni
+  }else if(modelName == "reduce_two_QwaitIni"){
+    repModelFun = reduce_Qwait_Ini
+  }else if(modelName == "reduce_one_phi"){
+    repModelFun = reduce_one_phi
+  }else if(modelName == "reduce_one_gamma"){
+    repModelFun = reduce_one_gamma
+  }else if(modelName == "cons_arbitrary"){
+    repModelFun = cons_arbitrary
+  }else if(modelName == "R_learning"){
+    repModelFun = R_learning
+  }else if(modelName == "R_learning2"){
+    repModelFun = R_learning2
+  }else if(modelName == "R_learning3"){
+    repModelFun = R_learning3
+  }
+  else{
     return("wrong model name!")
   }
   return(repModelFun)
 }
 ################ monte ######################
-curiosityTrial = function(paras, cond, scheduledWait){
+reduce_one_QwaitIni = function(para, cond, scheduledWait){
   # parse para
-  phi = paras[1]
-  tau = paras[2]
-  gamma = paras[3]
-  
-  # coefficient of curiosity
-  curSlope = 0.2
-  curIntercept = 2
+  phi = para[1]
+  tau = para[2]
+  gamma = para[3]
   
   # determine number of trials 
   nTrial = length(scheduledWait)
   wIni = mean(wInisExp)
-  QHPApOptim = 3.937851
-  QLPApOptim = 4.396877
-  wIni = (QHPApOptim + QLPApOptim)/ 2
   
   # determine parameters for this condition
   tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
@@ -36,7 +42,7 @@ curiosityTrial = function(paras, cond, scheduledWait){
   
   # initialize action values
   Qwait = rep(wIni, nTimeStep) 
-  Qquit = wIni
+  Qquit = wIni * gamma ^(iti / stepDuration)
   
   # initialize varibles for recording
   vaWaits = matrix(NA, nTimeStep, nTrial);
@@ -53,8 +59,6 @@ curiosityTrial = function(paras, cond, scheduledWait){
   timeWaited = rep(0, nTrial)
   sellTime = rep(0, nTrial)
   
-  curiosity = curIntercept
-  
   # loop over trials
   for(tIdx in 1 : nTrial) {
     # sample rewardDelay
@@ -64,7 +68,7 @@ curiosityTrial = function(paras, cond, scheduledWait){
     t = 1
     while(t <= nTimeStep){
       # determine action
-      waitRate =  1 / sum(1  + exp((Qquit - Qwait[t] - curiosity)* tau))
+      waitRate =  1 / sum(1  + exp((Qquit - Qwait[t])* tau))
       action = ifelse(runif(1) < waitRate, 'wait', 'quit')
       # next reward 
       rewardOccur = rewardDelay <= timeTicks[t + 1] && rewardDelay > timeTicks[t] 
@@ -89,24 +93,18 @@ curiosityTrial = function(paras, cond, scheduledWait){
     # update totalSecs 
     totalSecs = totalSecs + iti+ ifelse(getReward, rewardDelay, timeWaited[tIdx]) 
     
-    # update curiosity
-    curiosity =  curIntercept * exp(-curSlope*(tIdx - 1))
     # update Qwait and Qquit and go to the next trail if t < nTimeStep
     if(tIdx < nTrial){
-      # determine the update target by one-step bellman backup
-      # in determing nextQ, we use the unupdated policy, yet using the new curiosity
-      nextWaitRateS1 =  1 / sum(1  + exp((Qquit - Qwait[1] - curiosity)* tau))
-      nextQ = nextWaitRateS1 * Qwait[1] +
-        (1 - nextWaitRateS1) * Qquit 
-      trialReward = nextReward + nextQ * gamma ^(iti / stepDuration)
+      if(nextReward == 0){
+        nextWaitRateHat =  1 / sum(1  + exp((Qquit - Qwait[1])* tau))
+        trialReward = nextWaitRateHat * Qwait[1] * gamma ^(iti / stepDuration) +
+          (1 - nextWaitRateHat) * Qquit * gamma ^(iti / stepDuration)
+      }else{
+        trialReward = nextReward
+      }
       
-      # the learning rule is very naive,
-      # first, it only update Qquit when the agent quit
-      # more importantly, the update target of Qwait[1] should not be trialReward * gamma ^ rev((1 : t))
       if(action == 'wait'){
-        Qwait[1 : t] = (1 - phi) * Qwait[1 : t] + phi * trialReward * gamma ^ rev((1 : t))
-        nextWaitRateS1 =  1 / sum(1  + exp((Qquit - Qwait[1] - curiosity)* tau))
-        Qquit = nextWaitRateS1 * Qwait[1] + (1 - nextWaitRateS1) * Qquit
+        Qwait[1 : t] = (1 - phi) * Qwait[1 : t] + phi * trialReward * gamma ^ rev((0 : (t - 1 )))
       }else{
         Qquit =  (1 - phi) * Qquit + phi *  trialReward
         if(t > 1){

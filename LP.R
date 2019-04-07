@@ -242,5 +242,10 @@ for(lastWaitGap in 1 : nGap){
 plot(Rstep * gamma ^ stepDuration / (1 - gamma ^ stepDuration),
      QLP)
 
+
 plot(rewardRate$LP*stepDuration * gamma^stepDuration / (1 - gamma^stepDuration),
      QLP)
+
+stepDuration = 0.001
+QLPAp = rewardRate$LP * stepDuration * gamma ^ stepDuration / (1 - gamma ^ stepDuration)
+QLPAp[[22]]

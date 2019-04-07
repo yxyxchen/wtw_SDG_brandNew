@@ -4,7 +4,6 @@ library("stringr")
 library("dplyr")
 library("tidyr")
 source("subFxs/plotThemes.R")
-
 source("subFxs/helpFxs.R")
 source("subFxs/loadFxs.R") 
 
@@ -13,14 +12,53 @@ source("subFxs/taskFxs.R") # used in repetition
 source("subFxs/repetitionFxs.R")
 source("subFxs/analysisFxs.R") # for analysis
 load("wtwSettings.RData") # used in repetition
-
 load("wtwSettings.RData")
-load("genData/expDataAnalysis/kmOnGrid.RData")
+load("genData/expDataAnalysis/kmOnGridSess.RData")
 
+
+# load raw data 
+allData = loadAllData()
+hdrData = allData$hdrData  
+allIDs = hdrData$ID     
+expTrialData = allData$trialData   
+idList = hdrData$ID
+n = length(idList)
+
+# inputs``
+# simluation 
+paras = c(0.02, 20, 0.9)
+set.seed(231)
+modelName = "curiosityTrial"
+repModelFun = getRepModelFun(modelName)
+nRep = 10# number of repetitions
+trialData = vector(length = n * nRep, mode ='list')
+repNo = matrix(1 : (n * nRep), nrow = n, ncol = nRep)
+for(sIdx in 1 : n){
+  id = idList[[sIdx]] 
+  cond = unique(blockData$condition[blockData$id == id])
+  thisExpTrialData = expTrialData[[id]]
+  thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
+  scheduledWait = thisExpTrialData$scheduledWait
+  for(rIdx in 1 : nRep){
+    tempt = repModelFun(paras, cond, scheduledWait)
+    trialData[[repNo[sIdx, rIdx]]] = tempt
+    # simDistMatrix[,rIdx] = abs(tempt$timeWaited - thisExpTrialData$timeWaited)
+  }
+  # simDist_[[sIdx]] = apply(simDistMatrix, 1, mean)
+  # simDistSd_[[sIdx]] = apply(simDistMatrix, 1, sd)
+}
+
+for(i in 1:n){
+  sIdx = repNo[i, 1]
+  label = hdrData$condition[hdrData$ID== i]
+  trialPlots(trialData[[sIdx]], label)
+  readline("continue")
+}
 
 # inputs
-modelName = "monteRatio"
-pars = getParas(modelName)
+modelName = "curiosity"
+# paras = getParas(modelName)
+paras = c("phi", "tau", "gamma")
 # load expPara
 expPara = loadExpPara(modelName, pars)
 #tempt= loadExpParaExtra(modelName, pars)
@@ -33,12 +71,6 @@ EffeCols = which(str_detect(colnames(expPara), "Effe"))[1 : length(pars)]
 useID = idList[apply(expPara[,RhatCols] < 1.1, MARGIN = 1, sum) == length(pars) & 
                          apply(expPara[,EffeCols] >100, MARGIN = 1, sum) == length(pars)]
 
-# load raw data 
-allData = loadAllData()
-hdrData = allData$hdrData  
-allIDs = hdrData$ID     
-expTrialData = allData$trialData       
-n = length(idList)
 
 
 # simluation 
