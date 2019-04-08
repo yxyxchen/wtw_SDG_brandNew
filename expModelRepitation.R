@@ -26,7 +26,7 @@ n = length(idList)
 
 # inputs``
 # simluation 
-paras = c(0.02, 20, 0.9)
+paras = c(0.02, 5, 0.99)
 set.seed(231)
 modelName = "curiosityTrial"
 repModelFun = getRepModelFun(modelName)
@@ -48,15 +48,32 @@ for(sIdx in 1 : n){
   # simDistSd_[[sIdx]] = apply(simDistMatrix, 1, sd)
 }
 
+# case in HP
+# the real model heavily depends on gamma, you can see directly the difference
+# since gamma determine the relationship between Qwait[1] and 
+id = 3
+id = idList[[sIdx]] 
+cond = unique(blockData$condition[blockData$id == id])
+thisExpTrialData = expTrialData[[id]]
+thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
+scheduledWait = thisExpTrialData$scheduledWait
+determine = repModelFun(c(0.02, 100, 0.95), cond, scheduledWait)
+random =  repModelFun(c(0.02, 5, 0.95), cond, scheduledWait)
+trialPlots(determine)
+
+
 for(i in 1:n){
   sIdx = repNo[i, 1]
   label = hdrData$condition[hdrData$ID== i]
-  trialPlots(trialData[[sIdx]], label)
+  thisTrialData = trialData[[sIdx]]
+  trialPlots(thisTrialData, label)
   readline("continue")
   tMax = ifelse(label == "HP", 20, 40)
   kmGrid = seq(0, tMax, by=0.1) 
-  kmscResults = kmsc(trialData[[sIdx]],tMax,label,T,kmGrid)
+  thisTrialData = trialData[[sIdx]]
+  kmscResults = kmsc(thisTrialData,tMax,label,T,kmGrid)
   readline("continue")
+  # actionValueViewer(thisTrialData)
 }
 
 # inputs
