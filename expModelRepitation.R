@@ -53,6 +53,10 @@ for(i in 1:n){
   label = hdrData$condition[hdrData$ID== i]
   trialPlots(trialData[[sIdx]], label)
   readline("continue")
+  tMax = ifelse(label == "HP", 20, 40)
+  kmGrid = seq(0, tMax, by=0.1) 
+  kmscResults = kmsc(trialData[[sIdx]],tMax,label,T,kmGrid)
+  readline("continue")
 }
 
 # inputs

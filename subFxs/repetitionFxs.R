@@ -36,7 +36,7 @@ curiosityTrial = function(paras, cond, scheduledWait){
   
   # initialize action values
   Qwait = rep(wIni, nTimeStep) 
-  Qquit = wIni
+  Qquit = wIni 
   
   # initialize varibles for recording
   vaWaits = matrix(NA, nTimeStep, nTrial);
@@ -105,8 +105,8 @@ curiosityTrial = function(paras, cond, scheduledWait){
       # more importantly, the update target of Qwait[1] should not be trialReward * gamma ^ rev((1 : t))
       if(action == 'wait'){
         Qwait[1 : t] = (1 - phi) * Qwait[1 : t] + phi * trialReward * gamma ^ rev((1 : t))
-        nextWaitRateS1 =  1 / sum(1  + exp((Qquit - Qwait[1] - curiosity)* tau))
-        Qquit = nextWaitRateS1 * Qwait[1] + (1 - nextWaitRateS1) * Qquit
+        # counterfactual thinking
+        Qquit = (1 - phi) * Qquit + phi * trialReward * gamma ^ ((iti / stepDuration) + t)
       }else{
         Qquit =  (1 - phi) * Qquit + phi *  trialReward
         if(t > 1){

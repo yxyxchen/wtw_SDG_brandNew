@@ -23,7 +23,7 @@ nBlock = 3
 
 # control which individual-level plots to generate
 plotTrialwiseData = T
-plotKMSC = F
+plotKMSC = T
 plotWTW = F
 
 # initialize outputs, organised by block
@@ -37,7 +37,7 @@ kmOnGrid_ = vector(mode = "list", length = n * nBlock)
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
   #if(blockData[blockData$id == thisID, "AUC"] > 20 & blockData$condition[blockData$id == thisID] == "LP"){
-  for (bkIdx in 1: nBlock){
+  for (bkIdx in 1: 1){
     # select data 
     thisTrialData = trialData[[thisID]]
     thisBlockIdx = (thisTrialData$blockNum == bkIdx)
