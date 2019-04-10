@@ -49,7 +49,7 @@ expModelFitting = function(modelName, paras){
       trialEarnings = thisTrialData$trialEarnings
       timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
       cond = unique(thisTrialData$condition)
-      wIni = ifelse(cond == "HP", wInisTheory[1], wInisTheory[2]) # wIni is the theoratical initial values
+      wIni = 4.167364 
       fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
       modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
   }

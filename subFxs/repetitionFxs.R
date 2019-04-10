@@ -91,12 +91,12 @@ curiosityTrial = function(paras, cond, scheduledWait){
     totalSecs = totalSecs + iti+ ifelse(getReward, rewardDelay, timeWaited[tIdx]) 
     
     # update curiosity
-    curiosity =  curIntercept * exp(-curSlope*(tIdx - 1))
+    nextCuriosity =  curIntercept * exp(-curSlope*tIdx)
     # update Qwait and Qquit and go to the next trail if t < nTimeStep
     if(tIdx < nTrial){
       # determine the update target by one-step bellman backup
       # in determing nextQ, we use the unupdated policy, yet using the new curiosity
-      nextWaitRateS1 =  1 / sum(1  + exp((Qquit - Qwait[1] - curiosity)* tau))
+      nextWaitRateS1 =  1 / sum(1  + exp((Qquit - Qwait[1] - nextCuriosity)* tau))
       nextQ = nextWaitRateS1 * Qwait[1] +
         (1 - nextWaitRateS1) * Qquit 
       trialReward = nextReward + nextQ * gamma ^(iti / stepDuration)
@@ -115,13 +115,16 @@ curiosityTrial = function(paras, cond, scheduledWait){
             phi * trialReward * gamma ^ rev((1 : (t - 1 )))
         }
         # counterfactual thinking
-        Qquit = (1 - phi) * Qquit + phi * trialReward * gamma ^ ((iti / stepDuration) + t)
+        # Qquit = (1 - phi) * Qquit + phi * trialReward * gamma ^ ((iti / stepDuration) + t)
       }
       # track vaWaits and vaQuits 
       vaWaits[,tIdx + 1] = Qwait
       vaQuits[tIdx + 1] = Qquit
       
     }# end of the update
+    
+    # update curiosity
+    curiosity = nextCuriosity
     
     if(Qquit < 0 || sum(Qwait < 0) > 0){
       browser()

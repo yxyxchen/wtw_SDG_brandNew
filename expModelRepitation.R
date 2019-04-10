@@ -26,7 +26,7 @@ n = length(idList)
 
 # inputs``
 # simluation 
-paras = c(0.02, 5, 0.99)
+paras = c(0.3, 10, 0.8)
 set.seed(231)
 modelName = "curiosityTrial"
 repModelFun = getRepModelFun(modelName)

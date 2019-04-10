@@ -2,7 +2,7 @@
 
 # check the distribution of scheduled delays
 # ...as measured in number of key presses (for the instrumental version of the task)
-scheduledDelays <- function(blockData,blockLabel) {
+scheduledDelays <- function(blockData,label) {
   cat(sprintf('Scheduled delays for %s\n',blockLabel))
   bkDelays = blockData$scheduledWait
   print(summary(bkDelays))
@@ -16,7 +16,7 @@ scheduledDelays <- function(blockData,blockLabel) {
 
 
 # plot trialwise responses in detail
-trialPlots <- function(blockData,blockLabel) {
+trialPlots <- function(blockData,label) {
   # vectors to be plotted
   rwdIdx = blockData$trialEarnings > loseValue
   quitIdx = blockData$trialEarnings <= loseValue
@@ -188,3 +188,13 @@ rewardRT <- function(blockData, blockLabel, makePlot) {
   }
 }
 
+truncateTrials = function(data, startTidx, endTidx){
+  nVar = length(data)
+  varNames = names(data)
+  outputs = vector(mode = "list", length = nVar)
+  for(i in 1 : nVar){
+    junk = data[[varNames[i]]]
+    outputs[[varNames[i]]] = junk[startTidx:endTidx]
+  }
+  return(outputs)
+}

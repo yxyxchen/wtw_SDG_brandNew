@@ -1,4 +1,8 @@
-# set up 
+# we don't need lp__ which is a sum loglikelyhood scaled by a constant, something like a dispersion 
+# we don't need lp__ for model comparison 
+# we save LL_all 
+# we use log_like to calculate WAIC and looStat
+# but we don't save log_like
 modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, pars, model){
   load("wtwSettings.RData")
   tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
@@ -15,7 +19,6 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
   data_list <- list(tMax = tMax,
                     # nScheduledWaitPoints = nScheduledWaitPoints,
                     wIni = wIni,# maybe change later
-                    wInis = wInis,
                     nTimeSteps = nTimeSteps,
                     N = length(timeWaited),
                     timeWaited = timeWaited,
@@ -33,7 +36,7 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
     adply(2, function(x) x) %>%  # change arrays into 2-d dataframe 
     select(-chains) 
   write.table(matrix(unlist(tempt), ncol = length(pars) + 1), file = sprintf("%s.txt", fileName), sep = ",",
-              col.names = F, row.names=FALSE)
+              col.names = F, row.names=FALSE) 
   # calculate and save WAIC
   log_lik = extract_log_lik(fit) # quit time consuming
   WAIC = waic(log_lik)
@@ -51,7 +54,7 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
   # distSd = as.vector(apply(junk, 2, sd))
   # save("timeWaitedProb", "timeWaitedProbSd", "dist", "distSd", file = sprintf("%s_prediction.RData", fileName))
   # save summarized fit 
-  fitSumary <- summary(fit,pars = c(pars, "lp__", "LL_all"), use_cache = F)$summary
+  fitSumary <- summary(fit,pars = c(pars, "LL_all"), use_cache = F)$summary
   write.table(matrix(fitSumary, nrow = length(pars) + 2), file = sprintf("%s_summary.txt", fileName),  sep = ",",
             col.names = F, row.names=FALSE)
 }

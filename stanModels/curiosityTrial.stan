@@ -1,6 +1,5 @@
 data {
   // depending on the condition
-  real wInis[2];
   real wIni;
   int tMax;
   int nTimeSteps; // nTimeSteps = tMax / stepDuration
@@ -35,7 +34,7 @@ transformed parameters{
   
   // initialize trialReward and nextWaitRateHat
   real trialReward;
-  real nextWaitRateHat = 1.0;
+  real nextWaitRateHat;
 
   // define gamma List
   // we assume rewards occur at the end of the last step
@@ -55,13 +54,18 @@ transformed parameters{
   //loop over trial
   for(tIdx in 1 : (N -1)){
     // determine thisNActions
-    int thisNActions = nActionsPerTrial[tIdx]; 
+    int thisNActions = nActionsPerTrial[tIdx];
+    // determine curiosity
+    // tIdx + 1 - 1 = tIdx
+    real nextCuriosity =  2 * exp(-0.2 * tIdx);
     // update and track action values
+    nextWaitRateHat =  1 / (1  + exp((Qquit - Qwait[1] - nextCuriosity)* tau));
     if(trialEarnings[tIdx] > 0){
-      trialReward = tokenValue;
+      trialReward = tokenValue + nextWaitRateHat * Qwait[1] * gamma ^(iti / stepDuration) + (1 - nextWaitRateHat) * Qquit * gamma ^(iti / stepDuration);
       Qwait[1 : thisNActions] = (1 - phi) * Qwait[1 : thisNActions] + phi * trialReward * gammaList[(nTimeSteps - thisNActions + 1):nTimeSteps];
+      # counterfactual thinking 
+      Qquit = (1 - phi) * Qquit + phi * trialReward * gammaList[nTimeSteps - thisNActions + 1] * gamma ^(iti / stepDuration);
     }else{
-      nextWaitRateHat =  1 / (1  + exp((Qquit - Qwait[1])* tau));
       trialReward = nextWaitRateHat * Qwait[1] * gamma ^(iti / stepDuration) + (1 - nextWaitRateHat) * Qquit * gamma ^(iti / stepDuration);
       Qquit =  (1 - phi) * Qquit + phi *  trialReward;
       if(thisNActions > 1){
@@ -74,21 +78,21 @@ transformed parameters{
 }
 model {
   phi ~ uniform(0, 0.3);
-  tau ~ uniform(2, 22);
-  gamma ~ uniform(0.7, 1);
-  ratio ~ uniform(0.2, 1);
+  tau ~ uniform(2, 50);
+  gamma ~ uniform(0.5, 1);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){
     int action;
     vector[2] values;
+    real curiosity = 2 * exp(-0.2 * (tIdx - 1));
     for(i in 1 : nActionsPerTrial[tIdx]){
     if(trialEarnings[tIdx] == 0 && i == nActionsPerTrial[tIdx]){
       action = 2; // quit
     }else{
       action = 1; // wait
     }
-      values[1] = Qwaits[i, tIdx] * tau;
+      values[1] = (Qwaits[i, tIdx] + curiosity) * tau;
       values[2] = Qquits[tIdx] * tau;
       //action ~ categorical_logit(values);
       target += categorical_logit_lpmf(action | values);
@@ -98,23 +102,22 @@ model {
 generated quantities {
 // initialize log_lik
   vector[totalSteps] log_lik = rep_vector(0, totalSteps);
-  vector[N] log_lik_trial = rep_vector(0, N);
   vector[2] values;
   real LL_all;
   int no = 1;
   // loop over trials
   for(tIdx in 1 : N){
     int action;
+    real curiosity = 2 * exp(-0.2 * (tIdx - 1));
     for(i in 1 : nActionsPerTrial[tIdx]){
       if(trialEarnings[tIdx] == 0 && i == nActionsPerTrial[tIdx]){
         action = 2; // quit
       }else{
         action = 1; // wait
       }
-      values[1] = Qwaits[i, tIdx] * tau;
+      values[1] = (Qwaits[i, tIdx] + curiosity) * tau;
       values[2] = Qquits[tIdx] * tau;
       log_lik[no] =categorical_logit_lpmf(action | values);
-      log_lik_trial[tIdx] = log_lik_trial[tIdx] + log_lik[no];
       no = no + 1;
     }
   }// end of the loop
