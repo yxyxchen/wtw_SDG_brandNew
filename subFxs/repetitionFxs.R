@@ -107,7 +107,9 @@ curiosityTrial = function(paras, cond, scheduledWait){
         Qwait[1 : t] = (1 - phi) * Qwait[1 : t] + phi * trialReward * gamma ^ rev((1 : t))
         # counterfactual thinking
         Qquit = (1 - phi) * Qquit + phi * trialReward * gamma ^ ((iti / stepDuration) + t)
+        
       }else{
+        # counterfactual thinking here
         Qquit =  (1 - phi) * Qquit + phi *  trialReward
         if(t > 1){
           Qwait[1 : (t - 1)] = (1 - phi) * Qwait[1 : (t - 1)] +
