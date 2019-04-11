@@ -1,7 +1,9 @@
 # unupdated vaWaits were not recorded, so here we manually
 # set them identical with the last updated value
 
-actionValueViewer = function(vaWaits, vaQuits, blockData){
+actionValueViewer = function(blockData){
+  vaWaits = blockData$vaWaits
+  vaQuits = blockData$vaQuits
   nTrial =  length(blockData$trialEarnings)
   nTimeStep = dim(vaWaits)[1]
   stepDuration = 0.5

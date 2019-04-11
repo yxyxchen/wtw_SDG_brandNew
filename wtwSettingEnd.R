@@ -33,13 +33,13 @@ trialGapIdxs = list(
 
 ########## additional  variables for optimal analysis ########
 # CDF of reward delays: p(t_reward <= T)
-k = 4
-mu = 0
-sigma = 2
+k = 4 # shape
+mu = 0 # location
+sigma = 2 # scale
 pareto = list()
-pareto[['k']] = k
-pareto[['mu']] = mu
-pareto[['sigma']] = sigma
+pareto[['k']] = k # shape
+pareto[['mu']] = mu # location
+pareto[['sigma']] = sigma # scale
 HP = 1 / length(trialGapIdxs$HP) * trialGapIdxs$HP
 LP = 1 - (1 + k * (trialGapValues$LP - mu) / sigma) ^ (-1 / k)
 LP[length(trialGapValues$LP)] = 1 
@@ -70,7 +70,7 @@ HP = tokenValue * rewardDelayCDF$HP /
   ((meanRewardDelay$HP * rewardDelayCDF$HP + trialGapValues$HP * (1 - rewardDelayCDF$HP)) + iti)
 LP = tokenValue * rewardDelayCDF$LP /
   ((meanRewardDelay$LP * rewardDelayCDF$LP + trialGapValues$LP * (1 - rewardDelayCDF$LP)) + iti)
-rewardRate = list('HP' = HP, 'LP' = LP)
+rewardRates = list('HP' = HP, 'LP' = LP)
 
 optimWaitTimes = list()
 optimWaitTimes$HP = trialGapValues$HP[which.max(HP)]
@@ -163,6 +163,15 @@ for(quitGap in 1 : nGap){
   }
   Qwait_[[quitGap]] = Qwait
 }
+
+# find the cross point for every policy(where Qquit > Qquit)
+crossPoints = vector(length = nGap)
+for(lastWaitGap in 1 : nGap){
+  tempt = which(Qwait_[[lastWaitGap]] <= Qquit_[[lastWaitGap]])
+  if(length(tempt) == 0) crossPoints[lastWaitGap] = nGap * stepDuration 
+  else crossPoints[lastWaitGap] = min(tempt) 
+}
+ 
 library("ggplot2")
 library("dplyr")
 library("tidyr")
