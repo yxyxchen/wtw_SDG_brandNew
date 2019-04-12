@@ -1,5 +1,7 @@
 # this script is used to unify all algorithms. 
 # here we assume the rewards arrive at the end
+# if we need stats for decrete steps, we can use wtwSettings.
+# for the optimal statistics, don't use both of them!
 ######## condition varibles #########
 conditions = c("HP", "LP")
 conditionColors = c("#008837", "#7b3294")

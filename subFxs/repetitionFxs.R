@@ -25,7 +25,7 @@ curiosityTrialR = function(paras, cond, scheduledWait){
   
   # determine number of trials 
   nTrial = length(scheduledWait)
-  wIni = mean(optimRewardRates$HP, optimRewardRates$LP) * stepDuration# initial value for 
+  wIni = mean(5/6, 0.93) * stepDuration# initial value for Rrate
   
   # determine parameters for this condition
   tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
@@ -33,8 +33,9 @@ curiosityTrialR = function(paras, cond, scheduledWait){
   nTimeStep = tMax / stepDuration
   
   # initialize action values
-  Qwait = rep(wIni, nTimeStep) 
-  Qquit = wIni 
+  Rrate = wIni
+  Qwait = rep(0, nTimeStep) 
+  Qquit = 0 
   
   # initialize varibles for recording
   vaWaits = matrix(NA, nTimeStep, nTrial);
@@ -156,7 +157,7 @@ curiosityTrial = function(paras, cond, scheduledWait){
   # determine number of trials 
   nTrial = length(scheduledWait)
   wIni = mean(wInisExp)
-  QHPApOptim = 3.937851
+  QHPApOptim = 3.937851 * gamma
   QLPApOptim = 4.396877
   wIni = (QHPApOptim + QLPApOptim)/ 2
   
