@@ -1,4 +1,5 @@
-# not so good to generate varibale in scripts, since sometimes it invloves variables you don't wont
+# this script is used to unify all algorithms. 
+# here we assume the rewards arrive at the end
 ######## condition varibles #########
 conditions = c("HP", "LP")
 conditionColors = c("#008837", "#7b3294")

@@ -1,4 +1,9 @@
-# not so good to generate varibale in scripts, since sometimes it invloves variables you don't wont
+# in this script, we try to calculate the optimWaitingTimes and the optimRewardRates
+# to be as close as to the normal analysis (like integrate the prob density)
+# we assume rewards happen at the middle of the gap(therefore, the meanRewardDelay would be unbiased)
+# yet in wtwSettingsEnd.R, to unfiy different algorithms, we assume rewards happen at the end of the gap
+# however, results for LP still change with the stepDuration
+# we do all the calculation by stepDuration = 0.5, and the optimWaitTime, you know is not that...
 ######## condition varibles #########
 conditions = c("HP", "LP")
 conditionColors = c("#008837", "#7b3294")
@@ -13,7 +18,7 @@ tGrid = seq(0, blockSecs, 0.1)
 ######### reward variable ########
 tokenValue = 10 #value of the token
 loseValue = 0
-stepDuration = 0.1
+stepDuration = 0.5
 ########## supporting vairbales ########
 # time ticks within a trial for timeEarnings or wtw analysis
 trialTicks = list(
@@ -61,8 +66,8 @@ rewardDelayPDF = list(
 
 # assume the rewards happen at the end of the gap
 # E(t_reward | t_reward <= T) 
-HP = cumsum((trialGapValues$HP) * rewardDelayPDF$HP) / cumsum(rewardDelayPDF$HP)
-LP = cumsum((trialGapValues$LP) * rewardDelayPDF$LP) / cumsum(rewardDelayPDF$LP)
+HP = cumsum((trialGapValues$HP - 0.5 * stepDuration) * rewardDelayPDF$HP) / cumsum(rewardDelayPDF$HP)
+LP = cumsum((trialGapValues$LP - 0.5 * stepDuration) * rewardDelayPDF$LP) / cumsum(rewardDelayPDF$LP)
 # no reward arrives before the first reward timing, so points before that turn to NAN
 meanRewardDelay = list('HP' = HP, 'LP' = LP)
 
@@ -81,46 +86,7 @@ optimRewardRates = list()
 optimRewardRates$HP = max(HP)
 optimRewardRates$LP = max(LP)
 
-# calculate wInis 
-wInisTheory = vector()
-for(c in 1 : 2){
-  cond = conditions[c];
-  trialTick = trialTicks[[cond]]
-  thisDelayPDF = rewardDelayPDF[[cond]]
-  nTicks = length(trialTick)
-
-  # assume gamma = 0.9
-  gamma = 0.90
-  r = - log(gamma) / stepDuration
-  actionValueWaits = rep(0, nTicks)
-  for(k in 1 : nTicks){
-    actionValueWaits[k] = sum(tokenValue * exp(- (trialTick[k : nTicks] - trialTick[k]) * r)* thisDelayPDF[k : nTicks] / sum( thisDelayPDF[k : nTicks]))
-  }
-  junk = mean(actionValueWaits)
-  wInisTheory[c] = junk
-}
-wInisArbitrary = vector(length = 2)
-wInisArbitrary[1] = 3 
-wInisArbitrary[2] = 2 
-
-load("genData/expDataAnalysis/subData.RData")
-load("genData/expDataAnalysis/blockData.RData")
-modelName = "full_model"
-source("subFxs/helpFxs.R")
-source("subFxs/loadFxs.R")
-paras = getParas(modelName)
-expPara = loadExpPara(modelName, paras)
-
-idList = unique(blockData$id)
-useID = getUseID(blockData, expPara, paras)
-# load expPara
-
-wInisExp = vector(length = 2)
-wInisExp[1] = median(expPara[subData$id %in% useID & subData$condition == "HP",4])
-wInisExp[2] = median(expPara[subData$id %in% useID & subData$condition == "LP",4])
-paraColors = list("phi" = "#78AB05","tau" = "#D9541A", "gamma" = "deepskyblue4", "QwaitIni" = "darkgoldenrod2") 
-
 save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", "tGrid", 
      "tokenValue", "stepDuration", "trialTicks", "pareto", "rewardDelayCDF", 
      "rewardDelayPDF", "meanRewardDelay", "rewardRate", "optimRewardRates", 
-     "optimWaitTimes", "wInis", "wInisTheory", "wInisExp", "paraColors", "loseValue", file = "wtwSettings.RData")
+     "optimWaitTimes", "loseValue", file = "wtwSettings.RData")
