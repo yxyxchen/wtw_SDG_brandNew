@@ -103,9 +103,9 @@ curiosityTrialR = function(paras, cond, scheduledWait){
       # first, it only update Qquit when the agent quit
       # more importantly, the update target of Qwait[1] should not be trialReward * gamma ^ rev((1 : t))
       if(action == 'wait'){     
-        Qwait[1 : t] = (1 - phi) * Qwait[1 : t] + phi * trialReward * gamma ^ rev((1 : t))
+        Qwait[1 : t] = (1 - phi) * Qwait[1 : t] + phi * trialReward * gamma ^ rev((0 : (t-1)))
         # counterfactual thinking
-        Qquit = (1 - phi) * Qquit + phi * trialReward * gamma ^ ((iti / stepDuration) + t)
+        Qquit = (1 - phi) * Qquit + phi * trialReward * gamma ^ ((iti / stepDuration) + t-1)
         
       }else{
         # counterfactual thinking here
@@ -157,8 +157,13 @@ curiosityTrial = function(paras, cond, scheduledWait){
   # determine number of trials 
   nTrial = length(scheduledWait)
   wIni = mean(wInisExp)
-  QHPApOptim = 3.937851 * gamma
-  QLPApOptim = 4.396877
+  # here we use the optimal reward rates from the normative analysis in Lempert 2018
+  # it is more accurate then the one I calcualte in wtwSettings.R
+  # in addition, I use the gamma from 0.5s stepDuration, just hope the Q is similiar to the asympototic value in this RL
+  # finally, we use / (1 - gamma) instead of the gamma / (1 - gamma), it assumes the results always happen as the begging 
+  # so it is a upper
+  QHPApOptim = 5 / 6 / (1 - gamma) 
+  QLPApOptim = 0.93 / (1 - gamma) 
   wIni = (QHPApOptim + QLPApOptim)/ 2
   
   # determine parameters for this condition
@@ -236,9 +241,9 @@ curiosityTrial = function(paras, cond, scheduledWait){
       # first, it only update Qquit when the agent quit
       # more importantly, the update target of Qwait[1] should not be trialReward * gamma ^ rev((1 : t))
       if(action == 'wait'){     
-        Qwait[1 : t] = (1 - phi) * Qwait[1 : t] + phi * trialReward * gamma ^ rev((1 : t))
+        Qwait[1 : t] = (1 - phi) * Qwait[1 : t] + phi * trialReward * gamma ^ rev((0 : (t-1)))
         # counterfactual thinking
-        Qquit = (1 - phi) * Qquit + phi * trialReward * gamma ^ ((iti / stepDuration) + t)
+        Qquit = (1 - phi) * Qquit + phi * trialReward * gamma ^ ((iti / stepDuration) + t-1)
       }else{
         Qquit =  (1 - phi) * Qquit + phi *  trialReward
         if(t > 1){

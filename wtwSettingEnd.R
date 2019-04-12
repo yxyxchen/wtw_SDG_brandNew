@@ -93,12 +93,13 @@ getMeanRewardDelay = function(gapIdx, quitAfter, gammaPerStep, cond){
     discount = NaN
     discount = NaN
   }else{
-    discount =sum(gamma ^ (seq(0, quitGap - gapIdx) * stepDuration + stepDuration) * rewardDelayPDF[[cond]][gapIdx : quitGap]) /
+    discount =sum(gamma ^ (seq(0, quitGap - gapIdx) * stepDuration) * rewardDelayPDF[[cond]][gapIdx : quitGap]) /
       sum(rewardDelayPDF[[cond]][gapIdx : quitGap])
-    time = sum((seq(0, quitGap - gapIdx) * stepDuration + stepDuration) * rewardDelayPDF[[cond]][gapIdx : quitGap]) /
+    time = sum((seq(0, quitGap - gapIdx) * stepDuration) * rewardDelayPDF[[cond]][gapIdx : quitGap]) /
       sum(rewardDelayPDF[[cond]][gapIdx : quitGap])
   }
-  meanRewardDelay = list(discount = discount, time = time)
+  # meanRewardDelay = list(discount = discount, time = time)
+  meanRewardDelay = list(discount = discount * gamma ^ stepDuration, time = time + stepDuration)
   return(meanRewardDelay)
 }
 
@@ -113,13 +114,14 @@ getMeanWaitDelay = function(gapIdx, quitAfter, gammaPerStep, cond){
     discount = NaN
     time = NaN
   }else{
-    discount =sum(gamma ^ pmin(seq(0, nGap - gapIdx) * stepDuration + stepDuration, quitAfter - gapIdx * stepDuration + stepDuration)
+    discount =sum(gamma ^ pmin(seq(0, nGap - gapIdx) * stepDuration, quitAfter - gapIdx * stepDuration)
                   * rewardDelayPDF[[cond]][gapIdx : nGap]) /
       sum(rewardDelayPDF[[cond]][gapIdx : nGap]) 
-    time = sum(pmin(seq(0, nGap - gapIdx) * stepDuration + stepDuration, quitAfter - gapIdx * stepDuration + stepDuration) * rewardDelayPDF[[cond]][gapIdx : nGap]) /
+    time = sum(pmin(seq(0, nGap - gapIdx) * stepDuration, quitAfter - gapIdx * stepDuration ) * rewardDelayPDF[[cond]][gapIdx : nGap]) /
       sum(rewardDelayPDF[[cond]][gapIdx : nGap])
   }
-  meanWaitDelay = list(discount = discount, time = time)
+  # meanWaitDelay = list(discount = discount, time = time)
+  meanWaitDelay = list(discount = discount * gamma ^ stepDuration, time = time + stepDuration)
   return(meanWaitDelay)
 }
 
@@ -137,7 +139,7 @@ getPreward = function(gapIdx, quitAfter, gammaPerStep, cond){
   return(pReward)
 }
 
-cond = "LP"
+cond = "HP"
 gammaPerStep = 0.80# discount per 0.5s 
 gamma = gammaPerStep ^ 2
 kd = -log(gamma)
@@ -172,7 +174,6 @@ library("ggplot2")
 library("dplyr")
 library("tidyr")
 source("subFxs/plotThemes.R")
-
 # ok there are the same
 nQuitGap = 20
 nGap = length(trialGapValues[[cond]])
@@ -197,6 +198,8 @@ for(lastWaitGap in 1 : nGap){
   QHP[[lastWaitGap]] =  sum(UHP[1:lastWaitGap] * Qwait_[[lastWaitGap]]) + sum(UHP[lastWaitGap + (1 : nQuitGap)] * QquitList)
 }
 
+# calculate reward rate defined in the R-learning, actually it is the reward rate for every steps
+# I assume no gamma here
 Rt = vector(length = length(trialGapValues[[cond]]))
 Rstep= vector(length = length(trialGapValues[[cond]]))
 Tstep = vector(length = length(trialGapValues$H))
@@ -223,14 +226,15 @@ for(lastWaitGap in 1 : nGap){
     junk * stepDuration + (1 - junk) * stepDuration
   })), rep(iti / nQuitGap, nQuitGap))
   meanTimePerAction = sum(UHP * timeInGaps)
-  Rt[lastWaitGap] = sum(UHP * rHP * 10) / meanTimePerAction
+  Rt[lastWaitGap] = sum(UHP * rHP * tokenValue) / meanTimePerAction
   Tstep[lastWaitGap] = meanTimePerAction
-  Rstep[lastWaitGap] = sum(UHP * rHP * 10)
+  Rstep[lastWaitGap] = sum(UHP * rHP * tokenValue)
 }
 
-# the same
-# always true, even the rewards occurs at the middle of the gap
-plot(Rstep / 0.1, rewardRate$HP)
+# the reward rate in R_learning is the same as that calculated by MVT
+# though one is for per action and one is for per seconds, we can normalize Rstep by stepDuration
+# it is also true when the events not occur at the end of the gap, so that the meanTimePerAction changes
+data.frame(Rt, rewardRates$HP)
 
 # plot state values
 # only true when all action have the same time
@@ -245,6 +249,8 @@ for(lastWaitGap in 1 : nGap){
   stateValueHP = unlist(lapply(1 : lastWaitGap, function(i) waitRate[i] * Qwait[i] + (1 - waitRate[i]) * Qquit))
   stateValueHP_[[lastWaitGap]] = stateValueHP
 }
+# ok now they are the same
+# I think it is maybe because, in my calculation, I always assume the rewards happens at the end of it right.
 plot(Rstep * gamma ^ stepDuration / (1 - gamma ^ stepDuration) / QHP)
 
 stepDuration = 0.001
