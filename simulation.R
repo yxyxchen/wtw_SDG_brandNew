@@ -4,19 +4,55 @@ library('dplyr')
 library('tidyr')
 load("wtwSettings.RData")
 source('subFxs/repetitionFxs.R') # 
-source("subFxs/taskFxs.R")
 source("subFxs/helpFxs.R")
 source("subFxs/plotThemes.R")
+source("subFxs/loadFxs.R") 
+source("subFxs/analysisFxs.R")
+###### simulate using the empirical schedualedWait
+# load raw data 
+allData = loadAllData()
+hdrData = allData$hdrData  
+allIDs = hdrData$ID     
+expTrialData = allData$trialData   
+idList = hdrData$ID
+n = length(idList)
 
-# simulated scheduledWait
-set.seed(123)
-for(c in 1 : 2){
-  cond  = conditions[c]
-  if(cond == "HP"){
-    scheduledWaitHPlist = lapply(1 : nRep, function(i) unlist(lapply(1:50, function(x) drawSample(cond))))
-  }else{
-    scheduledWaitLPlist = lapply(1 : nRep, function(i) unlist(lapply(1:50, function(x) drawSample(cond))))
+# simluation
+paras = c(0.01, 10, 0.9) # remember to change the paras
+set.seed(231)
+modelName = "curiosityTrial"
+repModelFun = getRepModelFun(modelName)
+nRep = 1# number of repetitions
+trialData = vector(length = n * nRep, mode ='list')
+repNo = matrix(1 : (n * nRep), nrow = n, ncol = nRep)
+for(sIdx in 1 : n){
+  id = idList[[sIdx]] 
+  cond = hdrData$cond[hdrData$ID == id]
+  thisExpTrialData = expTrialData[[id]]
+  thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
+  scheduledWait = thisExpTrialData$scheduledWait
+  for(rIdx in 1 : nRep){
+    tempt = repModelFun(paras, cond, scheduledWait)
+    trialData[[repNo[sIdx, rIdx]]] = tempt
+    # simDistMatrix[,rIdx] = abs(tempt$timeWaited - thisExpTrialData$timeWaited)
   }
+  # simDist_[[sIdx]] = apply(simDistMatrix, 1, mean)
+  # simDistSd_[[sIdx]] = apply(simDistMatrix, 1, sd)
+}
+
+for(i in 1:n){
+  sIdx = repNo[i, 1]
+  id = idList[sIdx]
+  label = sprintf("%s,%s", hdrData$condition[hdrData$ID== i], id)
+  thisTrialData = trialData[[sIdx]]
+  trialPlots(thisTrialData, label)
+  readline("continue")
+  tMax = ifelse(label == "HP", 20, 40)
+  kmGrid = seq(0, tMax, by=0.1) 
+  thisTrialData = trialData[[sIdx]]
+  kmscResults = kmsc(thisTrialData,tMax,label,T,kmGrid)
+  readline("continue")
+  # actionValueViewer(thisTrialData)
 }
 
 # simulate a long scheduledWait sequence to find out the asympotatic results
@@ -27,18 +63,6 @@ set.seed(123)
 longScheduledWaitLPList = lapply(1 : nSeq, function(i) unlist(lapply(1:1000, function(x) drawSample("LP"))))
 nRep = 10
 
-# determine model name here 
-modelName = "curiosityTrial"
-repModelFun = getRepModelFun(modelName)
-for(i in 1 : nParas){
-  paras = parasList[[i]]
-  for(j in 1 : nSeq){
-    longScheduledWaitLP = longScheduledWaitLPList[[j]]
-      for(k in 1 : nRep){
-        tempt = repModelFun(paras, "LP", longScheduledWaitLP)
-      }
-  }
-}
 # one sequences example
 paras1 = c(0.02, 100, 0.8)
 set.seed(123)
@@ -50,6 +74,17 @@ fileName = sprintf("zoomIn_%s.png", label)
 trialPlots(truncateTrials(tempt, 4800, 5000), label)
 ggsave(fileName, width = 6, height = 12)
 
+
+# simulated scheduledWait
+set.seed(123)
+for(c in 1 : 2){
+  cond  = conditions[c]
+  if(cond == "HP"){
+    scheduledWaitHPlist = lapply(1 : nRep, function(i) unlist(lapply(1:50, function(x) drawSample(cond))))
+  }else{
+    scheduledWaitLPlist = lapply(1 : nRep, function(i) unlist(lapply(1:50, function(x) drawSample(cond))))
+  }
+}
 # define functions
 simulate = function(modelName, nBlock, nRep, paraTable){
   dir.create("genData/simulation")

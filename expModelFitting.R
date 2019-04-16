@@ -22,6 +22,8 @@ expModelFitting = function(modelName, paras){
   dir.create(sprintf("genData/expModelFitting/%s", modelName))
   model = stan_model(file = sprintf("stanModels/%s.stan", modelName))
   
+  # determine wIni
+  wIni = ifelse(modelName == grepl("R", modelName), 0.4408333, 4.408333)
   # load expData
   allData = loadAllData()
   hdrData = allData$hdrData           
@@ -30,7 +32,7 @@ expModelFitting = function(modelName, paras){
   allIDs = hdrData$ID                   # column of subject IDs
   n = length(allIDs)                    # n
   
-  # extract input arguments from no stree subjects 
+  # load empirical data
   load("genData/expDataAnalysis/blockData.RData")
   idList = unique(blockData$id)
   # n = length(idList)
@@ -49,7 +51,6 @@ expModelFitting = function(modelName, paras){
       trialEarnings = thisTrialData$trialEarnings
       timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
       cond = unique(thisTrialData$condition)
-      wIni = 4.167364 
       fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
       modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
   }

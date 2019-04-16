@@ -20,33 +20,37 @@ transformed data {
 parameters {
   real<lower = 0, upper = 0.3> phi;
   real<lower = 2, upper = 50> tau;
-  real<lower = 0.7, upper = 1> gamma;
+  real<lower = 0, upper = 0.3> phiR;
 }
 transformed parameters{
   // initialize action values 
-  vector[nTimeSteps] Qwait = rep_vector(wIni, nTimeSteps);
-  real Qquit = wIni;
+  vector[nTimeSteps] Qwait = rep_vector(0, nTimeSteps);
+  real Qquit = 0;
+  real Rrate = wIni;
+  
   
   // initialize recordings of action values 
   matrix[nTimeSteps, N] Qwaits = rep_matrix(0, nTimeSteps, N);
   vector[N] Qquits = rep_vector(0, N);
-  
+  vector[N] Rrates = rep_vector(0, N);
   
   // initialize trialReward and nextWaitRateHat
   real trialReward;
   real nextWaitRateHat;
-
-  // define gamma List
-  // we use the 
-  vector[nTimeSteps] gammaList;
-  for(i in 1 : nTimeSteps){
-    gammaList[i] = gamma ^ (nTimeSteps - i);
-  }
   
+  // define toRewardTimeList
+  // we use the 
+  vector[nTimeSteps] toRewardTimeList;
+  for(i in 1 : nTimeSteps){
+    toRewardTimeList[i] = nTimeSteps - i + 1;
+  }
   // fill the first trial of Qwaits and Quits
   Qwaits[,1] = Qwait;
   Qquits[1] = Qquit;
-
+  Rrates[1] = Rrate;
+  
+  // initialize opportunity time length
+  
   //loop over trial
   for(tIdx in 1 : (N -1)){
     // determine thisNActions
@@ -57,28 +61,35 @@ transformed parameters{
     // update and track action values
     nextWaitRateHat =  1 / (1  + exp((Qquit - Qwait[1] - nextCuriosity)* tau));
     if(trialEarnings[tIdx] > 0){ 
-      trialReward = tokenValue + nextWaitRateHat * Qwait[1] * gamma ^(iti / stepDuration) + (1 - nextWaitRateHat) * Qquit * gamma ^(iti / stepDuration);
+      trialReward = tokenValue + nextWaitRateHat * Qwait[1]  + (1 - nextWaitRateHat) * Qquit - Rrate * (iti / stepDuration);
       // given gammaList[nTimeSteps] = 1
-      Qwait[1 : thisNActions] = (1 - phi) * Qwait[1 : thisNActions] + phi * trialReward * gammaList[(nTimeSteps - thisNActions + 1):nTimeSteps];
+      Qwait[1 : thisNActions] = (1 - phi) * Qwait[1 : thisNActions] + phi * (trialReward - Rrate * toRewardTimeList[(nTimeSteps - thisNActions + 1): nTimeSteps]);  
+      Rrate = (1 - phiR) * Rrate + phiR * (trialReward - Rrate * (toRewardTimeList[(nTimeSteps - thisNActions + 1)] + iti/stepDuration));
       # counterfactual thinking 
-      Qquit = (1 - phi) * Qquit + phi * trialReward * gammaList[nTimeSteps - thisNActions + 1] * gamma ^(iti / stepDuration);
+      Qquit = (1 - phi) * Qquit + phi * (trialReward - Rrate * (toRewardTimeList[(nTimeSteps - thisNActions + 1)] + iti/stepDuration));
     }else{
-      trialReward = nextWaitRateHat * Qwait[1] * gamma ^(iti / stepDuration) + (1 - nextWaitRateHat) * Qquit * gamma ^(iti / stepDuration);
+      trialReward = nextWaitRateHat * Qwait[1] + (1 - nextWaitRateHat) * Qquit - Rrate * (iti / stepDuration);
       Qquit =  (1 - phi) * Qquit + phi *  trialReward;
+      Rrate = (1 - phiR) * Rrate + phiR * (trialReward - Rrate * (toRewardTimeList[(nTimeSteps - thisNActions + 2)] + iti/stepDuration));
       if(thisNActions > 1){
-        Qwait[1 : (thisNActions - 1)] = (1 - phi) * Qwait[1 : (thisNActions - 1)] + phi * trialReward * gammaList[(nTimeSteps - thisNActions+1): (nTimeSteps-1)];
+        Qwait[1 : (thisNActions - 1)] = (1 - phi) * Qwait[1 : (thisNActions - 1)] + phi * (trialReward - Rrate * toRewardTimeList[(nTimeSteps - thisNActions + 2): nTimeSteps]);
       }
       # counterfactual thinking 
-      Qquit = (1 - phi) * Qquit + phi * trialReward * gammaList[nTimeSteps - thisNActions + 1] * gamma ^(iti / stepDuration);
+      if(thisNActions > 1){
+        Qquit = (1 - phi) * Qquit + phi * (trialReward - Rrate * (toRewardTimeList[nTimeSteps - thisNActions + 2] + iti/stepDuration));
+      }else{
+        Qquit = (1 - phi) * Qquit + phi * (trialReward - Rrate * (iti/stepDuration));
+      }
     }
     Qwaits[,tIdx+1] = Qwait;
     Qquits[tIdx+1] = Qquit;
+    Rrates[tIdx+1] = Rrate;
   }// end of the loop
 }
 model {
   phi ~ uniform(0, 0.3);
   tau ~ uniform(2, 50);
-  gamma ~ uniform(0.7, 1);
+  phiR ~ uniform(0, 0.3);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){

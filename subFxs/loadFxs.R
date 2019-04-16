@@ -78,13 +78,13 @@ loadAllData = function() {
 # l
 
 loadExpPara = function(modelName, paras){
-  nE = length(paras) + 2
+  nE = length(paras) + 1
   load("genData/expDataAnalysis/blockData.RData")
   blockData = blockData[blockData$blockNum == 1,]
   idList = blockData$id
   condition = blockData$condition
   n = length(idList)
-  nE = (length(paras) + 2) 
+  nE = (length(paras) + 1) 
   expPara = matrix(NA, n, nE * 4)
   for(i in 1 : n){
     ID = idList[i]
@@ -100,7 +100,7 @@ loadExpPara = function(modelName, paras){
     expPara[i, (3 * nE + 1) : (4 * nE)] = junk[,10]
   }
   expPara = data.frame(expPara)
-  junk = c(paras, "LL_all", "lp__")
+  junk = c(paras, "LL_all")
   colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"))
   expPara[["condition"]] = condition
   expPara$id = idList  # needed for left_join

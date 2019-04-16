@@ -24,60 +24,8 @@ expTrialData = allData$trialData
 idList = hdrData$ID
 n = length(idList)
 
-# inputs``
-# simluation 
-paras = c(0.3, 10, 0.8)
-set.seed(231)
-modelName = "curiosityTrial"
-repModelFun = getRepModelFun(modelName)
-nRep = 10# number of repetitions
-trialData = vector(length = n * nRep, mode ='list')
-repNo = matrix(1 : (n * nRep), nrow = n, ncol = nRep)
-for(sIdx in 1 : n){
-  id = idList[[sIdx]] 
-  cond = unique(blockData$condition[blockData$id == id])
-  thisExpTrialData = expTrialData[[id]]
-  thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
-  scheduledWait = thisExpTrialData$scheduledWait
-  for(rIdx in 1 : nRep){
-    tempt = repModelFun(paras, cond, scheduledWait)
-    trialData[[repNo[sIdx, rIdx]]] = tempt
-    # simDistMatrix[,rIdx] = abs(tempt$timeWaited - thisExpTrialData$timeWaited)
-  }
-  # simDist_[[sIdx]] = apply(simDistMatrix, 1, mean)
-  # simDistSd_[[sIdx]] = apply(simDistMatrix, 1, sd)
-}
-
-# case in HP
-# the real model heavily depends on gamma, you can see directly the difference
-# since gamma determine the relationship between Qwait[1] and 
-id = 3
-id = idList[[sIdx]] 
-cond = unique(blockData$condition[blockData$id == id])
-thisExpTrialData = expTrialData[[id]]
-thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
-scheduledWait = thisExpTrialData$scheduledWait
-determine = repModelFun(c(0.02, 100, 0.95), cond, scheduledWait)
-random =  repModelFun(c(0.02, 5, 0.95), cond, scheduledWait)
-trialPlots(determine)
-
-
-for(i in 1:n){
-  sIdx = repNo[i, 1]
-  label = hdrData$condition[hdrData$ID== i]
-  thisTrialData = trialData[[sIdx]]
-  trialPlots(thisTrialData, label)
-  readline("continue")
-  tMax = ifelse(label == "HP", 20, 40)
-  kmGrid = seq(0, tMax, by=0.1) 
-  thisTrialData = trialData[[sIdx]]
-  kmscResults = kmsc(thisTrialData,tMax,label,T,kmGrid)
-  readline("continue")
-  # actionValueViewer(thisTrialData)
-}
-
 # inputs
-modelName = "curiosity"
+modelName = "curiosityTrial"
 # paras = getParas(modelName)
 paras = c("phi", "tau", "gamma")
 # load expPara

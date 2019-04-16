@@ -99,3 +99,11 @@ for(c in 1:2){
   ggsave(sprintf("figures/sample_%s.pdf", cond), width = 9, height = 3)
 }
 
+x = 1 : 30
+curSlope = 0.2
+curIntercept = 2
+y =  curIntercept * exp(-curSlope*(x-1))
+plotData = data.frame(trialNum = x, curiosity = y)
+ggplot(plotData, aes(trialNum, curiosity)) + geom_point() + saveTheme
+ggsave("curiosity.png", width =6, height = 4)
+
