@@ -13,7 +13,7 @@ source("subFxs/repetitionFxs.R")
 source("subFxs/analysisFxs.R") # for analysis
 load("wtwSettings.RData") # used in repetition
 load("wtwSettings.RData")
-load("genData/expDataAnalysis/kmOnGridSess.RData")
+load("genData/expDataAnalysis/kmOnGridBlock.RData")
 
 
 # load raw data 
@@ -29,37 +29,35 @@ modelName = "curiosityTrial"
 # paras = getParas(modelName)
 paras = c("phi", "tau", "gamma")
 # load expPara
-expPara = loadExpPara(modelName, pars)
+expPara = loadExpPara(modelName, paras)
 #tempt= loadExpParaExtra(modelName, pars)
 #expParaMode = tempt$expParaMode
 #expParaMedian = tempt$expParaMedian
 idList = unique(blockData$id)
 n = length(idList)
-RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(pars)]
-EffeCols = which(str_detect(colnames(expPara), "Effe"))[1 : length(pars)]
-useID = idList[apply(expPara[,RhatCols] < 1.1, MARGIN = 1, sum) == length(pars) & 
-                         apply(expPara[,EffeCols] >100, MARGIN = 1, sum) == length(pars)]
+RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(paras)]
+EffeCols = which(str_detect(colnames(expPara), "Effe"))[1 : length(paras)]
+useID = idList[apply(expPara[,RhatCols] < 1.1, MARGIN = 1, sum) == length(paras) & 
+                         apply(expPara[,EffeCols] >100, MARGIN = 1, sum) == length(paras)]
 
 
 
-# simluation 
+# simluation using sample para
 set.seed(231)
 repModelFun = getRepModelFun(modelName)
 nRep = 10# number of repetitions
 trialData = vector(length = n * nRep, mode ='list')
 repNo = matrix(1 : (n * nRep), nrow = n, ncol = nRep)
-# simDist_ =  vector(mode = "list", length = length(useID))
-# simDistSd_ =  vector(mode = "list", length = length(useID))
 for(sIdx in 1 : n){
   id = idList[[sIdx]]
-  #para = as.double(expPara[sIdx, 1 : length(pars)])
+  #para = as.double(expPara[sIdx, 1 : length(paras)])
   paraList = read.table(sprintf("genData/expModelFitting/%s/s%d.txt", modelName, id),sep = ",", row.names = NULL)
   cond = unique(blockData$condition[blockData$id == id])
   thisExpTrialData = expTrialData[[id]]
   thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
   scheduledWait = thisExpTrialData$scheduledWait
   for(rIdx in 1 : nRep){
-    para = as.double(paraList[sample(1 : nrow(paraList), 1), 1 : length(pars)])
+    para = as.double(paraList[sample(1 : nrow(paraList), 1), 1 : length(paras)])
     tempt = repModelFun(para, cond, scheduledWait)
     trialData[[repNo[sIdx, rIdx]]] = tempt
     # simDistMatrix[,rIdx] = abs(tempt$timeWaited - thisExpTrialData$timeWaited)
@@ -118,28 +116,19 @@ ggplot(plotData[plotData$id %in% useID, ],
 fileName = sprintf("figures/expModelRepitation/AUC_AUCRep_%s.pdf", modelName) 
 ggsave(filename = fileName,  width = 6, height = 4)
 
-# plot the boxplot of AUCRep
-plotData = data.frame(AUC = rep(blockData$AUC[blockData$blockNum == 1], nRep),
-                      AUCRep = as.vector(AUCRep_), id = rep(expPara$id, nRep),
-                      condition = rep(blockData$condition[blockData$blockNum == 1], nRep))
-
-AUCRank = AUCSummary %>% group_by(condition) %>%  mutate(AUCRank = order(AUC, decreasing=TRUE))
-plotData$AUCRank = rep(as.factor(AUCRank$AUCRank), each = nRep)
-ggplot(plotData[plotData$id %in% useID, ], aes(AUC, AUCRep)) + geom_point() + facet_grid(~condition)
 
 # survival curve prediction
-for(sIdx in 20 : n){
+for(sIdx in 1 : n){
   thisID = idList[sIdx]
   if(thisID %in% useID){
-    para = as.double(expPara[sIdx, 1 : length(pars)])
+    para = as.double(expPara[sIdx, 1 : length(paras)])
     label = sprintf('Subject %s, %s, %s, LL = %.1f',thisID, hdrData$condition[sIdx], hdrData$stress[sIdx], expPara$LL_all[sIdx])
     label = paste(label, paste(round(para, 3), collapse = "", seq = " "))
     # prepara data 
-    cond = subData$condition[[which(subData$id == thisID)]]
-    kmOnGrid = kmOnGrid_[[which(subData$id == thisID)]]
+    cond = hdrData$condition[hdrData$ID == thisID]
+    kmOnGrid = kmOnGrid_[[which(blockData$id == thisID & blockData$blockNum == 1)]]
     tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
     kmGrid = seq(0, tMax, by = 0.1)
-    kmOnGrid = kmOnGrid_[[which(subData$id == thisID)]]
     kmOnGridRep = kmOnGridRep_[[which(idList== thisID)]]
     junk = data.frame(time = kmGrid, exp = kmOnGrid, rep= kmOnGridRep)
     plotData = gather(junk, source, survival_rate, -time)

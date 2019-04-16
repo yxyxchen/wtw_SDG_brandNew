@@ -22,8 +22,8 @@ cat('Analyzing data for',n,'subjects.\n')
 nBlock = 3
 
 # control which individual-level plots to generate
-plotTrialwiseData = T
-plotKMSC = T
+plotTrialwiseData =F
+plotKMSC = F
 plotWTW = F
 
 # initialize outputs, organised by block
