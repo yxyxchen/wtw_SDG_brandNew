@@ -25,12 +25,14 @@ getUseID = function(blockData, expPara, paras){
   
 getParaComb = function(paraTable){
   paraNames = names(paraTable)
-  nPara = ncol(paraTable)
-  nValue = nrow(paraTable)
+  nPara = length(paraTable)
+  nValue = unlist(lapply(1 : nPara, function(i) length(paraTable[[i]])))
   
-  output = matrix(NA, nrow = nValue ^ nPara, ncol = nPara)
-  for(i in 1 : nPara){
-    output[,i]= rep(rep(paraTable[,i], each = nValue ^ (nPara - i)), nValue ^ (i- 1))
+  output = matrix(NA, nrow = prod(nValue), ncol = nPara)
+  for(pIdx in 1 : nPara){
+    eachRep = ifelse(pIdx >= nPara, 1, prod(nValue[(pIdx+1) : nPara])) # repetition number for each element in the seq
+    seqRep = ifelse(pIdx <= 1, 1, prod(nValue[1 : (pIdx - 1)])) # repetition number for the seq
+    output[,pIdx]= rep(rep(paraTable[[pIdx]], each = eachRep), seqRep)
   }
   colnames(output) = paraNames
   return(output)

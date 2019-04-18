@@ -8,6 +8,7 @@ source("subFxs/helpFxs.R")
 source("subFxs/plotThemes.R")
 source("subFxs/loadFxs.R") 
 source("subFxs/analysisFxs.R")
+source("subFxs/taskFxs.R")
 ###### simulate using the empirical schedualedWait
 # load raw data 
 allData = loadAllData()
@@ -60,12 +61,14 @@ parasList = list(c(0.05, 10, 0.99), c(0.05, 10, 0.90), c(0.05, 10, 0.5))
 nParas = length(parasList)
 nSeq = 5
 set.seed(123)
-longScheduledWaitLPList = lapply(1 : nSeq, function(i) unlist(lapply(1:1000, function(x) drawSample("LP"))))
-nRep = 10
+# longScheduledWaitLPList = lapply(1 : nSeq, function(i) unlist(lapply(1:1000, function(x) drawSample("LP"))))
+# nRep = 10
 
 # one sequences example
-paras1 = c(0.02, 100, 0.8)
+paras1 = c(0.02, 20, 0.90)
 set.seed(123)
+modelName = "curiosityTrial"
+repModelFun = getRepModelFun(modelName)
 longScheduledWaitLP =  unlist(lapply(1:5000, function(x) drawSample("LP")))
 tempt = repModelFun(paras1, "LP", longScheduledWaitLP)
 label = sprintf("tau = %.2f", paras1[2])
@@ -73,6 +76,9 @@ trialPlots(tempt, label)
 fileName = sprintf("zoomIn_%s.png", label)
 trialPlots(truncateTrials(tempt, 4800, 5000), label)
 ggsave(fileName, width = 6, height = 12)
+
+plot(tempt$vaQuits / tempt$vaWaits[1,])
+plot(tempt$vaQuits)
 
 
 # simulated scheduledWait
@@ -85,47 +91,6 @@ for(c in 1 : 2){
     scheduledWaitLPlist = lapply(1 : nRep, function(i) unlist(lapply(1:50, function(x) drawSample(cond))))
   }
 }
-# define functions
-simulate = function(modelName, nBlock, nRep, paraTable){
-  dir.create("genData/simulation")
-  dir.create(sprintf("genData/simulation/%s", modelName))
-  # choose modelFun
-  repModelFun = getRepModelFun(modelName)
-  
-  # determine paraComb
-  paraComb = getParaComb(paraTable)
-  nComb = nrow(paraTable) ^ ncol(paraTable)
-  simNo = matrix(seq(1 : nComb * nRep), nrow = nComb, ncol = nRep)
-  save("paraComb", "nComb", "nRep", "simNo", file = sprintf("genData/simulation/%s/simParas.RData", modelName))
-  # initialize outputs
-  trialData = vector(length = nComb * nRep, mode ='list')
-  # loop over conditions
-  for(condIdx in 1 : 2){
-    cond = conditions[condIdx];
-    if(cond == "HP") scheduledWaitList = scheduledWaitHPlist else scheduledWaitList = scheduledWaitLPlist
-    # loop over repetions 
-    for(h in 1 : nrow(paraComb)){
-      para = as.double(paraComb[h,]);
-      # calculate wIni
-      for(j in 1 : nRep ){
-        scheduledWait = scheduledWaitList[[j]]
-        tempt =repModelFun(para, cond, scheduledWait)
-        trialData[[simNo[h, j]]] = tempt
-      }  
-    }
-    # save 
-    if(cond == "HP"){
-      trialHPData = trialData
-      fileName = sprintf('genData/simulation/%s/trialHPData.RData', modelName)
-      save(trialHPData,file = fileName)
-    }else{
-      trialLPData = trialData
-      fileName =  sprintf('genData/simulation/%s/trialLPData.RData', modelName)
-      save(trialLPData,file = fileName)
-    }
-  }
-}
-
 
 # simulate
 modelName = "full_model" 
