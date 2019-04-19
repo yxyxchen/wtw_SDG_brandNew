@@ -41,7 +41,7 @@ for(sIdx in 1:n){
 ######## calculate waiting threshold using an ideal observer
 ######## estimated from the empirical sequences
 #
-isPlot = F
+isPlot = T
 # inputs
 tMaxs = c(20, 40) # trial durations
 iti = 2 # iti duration in secs
