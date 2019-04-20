@@ -68,6 +68,7 @@ h6 {
 }
 </style>
 
+<link href="data:text/css;charset=utf-8,%0Abody%7B%0Afont%2Dfamily%3A%20Helvetica%3B%0Afont%2Dsize%3A%2012pt%3B%0A%7D%0A%0Ah1%2Ch2%2Ch3%2Ch4%2Ch5%2Ch6%7B%0Afont%2Dsize%3A%2020pt%3B%0A%7D" rel="stylesheet" type="text/css" />
 
 </head>
 
@@ -124,19 +125,31 @@ $(document).ready(function () {
 </div>
 
 
-<p>Loop for each episode, <span class="math inline">\(i = 0, 1, 2, ...\)</span>, :</p>
-<p>//determine <span class="math inline">\(\pi_i\)</span> given <span class="math inline">\(Q_{i-1}\)</span> and curiosity <span class="math inline">\(C_i\)</span><br />
-<span class="math display">\[\pi_i(Wait, S_t) = \frac{1}{exp\left[ tau \cdot Q(Quit, S_t) - Q(Wait, S_t) - C_i \right]}\]</span></p>
-<p>Loop for each step, <span class="math inline">\(t = 0, 1, 2, ...\)</span>:<br />
-Unless <span class="math inline">\(S_{t+1}\)</span> is terminal // either get a reward or quit<br />
-Choose and take <span class="math inline">\(A_t\)</span>, observe <span class="math inline">\(S_{t+1}\)</span> and <span class="math inline">\(R_{t+1}\)</span></p>
-<p><span class="math inline">\(T_i\)</span> = t+1 // total steps spent in the episode (if we want to quit at the begining, <span class="math inline">\(T_i = t-1\)</span> if <span class="math inline">\(A_t = Quit\)</span>)</p>
-<p>Loop for each step of episode, <span class="math inline">\(t = 0, 1, 2, ..., T_i－1\)</span>:<br />
-<span class="math inline">\(G_t = \sum_{k= t+1}^{T_i} \gamma^{k-t-1} R_{k} + \gamma^{T_i- t}V_{i-1}(S_{iti})\)</span><br />
-<span class="math inline">\(Q_{i}(S_t, A_t) = Q_{i-1}(S_t, A_t) + \alpha(G_t - Q_{i-1}(S_t, A_t))\)</span></p>
-<p>// update <span class="math inline">\(V(S_{iti})\)</span><br />
-<span class="math inline">\(V_{i}(S_{iti}) = V_{i-1}(S_{iti}) + \alpha(\gamma^{\tau_{iti}}G_t - V_{i}(S_{iti}))\)</span></p>
-<p>//counterfactual thinking // bellman backup can not be implemented incrementally <span class="math inline">\(Q_{i}(Quit) = Q_{i-1}(Quit) + \alpha(\gamma^{\tau_{iti}+1}G_t - Q_{i}(Quit))\)</span></p>
+<style>
+    p {line-height: 2em;}
+</style>
+<p>Loop for each episode, <span class="math inline">\(i = 0, 1, 2, ...\)</span>, :<br />
+<br />
+<span style="color:white">space</span> <span class="math inline">\(\pi_i(Wait, S_t) = \frac{1}{exp \{ tau \cdot \left[Q(Quit, S_t) - Q(Wait, S_t) - C_i\right] \}}\)</span><br />
+<br />
+<span style="color:white">space</span> Loop for each step, <span class="math inline">\(t = 0, 1, 2, ...\)</span>:<br />
+<span style="color:white">spacespace</span> Unless <span class="math inline">\(S_{t+1}\)</span> is terminal <span style="color:grey"><em># either get a reward or quit</em></span><br />
+<span style="color:white">spacespace</span> Choose and take <span class="math inline">\(A_t\)</span>, observe <span class="math inline">\(S_{t+1}\)</span> and <span class="math inline">\(R_{t+1}\)</span><br />
+<br />
+<span style="color:white">space</span> <span class="math inline">\(T_i\)</span> = t+1 <span style="color:grey"><em># <span class="math inline">\(T_i\)</span> is the step index of the terminal state</em></span><br />
+<span style="color:white">space</span>Loop for each step of episode, <span class="math inline">\(t = 0, 1, 2, ..., T_i－1\)</span>:<br />
+<span style="color:white">spacespace</span><span class="math inline">\(G_t = \sum_{k= t+1}^{T_i} \gamma^{k-t-1} R_{k} + \gamma^{T_i- t}V_{i-1}(S_{iti})\)</span><br />
+<span style="color:white">spacespace</span><span class="math inline">\(Q_{i}(S_t, A_t) = Q_{i-1}(S_t, A_t) + \alpha(G_t - Q_{i-1}(S_t, A_t))\)</span><br />
+<br />
+<span style="color:white">space</span><span class="math inline">\(V_{i}(S_{iti}) = V_{i-1}(S_{iti}) + \alpha(\gamma^{\tau_{iti}}G_t - V_{i}(S_{iti}))\)</span><span style="color:grey"><em># update <span class="math inline">\(V(S_{iti})\)</span></em> </span><br />
+<br />
+<span style="color:white">space</span><span class="math inline">\(Q_{i}(Quit) = Q_{i-1}(Quit) + \alpha(\gamma^{\tau_{iti}+1}G_t - Q_{i}(Quit))\)</span><span style="color:grey"><em># counterfactual thinking</em> </span></p>
+<div id="notes" class="section level3">
+<h3>notes:</h3>
+<p>[1] currently, we take each timestep as an undividable time unit and both waiting and quiting for one timestep cost one unit opportunity cost. It is equivalent to both quiting at and waiting until the end of the timestep.<br />
+[2] accoring to the Sutton&amp;Barto book, <span class="math inline">\(R_{t+1}\)</span> in Qlearning is not discounted in G_{t} in Qlearning yet is discounted in Rlearning. [3] currently, <span class="math inline">\(V(S_{iti})\)</span> is asypototically equal to the average discounted rewards <span class="math inline">\(J(\pi)\)</span>, and <span class="math inline">\(Q(quit)\)</span> is asypototically equal to <span class="math inline">\(\gamma J(\pi)\)</span>.<br />
+[4] The counterfactual learning component is important. Without it, the agent will only increase Qwait then he continously wait and get rewards, which leads to overpersistence. Also, the agent will decrease Qwait more than Qquit when he continously quit early and get nothing, which leads to underpersistence.</p>
+</div>
 
 
 
