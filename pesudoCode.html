@@ -126,13 +126,14 @@ $(document).ready(function () {
 
 <p>Loop for each episode, <span class="math inline">\(i = 0, 1, 2, ...\)</span>, :</p>
 <p>//determine <span class="math inline">\(\pi_i\)</span> given <span class="math inline">\(Q_{i-1}\)</span> and curiosity <span class="math inline">\(C_i\)</span><br />
-<span class="math inline">\(\pi_i(Wait, S_t) = \frac{1}{exp\left[ tau \cdot Q(Quit, S_t) - Q(Wait, S_t) - C_i \right]}\)</span></p>
+<span class="math display">\[\pi_i(Wait, S_t) = \frac{1}{exp\left[ tau \cdot Q(Quit, S_t) - Q(Wait, S_t) - C_i \right]}\]</span></p>
 <p>Loop for each step, <span class="math inline">\(t = 0, 1, 2, ...\)</span>:<br />
 Unless <span class="math inline">\(S_{t+1}\)</span> is terminal // either get a reward or quit<br />
 Choose and take <span class="math inline">\(A_t\)</span>, observe <span class="math inline">\(S_{t+1}\)</span> and <span class="math inline">\(R_{t+1}\)</span></p>
 <p><span class="math inline">\(T_i\)</span> = t+1 // total steps spent in the episode (if we want to quit at the begining, <span class="math inline">\(T_i = t-1\)</span> if <span class="math inline">\(A_t = Quit\)</span>)</p>
 <p>Loop for each step of episode, <span class="math inline">\(t = 0, 1, 2, ..., T_i－1\)</span>:<br />
-<span class="math inline">\(G_t = \sum_{k= t+1}^{T_i} \gamma^{k-t-1} R_{k} + \gamma^{T_i- t}V_{i-1}(S_{iti})\)</span> <span class="math inline">\(Q_{i}(S_t, A_t) = Q_{i-1}(S_t, A_t) + \alpha(G_t - Q_{i-1}(S_t, A_t))\)</span></p>
+<span class="math inline">\(G_t = \sum_{k= t+1}^{T_i} \gamma^{k-t-1} R_{k} + \gamma^{T_i- t}V_{i-1}(S_{iti})\)</span><br />
+<span class="math inline">\(Q_{i}(S_t, A_t) = Q_{i-1}(S_t, A_t) + \alpha(G_t - Q_{i-1}(S_t, A_t))\)</span></p>
 <p>// update <span class="math inline">\(V(S_{iti})\)</span><br />
 <span class="math inline">\(V_{i}(S_{iti}) = V_{i-1}(S_{iti}) + \alpha(\gamma^{\tau_{iti}}G_t - V_{i}(S_{iti}))\)</span></p>
 <p>//counterfactual thinking // bellman backup can not be implemented incrementally <span class="math inline">\(Q_{i}(Quit) = Q_{i-1}(Quit) + \alpha(\gamma^{\tau_{iti}+1}G_t - Q_{i}(Quit))\)</span></p>
