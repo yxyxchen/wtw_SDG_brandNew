@@ -18,14 +18,33 @@ expTrialData = allData$trialData
 idList = hdrData$ID
 n = length(idList)
 
-# simluation
-paras = c(0.01, 10, 0.9) # remember to change the paras
-set.seed(231)
-modelName = "curiosityTrial"
+##### get a sense of the model ######
+# simluation for one para and one scheduledWait from simulation or ...
+paras = c(1.41018006294953e-05, 13.3135101626043, 0.817994762050947)
+modelName = "curiosityTrialR"
 repModelFun = getRepModelFun(modelName)
-nRep = 1# number of repetitions
+sIdx = 1
+id = idList[[sIdx]]
+cond = hdrData$cond[hdrData$ID == id]
+thisExpTrialData = expTrialData[[id]]
+thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
+scheduledWait = thisExpTrialData$scheduledWait
+set.seed(123)
+# cond = "LP"
+# scheduledWait = unlist(lapply(1:1000, function(x) drawSample(cond)))
+tempt = repModelFun(paras, cond, scheduledWait)
+plot(tempt$Rrates)
+trialPlots(tempt, cond)
+  
+##### get a sense of the model from a lot scheduledWait######
+# simluation for one para and a lot scheduledWait
+paras = c(0.02, 10, 0.001) 
+modelName = "curiosityTrialR"
+repModelFun = getRepModelFun(modelName)
+nRep = 1 # number of repetitions
 trialData = vector(length = n * nRep, mode ='list')
 repNo = matrix(1 : (n * nRep), nrow = n, ncol = nRep)
+set.seed(231)
 for(sIdx in 1 : n){
   id = idList[[sIdx]] 
   cond = hdrData$cond[hdrData$ID == id]
@@ -35,10 +54,7 @@ for(sIdx in 1 : n){
   for(rIdx in 1 : nRep){
     tempt = repModelFun(paras, cond, scheduledWait)
     trialData[[repNo[sIdx, rIdx]]] = tempt
-    # simDistMatrix[,rIdx] = abs(tempt$timeWaited - thisExpTrialData$timeWaited)
   }
-  # simDist_[[sIdx]] = apply(simDistMatrix, 1, mean)
-  # simDistSd_[[sIdx]] = apply(simDistMatrix, 1, sd)
 }
 
 for(i in 1:n){

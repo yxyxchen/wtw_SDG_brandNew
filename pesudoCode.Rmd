@@ -8,26 +8,57 @@ output:
 <style>
     p {line-height: 2em;}
 </style>
-
+### Qlearning
 Loop for each episode, $i = 0, 1, 2, ...$, :   
 \
-<span style="color:white">space</span> $\pi_i(Wait, S_t) = \frac{1}{exp \{ tau \cdot \left[Q(Quit, S_t) - Q(Wait, S_t) - C_i\right] \}}$  
+<span style="color:white">space</span> $\pi_i(Wait, S_t) = \frac{1}{1 + exp \{ tau \cdot \left[Q(Quit, S_t) - Q(Wait, S_t) - C_i\right] \}}$  
 \
-<span style="color:white">space</span> Loop for each step, $t = 0, 1, 2, ...$:  
-<span style="color:white">spacespace</span> Unless $S_{t+1}$ is terminal <span style="color:grey">*#    either get a reward or quit*</span>  
+<span style="color:white">space</span> Loop for each step, $t = 0, 1, 2, ...$:    
 <span style="color:white">spacespace</span> Choose and take $A_t$, observe $S_{t+1}$ and $R_{t+1}$  
+<span style="color:white">spacespace</span> if $S_{t+1}$ is terminal:<span style="color:grey">*#    either get a reward or quit*</span>   
+<span style="color:white">spacespacespace</span> $T_i = t+1$<span style="color:grey">*#    $T_i$ is the step index of the terminal state*</span>   
+<span style="color:white">spacespacespace</span> break  
 \
-<span style="color:white">space</span> $T_i$ = t+1 <span style="color:grey">*#    $T_i$ is the step index of the terminal state*</span>  
 <span style="color:white">space</span>Loop for each step of episode, $t = 0, 1, 2, ..., T_i－1$:  
 <span style="color:white">spacespace</span>$G_t = \sum_{k= t+1}^{T_i} \gamma^{k-t-1} R_{k} + \gamma^{T_i- t}V_{i-1}(S_{iti})$     
-<span style="color:white">spacespace</span>$Q_{i}(S_t, A_t) = Q_{i-1}(S_t, A_t) + \alpha(G_t - Q_{i-1}(S_t, A_t))$  
+<span style="color:white">spacespace</span>$Q_{i}(S_t, A_t) = Q_{i-1}(S_t, A_t) + \alpha(G_t - Q_{i-1}(S_t, A_t))$    
 \
-<span style="color:white">space</span>$V_{i}(S_{iti}) = V_{i-1}(S_{iti}) + \alpha(\gamma^{\tau_{iti}}G_t - V_{i}(S_{iti}))$<span style="color:grey">*#    update $V(S_{iti})$* </span>    
+<span style="color:white">space</span>$Q_{i}(Quit) = Q_{i-1}(Quit) + \alpha(\gamma^{\tau_{iti}+1}G_0 - Q_{i-1}(Quit))$<span style="color:grey">*#    counterfactual thinking* </span>  
 \
-<span style="color:white">space</span>$Q_{i}(Quit) = Q_{i-1}(Quit) + \alpha(\gamma^{\tau_{iti}+1}G_t - Q_{i}(Quit))$<span style="color:grey">*#    counterfactual thinking* </span>
+<span style="color:white">space</span>$\delta_{iti} = \gamma^{\tau_{iti}} G_0 - V_{i-1}(S_{iti})$  
+<span style="color:white">space</span>$V_{i}(S_{iti}) = V_{i-1}(S_{iti}) + \alpha\delta_{iti}$<span style="color:grey">*#    update $V(S_{iti})$* </span>    
 
 ### notes:
-[1] currently, we take each timestep as an undividable time unit and both waiting and quiting for one timestep cost one unit opportunity cost. It is equivalent to both quiting at and waiting until the end of the timestep.      
-[2] accoring to the Sutton&Barto book, $R_{t+1}$ in Qlearning is not discounted in G_{t} in Qlearning yet is discounted in Rlearning.
-[3] currently, $V(S_{iti})$ is asypototically equal to the average discounted rewards $J(\pi)$, and $Q(quit)$ is asypototically equal to $\gamma J(\pi)$.  
-[4] The counterfactual learning component is important. Without it, the agent will only increase Qwait then he continously wait and get rewards, which leads to overpersistence. Also, the agent will decrease Qwait more than Qquit when he continously quit early and get nothing, which leads to underpersistence. 
+[1] index starts from 0. The events follow $S_0, A_0, R_1,...$. Therefore, we the reward index - the action index is the gap. In Qlearning, discounting factor is $\gamma^{gap-1} and in Rlearning, discounting factor is $r(\pi) * gap$. Additionally, if rewards occur at the end only, $G_t = \gamma^{k} G_{t+k}$  
+[2] When t starts from 1 instead of 0, there are two differences. First, all loops start from 1 instead of 0. Second, all $G_0$ in the last two updates becomes $G_1$   
+[3] currently, we take each timestep as an undividable time unit and both waiting and quiting for one timestep cost one unit opportunity cost. It is equivalent to both quiting at and waiting until the end of the timestep. 
+[4] currently, $V(S_{iti})$ is asypototically equal to the average discounted rewards $J(\pi)$, and $Q(quit)$ is asypototically equal to $\gamma J(\pi)$.  
+[5] The counterfactual learning component is important. Without it, the agent will only increase Qwait then he continously wait and get rewards, which leads to overpersistence. Also, the agent will decrease Qwait more than Qquit when he continously quit early and get nothing, which leads to underpersistence. 
+
+### Rlearning
+Loop for each episode, $i = 0, 1, 2, ...$, :   
+\
+<span style="color:white">space</span> $\pi_i(Wait, S_t) = \frac{1}{1 + exp \{ tau \cdot \left[Q(Quit, S_t) - Q(Wait, S_t) - C_i\right] \}}$  
+\
+<span style="color:white">space</span> Loop for each step, $t = 0, 1, 2, ...$:    
+<span style="color:white">spacespace</span> Choose and take $A_t$, observe $S_{t+1}$ and $R_{t+1}$  
+<span style="color:white">spacespace</span> if $S_{t+1}$ is terminal:<span style="color:grey">*#    either get a reward or quit*</span>   
+<span style="color:white">spacespacespace</span> $T_i = t+1$<span style="color:grey">*#    $T_i$ is the step index of the terminal state*</span>   
+<span style="color:white">spacespacespace</span> break  
+\
+<span style="color:white">space</span>Loop for each step of episode, $t = 0, 1, 2, ..., T_i－1$:  
+<span style="color:white">spacespace</span><span style="color:red">$G_t = \sum_{k= t+1}^{T_i} R_{k} - \bar R_{i-1} * (T_i - t) + V_{i-1}(S_{iti})$</span>     
+<span style="color:white">spacespace</span>$Q_{i}(S_t, A_t) = Q_{i-1}(S_t, A_t) + \alpha(G_t - Q_{i-1}(S_t, A_t))$  
+\
+<span style="color:white">space</span><span style="color:red">$Q_{i}(Quit) = Q_{i-1}(Quit) + \alpha(G_0 - \bar R_{i-1} * (\tau_{iti}+1) - Q_{i-1}(Quit))$</span><span style="color:grey">*#    counterfactual thinking* </span>   
+\
+<span style="color:red"><span style="color:white">space</span>$\delta = G_0 - \bar R_{i-1} * \tau_{iti}- V_{i-1}(S_{iti})$</span><span style="color:grey">        
+<span style="color:red"><span style="color:white">space</span>$V_{i}(S_{iti}) = V_{i-1}(S_{iti}) + \alpha \delta$</span><span style="color:grey">   
+<span style="color:red"><span style="color:white">space</span>$\bar R_{i} = \bar R_{i-1} + \beta \delta$</span><span style="color:grey"> *#    update $V(S_{iti})$ and $\bar R$* </span> 
+
+### notes:
+[1] The differences are in red
+[2] Here we save $\delta_{iti}$ first, since once we update $V_{i-1}(iti)$ to $V_{i}(iti)$, it is hard for us to use $V_{i-1}(iti)$ to update $\bar R$. It is not necessary in pesudo code, Here I just want to keep consistenet with the real code
+
+
+

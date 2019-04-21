@@ -128,27 +128,55 @@ $(document).ready(function () {
 <style>
     p {line-height: 2em;}
 </style>
+<div id="qlearning" class="section level3">
+<h3>Qlearning</h3>
 <p>Loop for each episode, <span class="math inline">\(i = 0, 1, 2, ...\)</span>, :<br />
 <br />
 <span style="color:white">space</span> <span class="math inline">\(\pi_i(Wait, S_t) = \frac{1}{exp \{ tau \cdot \left[Q(Quit, S_t) - Q(Wait, S_t) - C_i\right] \}}\)</span><br />
 <br />
 <span style="color:white">space</span> Loop for each step, <span class="math inline">\(t = 0, 1, 2, ...\)</span>:<br />
-<span style="color:white">spacespace</span> Unless <span class="math inline">\(S_{t+1}\)</span> is terminal <span style="color:grey"><em># either get a reward or quit</em></span><br />
 <span style="color:white">spacespace</span> Choose and take <span class="math inline">\(A_t\)</span>, observe <span class="math inline">\(S_{t+1}\)</span> and <span class="math inline">\(R_{t+1}\)</span><br />
+<span style="color:white">spacespace</span> if <span class="math inline">\(S_{t+1}\)</span> is terminal:<span style="color:grey"><em># either get a reward or quit</em></span><br />
+<span style="color:white">spacespacespace</span> <span class="math inline">\(T_i = t+1\)</span><span style="color:grey"><em># <span class="math inline">\(T_i\)</span> is the step index of the terminal state</em></span><br />
+<span style="color:white">spacespacespace</span> break<br />
 <br />
-<span style="color:white">space</span> <span class="math inline">\(T_i\)</span> = t+1 <span style="color:grey"><em># <span class="math inline">\(T_i\)</span> is the step index of the terminal state</em></span><br />
 <span style="color:white">space</span>Loop for each step of episode, <span class="math inline">\(t = 0, 1, 2, ..., T_i－1\)</span>:<br />
 <span style="color:white">spacespace</span><span class="math inline">\(G_t = \sum_{k= t+1}^{T_i} \gamma^{k-t-1} R_{k} + \gamma^{T_i- t}V_{i-1}(S_{iti})\)</span><br />
 <span style="color:white">spacespace</span><span class="math inline">\(Q_{i}(S_t, A_t) = Q_{i-1}(S_t, A_t) + \alpha(G_t - Q_{i-1}(S_t, A_t))\)</span><br />
 <br />
-<span style="color:white">space</span><span class="math inline">\(V_{i}(S_{iti}) = V_{i-1}(S_{iti}) + \alpha(\gamma^{\tau_{iti}}G_t - V_{i}(S_{iti}))\)</span><span style="color:grey"><em># update <span class="math inline">\(V(S_{iti})\)</span></em> </span><br />
+<span style="color:white">space</span><span class="math inline">\(Q_{i}(Quit) = Q_{i-1}(Quit) + \alpha(\gamma^{\tau_{iti}+1}G_0 - Q_{i-1}(Quit))\)</span><span style="color:grey"><em># counterfactual thinking</em> </span><br />
 <br />
-<span style="color:white">space</span><span class="math inline">\(Q_{i}(Quit) = Q_{i-1}(Quit) + \alpha(\gamma^{\tau_{iti}+1}G_t - Q_{i}(Quit))\)</span><span style="color:grey"><em># counterfactual thinking</em> </span></p>
+<span style="color:white">space</span><span class="math inline">\(\delta_{iti} = \gamma^{\tau_{iti}} G_0 - V_{i-1}(S_{iti})\)</span><br />
+<span style="color:white">space</span><span class="math inline">\(V_{i}(S_{iti}) = V_{i-1}(S_{iti}) + \alpha\delta_{iti}\)</span><span style="color:grey"><em># update <span class="math inline">\(V(S_{iti})\)</span></em> </span></p>
+</div>
+<div id="rlearning" class="section level3">
+<h3>Rlearning</h3>
+<p>Loop for each episode, <span class="math inline">\(i = 0, 1, 2, ...\)</span>, :<br />
+<br />
+<span style="color:white">space</span> <span class="math inline">\(\pi_i(Wait, S_t) = \frac{1}{exp \{ tau \cdot \left[Q(Quit, S_t) - Q(Wait, S_t) - C_i\right] \}}\)</span><br />
+<br />
+<span style="color:white">space</span> Loop for each step, <span class="math inline">\(t = 0, 1, 2, ...\)</span>:<br />
+<span style="color:white">spacespace</span> Choose and take <span class="math inline">\(A_t\)</span>, observe <span class="math inline">\(S_{t+1}\)</span> and <span class="math inline">\(R_{t+1}\)</span><br />
+<span style="color:white">spacespace</span> if <span class="math inline">\(S_{t+1}\)</span> is terminal:<span style="color:grey"><em># either get a reward or quit</em></span><br />
+<span style="color:white">spacespacespace</span> <span class="math inline">\(T_i = t+1\)</span><span style="color:grey"><em># <span class="math inline">\(T_i\)</span> is the step index of the terminal state</em></span><br />
+<span style="color:white">spacespacespace</span> break<br />
+<br />
+<span style="color:white">space</span>Loop for each step of episode, <span class="math inline">\(t = 0, 1, 2, ..., T_i－1\)</span>:<br />
+<span style="color:white">spacespace</span><span style="color:red"><span class="math inline">\(G_t = \sum_{k= t+1}^{T_i} R_{k} - \bar R_{i-1} * (T_i - t) + V_{i-1}(S_{iti})\)</span></span><br />
+<span style="color:white">spacespace</span><span class="math inline">\(Q_{i}(S_t, A_t) = Q_{i-1}(S_t, A_t) + \alpha(G_t - Q_{i-1}(S_t, A_t))\)</span><br />
+<br />
+<span style="color:white">space</span><span style="color:red"><span class="math inline">\(Q_{i}(Quit) = Q_{i-1}(Quit) + \alpha(G_0 - \bar R_{i-1} * (\tau_{iti}+1) - Q_{i-1}(Quit))\)</span></span><span style="color:grey"><em># counterfactual thinking</em> </span><br />
+<br />
+<span style="color:red"><span style="color:white">space</span><span class="math inline">\(\delta = G_0 - \bar R_{i-1} * \tau_{iti}- V_{i-1}(S_{iti})\)</span></span><span style="color:grey"><br />
+<span style="color:red"><span style="color:white">space</span><span class="math inline">\(V_{i}(S_{iti}) = V_{i-1}(S_{iti}) + \alpha \delta\)</span></span><span style="color:grey"><br />
+<span style="color:red"><span style="color:white">space</span><span class="math inline">\(\bar R_{i} = \bar R_{i-1} + \beta \delta\)</span></span><span style="color:grey"> <em># update <span class="math inline">\(V(S_{iti})\)</span> and <span class="math inline">\(\bar R\)</span></em> </span></p>
+</div>
 <div id="notes" class="section level3">
 <h3>notes:</h3>
-<p>[1] currently, we take each timestep as an undividable time unit and both waiting and quiting for one timestep cost one unit opportunity cost. It is equivalent to both quiting at and waiting until the end of the timestep.<br />
-[2] accoring to the Sutton&amp;Barto book, <span class="math inline">\(R_{t+1}\)</span> in Qlearning is not discounted in G_{t} in Qlearning yet is discounted in Rlearning. [3] currently, <span class="math inline">\(V(S_{iti})\)</span> is asypototically equal to the average discounted rewards <span class="math inline">\(J(\pi)\)</span>, and <span class="math inline">\(Q(quit)\)</span> is asypototically equal to <span class="math inline">\(\gamma J(\pi)\)</span>.<br />
-[4] The counterfactual learning component is important. Without it, the agent will only increase Qwait then he continously wait and get rewards, which leads to overpersistence. Also, the agent will decrease Qwait more than Qquit when he continously quit early and get nothing, which leads to underpersistence.</p>
+<p>[1] index starts from 0. The events follow <span class="math inline">\(S_0, A_0, R_1,...\)</span>. Therefore, we the reward index - the action index is the gap. In Qlearning, discounting factor is $^{gap-1} and in Rlearning, discounting factor is <span class="math inline">\(r(\pi) * gap\)</span>. Additionally, if rewards occur at the end only, <span class="math inline">\(G_t = \gamma^{k} G_{t+k}\)</span><br />
+[2] When t starts from 1 instead of 0, there are two differences. First, all loops start from 1 instead of 0. Second, all <span class="math inline">\(G_0\)</span> in the last two updates becomes <span class="math inline">\(G_1\)</span><br />
+[3] currently, we take each timestep as an undividable time unit and both waiting and quiting for one timestep cost one unit opportunity cost. It is equivalent to both quiting at and waiting until the end of the timestep. [4] currently, <span class="math inline">\(V(S_{iti})\)</span> is asypototically equal to the average discounted rewards <span class="math inline">\(J(\pi)\)</span>, and <span class="math inline">\(Q(quit)\)</span> is asypototically equal to <span class="math inline">\(\gamma J(\pi)\)</span>.<br />
+[5] The counterfactual learning component is important. Without it, the agent will only increase Qwait then he continously wait and get rewards, which leads to overpersistence. Also, the agent will decrease Qwait more than Qquit when he continously quit early and get nothing, which leads to underpersistence.</p>
 </div>
 
 
