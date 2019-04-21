@@ -8,7 +8,7 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
   tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
   condIdx = ifelse(cond =="HP", 1, 2)
   nChain = 4
-  nIter = 5000
+  nIter = 500
   nTimeSteps = tMax / stepDuration
   Ts = round(ifelse(trialEarnings >0, ceiling(timeWaited / stepDuration) + 1, floor(timeWaited / stepDuration) + 1))
   # If using the least distance loss function
