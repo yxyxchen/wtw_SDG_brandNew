@@ -1,8 +1,12 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
 Loop for each episode, $i = 0, 1, 2, ...$, : 
 
 //determine $\pi_i$ given $Q_{i-1}$ and curiosity $C_i$  
-$\pi_i(Wait, S_t) = \frac{1}{exp\left[ tau \cdot Q(Quit, S_t) - Q(Wait, S_t) - C_i \right]}$
-
+<span style="color:white">space</span>$\pi_i(Wait, S_t) = \frac{1}{exp\left[ tau \cdot Q(Quit, S_t) - Q(Wait, S_t) - C_i \right]}$
 Loop for each step, $t = 0, 1, 2, ...$:  
 Unless $S_{t+1}$ is terminal // either get a reward or quit  
 Choose and take $A_t$, observe $S_{t+1}$ and $R_{t+1}$  
@@ -19,3 +23,7 @@ $V_{i}(S_{iti}) = V_{i-1}(S_{iti}) + \alpha(\gamma^{\tau_{iti}}G_t - V_{i}(S_{it
 //counterfactual thinking
 // bellman backup can not be implemented incrementally 
 $Q_{i}(Quit) = Q_{i-1}(Quit) + \alpha(\gamma^{\tau_{iti}+1}G_t - Q_{i}(Quit))$
+
+
+
+
