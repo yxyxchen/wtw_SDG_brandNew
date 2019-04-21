@@ -10,10 +10,7 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
   nChain = 4
   nIter = 5000
   nTimeSteps = tMax / stepDuration
-  # if gets the reward, then make waiting decisions for ceiling(timeWaited/stepDuration) steps
-  # if doesn't get the reward, then make waiting decisions for floor(timeWaited/stepDuration) steps
-  # and quit at floor(timeWaited/stepDuration) + 1 steps 
-  nActionsPerTrial = round(ifelse(trialEarnings >0, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1))
+  Ts = round(ifelse(trialEarnings >0, ceiling(timeWaited / stepDuration) + 1, floor(timeWaited / stepDuration) + 1))
   # If using the least distance loss function
   # nScheduledWaitPoints = ceiling(scheduledWait / stepDuration)
   data_list <- list(tMax = tMax,
@@ -23,12 +20,12 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
                     N = length(timeWaited),
                     timeWaited = timeWaited,
                     trialEarnings = trialEarnings,
-                    nActionsPerTrial = nActionsPerTrial)
+                    Ts = Ts)
   fit = sampling(object = model, data = data_list, cores = min(nChain, 3), chains = nChain,
                iter = nIter) 
   # extract parameters
   extractedPara = fit %>%
-    rstan::extract(permuted = F, pars = c(pars, "LL_all"))
+    rstan::extract(permuted = F, pars = c("Qwait[1]"))
   # save sampling sequences
   tempt = extractedPara %>%
     adply(2, function(x) x) %>%  # change arrays into 2-d dataframe 

@@ -1,5 +1,5 @@
 # define functions
-simulate = function(modelName, nRep, paraTable, schedueledWaitList, cond){
+simulate = function(modelName, nRep, paraTable, scheduledWaitList, cond){
   # create the output file
   dir.create("genData/simulation")
   dir.create(sprintf("genData/simulation/%s", modelName))
@@ -10,7 +10,7 @@ simulate = function(modelName, nRep, paraTable, schedueledWaitList, cond){
   # determine paraComb and nSeq
   paraComb = getParaComb(paraTable)
   nComb = length(paraComb) / length(paraTable)
-  nSeq = length(schedueledWaitList)
+  nSeq = length(scheduledWaitList)
   
   # determine simNo
   simNo = array(t(seq(1 : (nComb * nSeq * nRep))), dim = c(nRep, nSeq, nComb)) 
