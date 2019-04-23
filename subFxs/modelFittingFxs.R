@@ -25,7 +25,7 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
                iter = nIter) 
   # extract parameters
   extractedPara = fit %>%
-    rstan::extract(permuted = F, pars = c("Qwait[1]"))
+    rstan::extract(permuted = F, pars = pars)
   # save sampling sequences
   tempt = extractedPara %>%
     adply(2, function(x) x) %>%  # change arrays into 2-d dataframe 

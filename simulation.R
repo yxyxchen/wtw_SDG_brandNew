@@ -20,8 +20,8 @@ n = length(idList)
 
 ##### get a sense of the model ######
 # simluation for one para and one scheduledWait from simulation or ...
-paras = c(1.41018006294953e-05, 13.3135101626043, 0.817994762050947)
-modelName = "curiosityTrialR"
+paras = c(0.01, 5, 0.8)
+modelName = "curiosityTrial"
 repModelFun = getRepModelFun(modelName)
 sIdx = 1
 id = idList[[sIdx]]
@@ -33,9 +33,11 @@ set.seed(123)
 # cond = "LP"
 # scheduledWait = unlist(lapply(1:1000, function(x) drawSample(cond)))
 tempt = repModelFun(paras, cond, scheduledWait)
-plot(tempt$Rrates)
 trialPlots(tempt, cond)
-  
+
+plot(tempt$Rrates)
+
+
 ##### get a sense of the model from a lot scheduledWait######
 # simluation for one para and a lot scheduledWait
 paras = c(0.02, 10, 0.001) 

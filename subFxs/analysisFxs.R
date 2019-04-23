@@ -104,6 +104,60 @@ truncateTrials = function(data, startTidx, endTidx){
   return(outputs)
 }
 
+# willingness to wait time-series
+wtwTS <- function(blockData, tGrid, wtwCeiling, blockLabel, plotWTW) {
+  trialWTW = numeric(length = length(blockData$trialEarnings)) # initialize the per-trial estimate of WTW
+  quitIdx = blockData$trialEarnings == 0
+  # use either the rewardTime (for reward trials) or time waited (for quit trials)
+  #   (not using time waited for reward trials because this includes the post-reward RT)
+  timeWaited = blockData$scheduledWait # use rewardtime make more sense but sometime nan
+  timeWaited[quitIdx] = blockData$timeWaited[quitIdx]
+  ### find the longest time waited up through the first quit trial
+  #   (or, if there were no quit trials, the longest time waited at all)
+  #   that will be the WTW estimate for all trials prior to the first quit
+  firstQuit = which(quitIdx)[1]
+  if (is.na(firstQuit)) {firstQuit = length(blockData$trialEarnings)} # if no quit, set to the last trial
+  currentWTW = max(timeWaited[1:firstQuit])
+  thisTrialIdx = firstQuit - 1
+  trialWTW[1:thisTrialIdx] = currentWTW
+  ### iterate through the remaining trials, updating currentWTW
+  while (thisTrialIdx < length(blockData$trialEarnings)) {
+    thisTrialIdx = thisTrialIdx + 1
+    if (quitIdx[thisTrialIdx]) {currentWTW = timeWaited[thisTrialIdx]}
+    else {currentWTW = max(currentWTW, timeWaited[thisTrialIdx])}
+    trialWTW[thisTrialIdx] = currentWTW
+  }
+  ### impose a ceiling value, since trial durations exceeding some value may be infrequent
+  trialWTW = pmin(trialWTW, wtwCeiling)
+  ### convert from per-trial to per-second over the course of the block
+  timeWTW = numeric(length = length(tGrid)) # initialize output
+  binStartIdx = 1
+  thisTrialIdx = 0
+  while (thisTrialIdx < length(blockData$trialEarnings)) {
+    thisTrialIdx = thisTrialIdx + 1
+    # make no recordings if quit immediately
+    if(blockData$timeWaited[thisTrialIdx] > 0){
+      binEndTime = blockData$sellTime[thisTrialIdx] 
+      binEndIdx = max(which(tGrid < binEndTime)) # last grid point that falls within this trial
+      timeWTW[binStartIdx:binEndIdx] = trialWTW[thisTrialIdx]
+      binStartIdx = binEndIdx + 1
+    }
+  }
+  # extend the final value to the end of the vector
+  timeWTW[binStartIdx:length(timeWTW)] = trialWTW[thisTrialIdx]
+  
+  ### for testing
+  # for testing: plot trialWTW on top of an individual's trialwise plot
+  if(plotWTW){
+    # for testing: plot timeWTW
+    p = ggplot(data.frame(tGrid, timeWTW), aes(tGrid, timeWTW)) + geom_line() +
+      xlab("Time in block (s)") + ylab("WTW (s)") + ggtitle(sprintf('WTW : %s', blockLabel)) +
+      displayTheme
+    print(p)
+  }
+  return(timeWTW)
+}
+
 # correlation plot
 # the first col of plotData is x, the second col is y, the third col is the group
 plotCorrelation = function(data, dotColor, cor.method, isRank){

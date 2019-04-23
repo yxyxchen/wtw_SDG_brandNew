@@ -16,11 +16,12 @@ transformed data {
   real iti = 2;
   real tokenValue = 10;
   int totalSteps = sum(Ts) - N;
+  real phiR = 0.005;
   }
 parameters {
   real<lower = 0, upper = 0.3> phi;
   real<lower = 2, upper = 50> tau;
-  real<lower = 0, upper = 0.3> phiR;
+  //real<lower = 0, upper = 0.3> phiR;
 }
 transformed parameters{
   // initialize action values 
@@ -86,7 +87,7 @@ transformed parameters{
 model {
   phi ~ uniform(0, 0.3);
   tau ~ uniform(2, 50);
-  phiR ~ uniform(0, 0.3);
+  //phiR ~ uniform(0, 0.3);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){

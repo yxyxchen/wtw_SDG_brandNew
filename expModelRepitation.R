@@ -27,7 +27,7 @@ n = length(idList)
 # inputs
 modelName = "curiosityTrialR"
 # paras = getParas(modelName)
-paras = c("phi", "tau", "phiRs")
+paras = c("phi", "tau", "phiR")
 # load expPara
 expPara = loadExpPara(modelName, paras)
 #tempt= loadExpParaExtra(modelName, pars)
