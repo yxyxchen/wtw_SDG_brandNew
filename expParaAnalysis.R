@@ -6,11 +6,13 @@ library("dplyr")
 library("Hmisc")
 load("wtwSettings.RData")
 
-# load experimental data
+# load blockdata data
 load("genData/expDataAnalysis/blockData.RData")
 blockData = blockData[blockData$blockNum == 1,]
 idList = unique(blockData$id) 
 n = length(idList)
+
+
 plotParaAUC = function(expPara, paraName, blockData, useID){
   paraColor = paraColors[[paraName]]
   # subset data
@@ -40,14 +42,15 @@ plotParaAUC = function(expPara, paraName, blockData, useID){
   textColors = c(ifelse(pHP < 0.05, "red", "blue"), ifelse(pLP < 0.05, "red", "blue"))
   textData = data.frame(label = c(paste(rhoHP, "(p =", pHP, ")"), paste(rhoLP, "(p =", pLP, ")")),
                         condition = c("HP", "LP"), color = textColors)
-
+  # prepare plotData
   plotData = expPara
   plotData[,rankName] = unlist(plotData[,rankName])
-  p = ggplot(plotData, aes_string(paraName, "AUCRank")) + geom_point(size = 4, color = paraColor, fill = paraColor) +
+  
+  p = ggplot(plotData, aes_string(rankName, "AUCRank")) + geom_point(size = 4, color = paraColor, fill = paraColor) +
     facet_grid(~condition)  +
     geom_text(data = textData,aes(x = -Inf,y = -Inf, label = label),
     hjust   = -0.2,vjust = -1,color = "blue",size = 5, fontface = 2, color = textColors) + saveTheme  +
-    ylim(c(-8, 68)) + ylab("AUC rank") + xlab(capitalize(paraName))
+    ylim(c(-8, 68)) + ylab("AUC rank") + xlab(capitalize(rankName))
   print(p)
 } 
 
@@ -72,20 +75,21 @@ plotParaPara = function(expPara, paraX, paraY, useID){
     saveTheme + ylab(capitalize(paraY)) + xlab(capitalize(paraX))
   print(p)
 }
+
 dir.create("figures/expParaAnalysis")
+saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
+dir.create(saveDir)
 # full_model
-modelName = "full_model"
+modelName = "curiosityTrial"
 paras = getParas(modelName)
 expPara = loadExpPara(modelName, paras)
 useID = getUseID(blockData, expPara, paras)
-plotParaAUC(expPara, "phi", blockData, useID)
-ggsave("figures/expParaAnalysis/AUC_phi.pdf", width =8 ,height = 4)
-plotParaAUC(expPara, "QwaitIni", blockData, useID)
-ggsave("figures/expParaAnalysis/AUC_QwaitIni.pdf", width =8 ,height = 4)
-plotParaAUC(expPara, "tau", blockData, useID)
-ggsave("figures/expParaAnalysis/AUC_tau.pdf", width =8 ,height = 4)
-plotParaAUC(expPara, "gamma", blockData, useID)
-ggsave("figures/expParaAnalysis/AUC_gamma.pdf", width =8 ,height = 4)
+for(pIdx in 1 : length(paras)){
+  para = paras[pIdx]
+  plotParaAUC(expPara, para, blockData, useID)
+  ggsave(sprintf("%s/AUC_%s.pdf", saveDir, para), width =8 ,height = 4)
+}
+
 
 for(i in 1 : length(paras)){
   para = paras[i]
@@ -97,18 +101,6 @@ for(i in 1 : length(paras)){
   fileName = sprintf("figures/expParaAnalysis/hist_%s.pdf", para)
   ggsave(fileName, width = 6, height = 3)
 }
-
-
-# sammarise by phi
-for(i in 1 : length(paras)){
-  para = paras[i]
-  tempt = expPara %>% mutate(quartile = ntile(phi, 5))
-  quartileName = sprintf("q%s", para)
-  expPara[[quartileName]] = as.factor(tempt$quartile)
-}
-expParaInfo = expPara %>% group_by(qphi) %>% dplyr::summarise(mean = mean(AUC), se = sd(AUC) / sqrt(length(phi)))
-ggplot(expParaInfo, aes(qphi, mean)) + geom_bar(stat = "identity")
-
 
 # plot diagonise statistics
 meanData = as.double(dplyr::summarise(expPara[expPara$id %in% useID,], phi = mean(phiRhat), tau = mean(tauRhat),
@@ -153,12 +145,40 @@ for(i in 1 : nPara){
   }
 }
 
+# trait analysis
+personality = read.csv("data/SDGdataset.csv")
+plotData = data.frame(expPara, personality)
+plotData$stress = hdrData$stress
+traits = c("Delay.of.Gratification", "Barratt.Impulsiveness",
+           "Intolerance.of.Uncertainty", "Trait.Anxiety..STAIT.")
+plotData = plotData[plotData$id %in% useID,]
+para = "tau"
+for(trIdx in 1 : length(traits)){
+  trait = traits[trIdx]
+  p = ggplot(plotData,
+             aes_string(para, trait)) +
+    geom_point() + facet_grid(~condition)
+  print(p)
+  print(cor.test(plotData[plotData$condition == "HP",trait],
+                 plotData[plotData$condition == "HP",para], method = "spearman"))
+  print(cor.test(plotData[plotData$condition == "LP",trait],
+                 plotData[plotData$condition == "LP",para], method = "spearman"))
+  readline("continue")
+}
 
-# full_model
-modelName = "cons_arbitrary"
-paras = c("phi", "tau", "gamma")
-expPara = loadExpPara(modelName, paras)
-useID = getUseID(blockData, expPara, paras)
-plotParaAUC(expPara, "phi", blockData, useID)
-plotParaAUC(expPara, "tau", blockData, useID)
-plotParaAUC(expPara, "gamma", blockData, useID)
+
+data = data.frame(expPara$tau,
+                  y = blockData$varQuitTime[blockData$blockNum == 3],
+                  expPara$condition)
+data = data[expPara$id %in% useID & !is.na(data$y),]
+p = plotCorrelation(data, "green", "spearman", T)
+p + xlab("Tau rank") + ylab("varQuitTime rank") + saveTheme
+ggsave("varQuitTime.png", width = 8, height = 4)
+
+data = data.frame(expPara$tau,
+                  y = personality$Delay.of.Gratification,
+                  expPara$condition)
+data = data[expPara$id %in% useID,]
+p = plotCorrelation(data, "green", "spearman", T)
+p + xlab("Tau rank") + ylab("Impulsiveness") + saveTheme
+ggsave("delay.png", width = 8, height = 4)

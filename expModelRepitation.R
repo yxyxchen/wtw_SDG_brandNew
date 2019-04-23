@@ -25,9 +25,9 @@ idList = hdrData$ID
 n = length(idList)
 
 # inputs
-modelName = "curiosityTrial"
+modelName = "curiosityTrialR"
 # paras = getParas(modelName)
-paras = c("phi", "tau", "gamma")
+paras = c("phi", "tau", "phiRs")
 # load expPara
 expPara = loadExpPara(modelName, paras)
 #tempt= loadExpParaExtra(modelName, pars)
@@ -112,7 +112,7 @@ AUCSummary = plotData
 ggplot(plotData[plotData$id %in% useID, ],
        aes(AUC, AUCRep)) +  geom_errorbar(aes(ymin = AUCRepMin, ymax = AUCRepMax), color = "grey")  + geom_point() + facet_grid(~condition) + 
   geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(-2, 45)) + ylim(c(-2, 45)) +
-  ylab("Predicted AUC / min") + xlab("AUC / min")
+  ylab("Predicted / s") + xlab("Observed / s") + ggtitle("Predicted vs Observed AUC")
 fileName = sprintf("figures/expModelRepitation/AUC_AUCRep_%s.pdf", modelName) 
 ggsave(filename = fileName,  width = 6, height = 4)
 
@@ -138,45 +138,10 @@ for(sIdx in 1 : n){
   }
 }
 
-zoomInID = unique(blockData$id[blockData$AUC> 11 & blockData$AUC < 25 & blockData$condition == "LP"])
-# trialData prediction
-for(sIdx in 20 : n){
-  thisID = idList[sIdx]
-  #if(thisID %in% zoomInID){
-    thisExpTrialData = expTrialData[[thisID]]
-    thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum == 1,]
-    nTrial = nrow(thisExpTrialData)
-    if(thisID %in% useID){
-      para = as.double(expPara[expPara$id == thisID, 1 : length(pars)])
-      
-      # prepara data 
-      timeWaited = thisExpTrialData$timeWaited
-      trialEarnings = thisExpTrialData$trialEarnings
-      scheduledWait = thisExpTrialData$scheduledWait
-      timeWaited[trialEarnings >0] = scheduledWait[trialEarnings >0]
-      nAction = sum(round(ifelse(trialEarnings >0, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1)))
-      label = sprintf('Subject %s, %s, %s, -LL = %.2f',thisID, unique(blockData$condition[blockData$id == thisID]),
-                      unique(blockData$stress[blockData$id == thisID]), -expPara$LL_all[expPara$id == thisID] / nAction)
-      #label = paste(label, paste(round(para, 3), collapse = "", seq = " "))
-      label = paste(label, sprintf("AUC = %.2f, AUCR = %.2f", AUCSummary$AUC[expPara$id == thisID], AUCSummary$AUCRep[expPara$id == thisID]))
-      # prepare plotData
-      plotData = data.frame(trialNum = rep(1 : nTrial, 2), timeWaited = c(timeWaited,
-                                                                          timeWaitedRep_[[which(expPara$id == thisID)]]),
-                            quitIdx = rep(trialEarnings == 0, 2), source = rep(c("exp", "rep"), each = nTrial))
-      p = ggplot(plotData, aes(trialNum, timeWaited)) + geom_line(aes(color = source, alpha = source))  +
-        geom_point(data = plotData[plotData$quitIdx == 1 & plotData$source == "exp", ], aes(trialNum, timeWaited)) + ggtitle(label)+
-        displayTheme + scale_alpha_manual(values = c(0.8, 0.5))
-      print(p)
-      readline("continue")
-    }
-    
-  #}
-}
-
 ######### simluation for sequences
 expPara$condition = blockData$condition[blockData$blockNum == 1]
 tempt = summarise(group_by(expPara, condition), phi = mean(phi), tau = mean(tau),
-                  gamma = mean(gamma), QwaitIni = mean(QwaitIni))
+                  gamma = mean(gamma))
 medianParaHP = as.double(tempt[1,])[-1]
 medianParaLP = as.double(tempt[2,])[-1]
 

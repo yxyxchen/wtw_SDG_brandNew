@@ -23,7 +23,7 @@ expModelFitting = function(modelName, paras){
   model = stan_model(file = sprintf("stanModels/%s.stan", modelName))
   
   # determine wIni
-  wIni = ifelse(modelName == grepl("R", modelName), 0.4408333, 4.408333)
+  wIni = ifelse(modelName == "curiosityTrialR", 0.4408333, 4.408333)
   # load expData
   allData = loadAllData()
   hdrData = allData$hdrData           

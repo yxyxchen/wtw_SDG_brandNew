@@ -6,8 +6,7 @@ library("ggplot2")
 source("subFxs/helpFxs.R")
 
 # load model names
-modelNames = c("baseline", "reduce_one_phi", "reduce_one_gamma",
-               "reduce_one_QwaitIni", "reduce_two_QwaitIni",
+modelNames = c("curiosityTrial", "curiosityTrialR",
                "full_model")
 modelNames = c("no_learning_2",
                "full_model")

@@ -33,11 +33,13 @@ totalEarnings =  numeric(length =n * nBlock)
 nAction = numeric(length =n * nBlock)
 wtwEarly = numeric(length =n * nBlock)
 kmOnGrid_ = vector(mode = "list", length = n * nBlock)
+varQuitTime = numeric(length =n * nBlock)
+cvQuitTime = numeric(length =n * nBlock)
 # descriptive statistics for individual subjects and blocks
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
   #if(blockData[blockData$id == thisID, "AUC"] > 20 & blockData$condition[blockData$id == thisID] == "LP"){
-  for (bkIdx in 1: 1){
+  for (bkIdx in 1: nBlock){
     # select data 
     thisTrialData = trialData[[thisID]]
     thisBlockIdx = (thisTrialData$blockNum == bkIdx)
@@ -57,7 +59,10 @@ for (sIdx in 1 : n) {
     scheduledWait = thisTrialData$scheduledWait
     timeWaited[trialEarnings > loseValue] = scheduledWait[trialEarnings > loseValue]
     nAction[noIdx] = sum(round(ifelse(trialEarnings > loseValue, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1)))
-      
+    
+    # calculate varQuitTime
+    varQuitTime[noIdx] = ifelse(totalEarnings == 0, NA, var(timeWaited[trialEarnings == 0]))
+    cvQuitTime[noIdx] = ifelse(totalEarnings == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
     # plot trial-by-trial data
     if (plotTrialwiseData) {
       trialPlots(thisTrialData,label)
@@ -79,14 +84,14 @@ for (sIdx in 1 : n) {
       graphics.off()
     }
   } # loop over blocks
-  #}
 }
+
 # save data
 save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridBlock.RData')
 blockData = data.frame(id = rep(allIDs, each = nBlock), blockNum = rep( t(1 : nBlock), n),
                        cbal = rep(hdrData$cbal, each = nBlock), condition = factor(rep(hdrData$condition, each = nBlock), levels = c("HP", "LP")),
                        stress = factor(rep(hdrData$stress, each = nBlock), levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
-                       totalEarnings = totalEarnings, nAction = nAction)
+                       totalEarnings = totalEarnings, nAction = nAction, varQuitTime = varQuitTime, cvQuitTime = cvQuitTime)
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
 
 # get session data 
@@ -117,7 +122,7 @@ save(subData, file = 'genData/expDataAnalysis/subData.RData')
 save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridSess.RData')
 
 
-## correlation between 
+## correlation between AUC and triats 
 summaryData = read.csv("data/SDGdataset.csv", header = T)
 summaryData$AUCblock1 = blockData$AUC[blockData$blockNum == 1]
 summaryData$condition = ifelse(summaryData$Task..1...unif..2...gp. == 1, "HP", "LP")
@@ -166,7 +171,7 @@ for(i in 1 : nPredictor){
   fileName = sprintf("figures/expDataAnalysis/sm_%s_AUC_sm.pdf", predictorName)
   ggsave(fileName, width = 4, height = 6)
 }
-save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridBlock.RData')
+
 
 # analysis the effect of sequence
 cutMins = 0.5
