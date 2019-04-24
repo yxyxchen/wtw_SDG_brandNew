@@ -29,9 +29,9 @@ trialPlots <- function(blockData,label) {
   # other parameters
   nTrials = length(blockData$trialEarnings)
   # make the plot and add series
-  plotData = data.frame(trialNum = c(rwdTrialNo, quitTrialNo, quitTrialNo),
-                        trialDuration = c(rwdSchedDelay, quitTime, quitSchedDelay),
-                        condition = rep(c('reward', 'quit', 'quitSchedule'), time = 
+  plotData = data.frame("trialNum" = c(rwdTrialNo, quitTrialNo, quitTrialNo),
+                        "trialDuration" = c(rwdSchedDelay, quitTime, quitSchedDelay),
+                        "condition" = rep(c('reward', 'quit', 'quitSchedule'), time = 
                                         c(length(rwdTrialNo), length(quitTrialNo),
                                           length(quitTrialNo))))
   plotData$condition = factor( plotData$condition, levels = c('reward', 'quit', 'quitSchedule'))
@@ -99,8 +99,10 @@ truncateTrials = function(data, startTidx, endTidx){
   outputs = vector(mode = "list", length = nVar)
   for(i in 1 : nVar){
     junk = data[[varNames[i]]]
-    outputs[[varNames[i]]] = junk[startTidx:endTidx]
+    if(is.matrix(junk)) outputs[[i]] = junk[, startTidx:endTidx]
+    else outputs[[i]] = junk[startTidx:endTidx]
   }
+  names(outputs) = varNames
   return(outputs)
 }
 

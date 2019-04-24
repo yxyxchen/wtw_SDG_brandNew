@@ -1,14 +1,13 @@
-# unupdated vaWaits were not recorded, so here we manually
+# unupdated Qwaits were not recorded, so here we manually
 # set them identical with the last updated value
 
 actionValueViewer = function(blockData){
-  vaWaits = blockData$vaWaits
-  vaQuits = blockData$vaQuits
+  Qwaits = blockData$Qwaits
+  Qquits = blockData$Qquits
   nTrial =  length(blockData$trialEarnings)
-  nTimeStep = dim(vaWaits)[1]
-  stepDuration = 0.5
+  nTimeStep = dim(Qwaits)[1]
   for(tIdx in 1: nTrial){
-    plotData = data.frame(va =c(vaWaits[,tIdx], rep(vaQuits[tIdx], nTimeStep)),
+    plotData = data.frame(va =c(Qwaits[,tIdx], rep(Qquits[tIdx], nTimeStep)),
                           time = rep( 1 : nTimeStep, 2),
                           action = rep(c('wait', 'quit'),
                                        each = nTimeStep))

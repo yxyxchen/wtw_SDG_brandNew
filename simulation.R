@@ -20,10 +20,10 @@ n = length(idList)
 
 ##### get a sense of the model ######
 # simluation for one para and one scheduledWait from simulation or ...
-paras = c(0.01, 5, 0.8)
-modelName = "curiosityTrial"
+paras = c(0.05, 8, 0.02)
+modelName = "curiosityTrialR"
 repModelFun = getRepModelFun(modelName)
-sIdx = 1
+sIdx = 2
 id = idList[[sIdx]]
 cond = hdrData$cond[hdrData$ID == id]
 thisExpTrialData = expTrialData[[id]]
@@ -34,9 +34,6 @@ set.seed(123)
 # scheduledWait = unlist(lapply(1:1000, function(x) drawSample(cond)))
 tempt = repModelFun(paras, cond, scheduledWait)
 trialPlots(tempt, cond)
-
-plot(tempt$Rrates)
-
 
 ##### get a sense of the model from a lot scheduledWait######
 # simluation for one para and a lot scheduledWait
@@ -74,30 +71,22 @@ for(i in 1:n){
   # actionValueViewer(thisTrialData)
 }
 
-# simulate a long scheduledWait sequence to find out the asympotatic results
-parasList = list(c(0.05, 10, 0.99), c(0.05, 10, 0.90), c(0.05, 10, 0.5))
-nParas = length(parasList)
-nSeq = 5
-set.seed(123)
-# longScheduledWaitLPList = lapply(1 : nSeq, function(i) unlist(lapply(1:1000, function(x) drawSample("LP"))))
-# nRep = 10
 
 # one sequences example
-paras1 = c(0.02, 20, 0.90)
+paras = c(0.01, 15, 1)
 set.seed(123)
 modelName = "curiosityTrial"
 repModelFun = getRepModelFun(modelName)
 longScheduledWaitLP =  unlist(lapply(1:5000, function(x) drawSample("LP")))
-tempt = repModelFun(paras1, "LP", longScheduledWaitLP)
-label = sprintf("tau = %.2f", paras1[2])
+tempt = repModelFun(paras, "LP", longScheduledWaitLP)
+label = sprintf("tau = %.2f", paras[2])
 trialPlots(tempt, label)
 fileName = sprintf("zoomIn_%s.png", label)
 trialPlots(truncateTrials(tempt, 4800, 5000), label)
 ggsave(fileName, width = 6, height = 12)
-
-plot(tempt$vaQuits / tempt$vaWaits[1,])
-plot(tempt$vaQuits)
-
+actionValueViewer(truncateTrials(tempt, 4000, 4100))
+plot(tempt$Qwaits[,4000])
+which.min(tempt$Qwaits[,2000])
 
 # simulated scheduledWait
 set.seed(123)

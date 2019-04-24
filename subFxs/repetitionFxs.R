@@ -33,7 +33,7 @@ curiosityTrialR = function(paras, cond, scheduledWait){
   # it is more accurate then the one I calcualte in wtwSettings.R
   wIni = (5/6 + 0.93)/ 2 * stepDuration
   
-  Qwait = rep(0, nTimeStep) 
+  Qwait = c(rep(1, nTimeStep))
   Qquit = 0
   Viti = 0
   Rrate = wIni
@@ -60,7 +60,8 @@ curiosityTrialR = function(paras, cond, scheduledWait){
   for(tIdx in 1 : nTrial) {
     # determine 
     thisScheduledWait = scheduledWait[tIdx]
-    curiosity =  curIntercept * exp(-curSlope*(tIdx-1))
+    #curiosity =  curIntercept * exp(-curSlope*(tIdx-1))
+    curiosity =  0
     
     # loop for each timestep t and determine At
     t = 1
@@ -161,9 +162,9 @@ curiosityTrial = function(paras, cond, scheduledWait){
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
   wIni = (QHPApOptim + QLPApOptim)/ 2
   
-  Qwait = rep(wIni, nTimeStep) 
-  Qquit = wIni 
-  Viti = wIni
+  Qwait = c(rep(wIni, 80), rep(0, nTimeStep - 80))
+  Qquit = wIni * 0.8
+  Viti = wIni * 0.8
   
   # initialize varibles for recording action values
   Qwaits = matrix(NA, nTimeStep, nTrial);
@@ -172,6 +173,8 @@ curiosityTrial = function(paras, cond, scheduledWait){
   Qquits[1] = Qquit
   Vitis = vector(length = nTrial);
   Vitis[1] = Viti
+  deltas = matrix(NA, nTimeStep, nTrial)
+  Gs = matrix(NA, nTimeStep, nTrial)
   
   # initialize outputs 
   trialEarnings = rep(0, nTrial)
@@ -185,8 +188,8 @@ curiosityTrial = function(paras, cond, scheduledWait){
   for(tIdx in 1 : nTrial) {
     # determine 
     thisScheduledWait = scheduledWait[tIdx]
-    curiosity =  curIntercept * exp(-curSlope*(tIdx-1))
-    
+    # curiosity =  curIntercept * exp(-curSlope*(tIdx-1))
+    curiosity = 0
     # loop for each timestep t and determine At
     t = 1
     while(t <= nTimeStep){
@@ -219,13 +222,20 @@ curiosityTrial = function(paras, cond, scheduledWait){
       
       # update action values for each timestep t
       returns = sapply(1 : (T-1), function(t) gamma^(T-t-1) *nextReward + gamma^(T-t) * Viti)
+      # returns = sapply(1 : (T-1), function(t) gamma^(T-t-1) *nextReward + gamma^(T-t) * Viti)
       # when the agent always wait and get the reward, update Qwait[1:(T-1)]
       # otherwise, update Qquit and Qwait[1 : (T-2)]      
       if(getReward){
-        Qwait[1 : (T-1)] = Qwait[1 : (T-1)] + phi*(returns[1 : (T-1)] - Qwait[1 : (T-1)])        
+        Gs[1 : (T-1), tIdx] = returns[1 : (T-1)]
+        deltas[1 : (T-1), tIdx] = returns[1 : (T-1)] - Qwait[1 : (T-1)]
+        Qwait[1 : (T-1)] = Qwait[1 : (T-1)] + phi*(returns[1 : (T-1)] - Qwait[1 : (T-1)])
       }else{
         Qquit = Qquit + phi*(returns[T-1] - Qquit)
-        if(T > 2) Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phi*(returns[1 : (T-2)] - Qwait[1 : (T-2)])
+        if(T > 2){
+          Gs[1 : (T-2), tIdx] = returns[1 : (T-2)]
+          deltas[1 : (T-2), tIdx] = returns[1 : (T-2)] - Qwait[1 : (T-2)]
+          Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phi*(returns[1 : (T-2)] - Qwait[1 : (T-2)])
+        }
       }
       
       # update Viti
@@ -250,6 +260,8 @@ curiosityTrial = function(paras, cond, scheduledWait){
     "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits,
     "Qquits" = Qquits,
+    "Gs" = Gs,
+    "deltas" = deltas,
     "Vitis" = Vitis
   )
   return(outputs)
