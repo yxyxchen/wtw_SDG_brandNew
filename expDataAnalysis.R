@@ -19,7 +19,7 @@ n = length(allIDs)                    # n
 cat('Analyzing data for',n,'subjects.\n')
 
 # define nBlock
-nBlock = 3
+nBlock = 1
 
 # control which individual-level plots to generate
 plotTrialwiseData =T

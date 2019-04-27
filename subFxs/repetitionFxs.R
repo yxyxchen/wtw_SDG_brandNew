@@ -6,6 +6,10 @@ getRepModelFun = function(modelName){
     repModelFun = curiosityTrialR
   }else if(modelName == "curiosityTrial"){
     repModelFun = curiosityTrial
+  }else if(modelName == "heuristicRL"){
+    repModelFun = heuristicRL
+  }else if(modelName == "heuristicRLAve"){
+    repModelFun = heuristicRLAve
   }else{
     return("wrong model name!")
   }
@@ -270,4 +274,106 @@ curiosityTrial = function(paras, cond, scheduledWait){
 
 
 
+heuristicRL =  function(paras, cond, scheduledWait){
+  phi = paras[1]
+  threshd = paras[2]
+  ini = paras[3]
+  
+  nTrial = length(scheduledWait)
+  
+  # initialize outputs 
+  trialEarnings = rep(0, nTrial)
+  timeWaited = rep(0, nTrial)
+  sellTime = rep(0, nTrial)
+  expectedDurations = rep(0, nTrial)
+  
+  # initialize elapsed time
+  elapsedTime = 0
+  
+  # initialize expectedDuration
+  expectedDuration = ini
+  
+  # loop over trials
+  for(tIdx in 1 : nTrial) {
+    # determine thisScheduledWait
+    thisScheduledWait = scheduledWait[tIdx]
+    # determine timeWaited, trialEarnings, sellTime and elapsedTime 
+    if(thisScheduledWait <= (expectedDuration * threshd)){
+      trialEarnings[tIdx] = tokenValue
+      timeWaited[tIdx] = thisScheduledWait
+      sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+      elapsedTime = elapsedTime + timeWaited[tIdx] + iti
+    }else{
+      trialEarnings[tIdx] = 0
+      timeWaited[tIdx] = expectedDuration * threshd
+      sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+      elapsedTime = elapsedTime + timeWaited[tIdx] + iti
+    }
+    # record expectedDurations
+    expectedDurations[tIdx] = expectedDuration
+    # update threshold
+    expectedDuration = expectedDuration + phi*(timeWaited[tIdx] - expectedDuration)
+  }  
+  
+  outputs = list( 
+    "trialNum" = 1 : nTrial,
+    "trialEarnings" = trialEarnings,
+    "timeWaited" = timeWaited,
+    "sellTime" = sellTime, # used in wtw analysis
+    "scheduledWait" = scheduledWait,
+    "expectedDurations" = expectedDuration
+  )
+  return(outputs)
+}
 
+
+heuristicRLAve =  function(paras, cond, scheduledWait){
+  threshd = paras[1]
+  ini = paras[2]
+  
+  nTrial = length(scheduledWait)
+  
+  # initialize outputs 
+  trialEarnings = rep(0, nTrial)
+  timeWaited = rep(0, nTrial)
+  sellTime = rep(0, nTrial)
+  expectedDurations = rep(0, nTrial)
+  
+  # initialize elapsed time
+  elapsedTime = 0
+  
+  # initialize expectedDuration
+  expectedDuration = ini
+  
+  # loop over trials
+  for(tIdx in 1 : nTrial) {
+    # determine thisScheduledWait
+    thisScheduledWait = scheduledWait[tIdx]
+    # determine timeWaited, trialEarnings, sellTime and elapsedTime 
+    if(thisScheduledWait <= (expectedDuration * threshd)){
+      trialEarnings[tIdx] = tokenValue
+      timeWaited[tIdx] = thisScheduledWait
+      sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+      elapsedTime = elapsedTime + timeWaited[tIdx] + iti
+    }else{
+      trialEarnings[tIdx] = 0
+      timeWaited[tIdx] = expectedDuration * threshd
+      sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+      elapsedTime = elapsedTime + timeWaited[tIdx] + iti
+    }
+    # record expectedDurations
+    expectedDurations[tIdx] = expectedDuration
+    # update threshold
+    expectedDuration = expectedDuration + 1 / (tIdx + 1) *(timeWaited[tIdx] - expectedDuration)
+  }  
+  
+  outputs = list( 
+    "trialNum" = 1 : nTrial,
+    "trialEarnings" = trialEarnings,
+    "timeWaited" = timeWaited,
+    "sellTime" = sellTime, # used in wtw analysis
+    "scheduledWait" = scheduledWait,
+    "expectedDurations" = expectedDuration
+  )
+  return(outputs)
+}

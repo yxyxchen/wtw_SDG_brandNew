@@ -8,17 +8,19 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
   tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
   condIdx = ifelse(cond =="HP", 1, 2)
   nChain = 4
-  nIter = 5000
+  nIter = 10000
   nTimeSteps = tMax / stepDuration
-  Ts = round(ifelse(trialEarnings >0, ceiling(timeWaited / stepDuration) + 1, floor(timeWaited / stepDuration) + 1))
+  Ts = round(ceiling(timeWaited / stepDuration) + 1)
+  # determine the initial williness to wait
+  ini = if()
   # If using the least distance loss function
   # nScheduledWaitPoints = ceiling(scheduledWait / stepDuration)
   data_list <- list(tMax = tMax,
                     # nScheduledWaitPoints = nScheduledWaitPoints,
                     wIni = wIni,# maybe change later
                     nTimeSteps = nTimeSteps,
-                    N = length(timeWaited),
                     timeWaited = timeWaited,
+                    N = length(timeWaited),
                     trialEarnings = trialEarnings,
                     Ts = Ts)
   fit = sampling(object = model, data = data_list, cores = min(nChain, 3), chains = nChain,

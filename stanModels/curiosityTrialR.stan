@@ -6,7 +6,7 @@ data {
   
   // depending on each subject
   int N; // number of trials
-  vector[N] timeWaited;
+  real timeWaited[N];
   vector[N] trialEarnings;
   int Ts[N]; // terminal time step index 
 }
