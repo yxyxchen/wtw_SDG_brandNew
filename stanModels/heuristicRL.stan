@@ -14,7 +14,6 @@ data {
 parameters {
   real<lower = 0, upper = 1> phi;
   real<lower = 2, upper = 50> tau;
-  real<lower = 0.01, upper = 2> threshd;
   //real<lower = 0, upper = 0.3> phiR;
 }
 transformed parameters{
@@ -34,14 +33,14 @@ transformed parameters{
 model {
   phi ~ uniform(0, 1);
   tau ~ uniform(2, 50);
-  threshd ~ uniform(0, 2);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){
     if(trialEarnings[tIdx] < 0){
-      target += normal_lpdf(timeWaited[tIdx] | expectedWaits[tIdx] * threshd, expectedWaits[tIdx] * threshd / tau);
+      target += normal_lpdf(timeWaited[tIdx] | expectedWaits[tIdx], expectedWaits[tIdx] / tau);
+      print(normal_lpdf(timeWaited[tIdx] | expectedWaits[tIdx], expectedWaits[tIdx] / tau));
     }else{
-      target += 1 - normal_lcdf(timeWaited[tIdx] | expectedWaits[tIdx] * threshd, expectedWaits[tIdx] * threshd / tau);
+      target += normal_lcdf(2*expectedWaits[tIdx] - timeWaited[tIdx] | expectedWaits[tIdx], expectedWaits[tIdx] / tau);
     }
       
   }
@@ -53,9 +52,9 @@ generated quantities {
   // loop over trials
   for(tIdx in 1 : N){
     if(trialEarnings[tIdx] < 0){
-      log_lik[tIdx] = normal_lpdf(timeWaited[tIdx] | expectedWaits[tIdx] * threshd, expectedWaits[tIdx] * threshd / tau);
+      log_lik[tIdx] = normal_lpdf(timeWaited[tIdx] | expectedWaits[tIdx], expectedWaits[tIdx] / tau);
     }else{
-      log_lik[tIdx] = 1 - normal_lcdf(timeWaited[tIdx] | expectedWaits[tIdx] * threshd, expectedWaits[tIdx] * threshd / tau);
+      log_lik[tIdx] = 1 - normal_lcdf(timeWaited[tIdx] | expectedWaits[tIdx], expectedWaits[tIdx] / tau);
     }
   }// end of the loop
   LL_all =sum(log_lik);
