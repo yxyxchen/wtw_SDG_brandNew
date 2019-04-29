@@ -25,9 +25,9 @@ idList = hdrData$ID
 n = length(idList)
 
 # inputs
-modelName = "curiosityTrialR"
+modelName = "heuristicRL"
 # paras = getParas(modelName)
-paras = c("phi", "tau", "phiR")
+paras = c("phi", "sigma")
 # load expPara
 expPara = loadExpPara(modelName, paras)
 #tempt= loadExpParaExtra(modelName, pars)
@@ -145,15 +145,13 @@ tempt = summarise(group_by(expPara, condition), phi = mean(phi), tau = mean(tau)
 medianParaHP = as.double(tempt[1,])[-1]
 medianParaLP = as.double(tempt[2,])[-1]
 
+medianParaHP = c(0.05, 15)
+medianParaLP = c(0.05, 30)
+repModelFun = getRepModelFun("heuristicRL")
 set.seed(231)
-paraHPList = 
-paraLPPossible = data.frame(phi = )
-paraLPist = getCombination(paraLPPossible)
-nRep = 30# number of repetitions
+nRep = 10
 trialData = vector(length = n * nRep, mode ='list')
 repNo = matrix(1 : (n * nRep), nrow = n, ncol = nRep)
-# simDist_ =  vector(mode = "list", length = length(useID))
-# simDistSd_ =  vector(mode = "list", length = length(useID))
 for(sIdx in 1 : n){
   id = idList[[sIdx]]
   cond = unique(blockData$condition[blockData$id == id])
@@ -162,11 +160,11 @@ for(sIdx in 1 : n){
   thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
   scheduledWait = thisExpTrialData$scheduledWait
   for(rIdx in 1 : nRep){
-   # if(cond == "HP"){
-   #   para = paraHPList[rIdx, ]
-   # }else{
-   #   para = paraLPList[rIdx, ]
-   # }
+   if(cond == "HP"){
+     para = medianParaHP
+   }else{
+     para = medianParaLP
+   }
     tempt = repModelFun(para, cond, scheduledWait)
     trialData[[repNo[sIdx, rIdx]]] = tempt
     # simDistMatrix[,rIdx] = abs(tempt$timeWaited - thisExpTrialData$timeWaited)
@@ -222,7 +220,7 @@ ggplot(plotData[plotData$id %in% useID, ],
   geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(0, 40)) + ylim(c(0, 40))
 
 
-[which(plotData$AUCRep > 38)
+which(plotData$AUCRep > 25)
 
 
 

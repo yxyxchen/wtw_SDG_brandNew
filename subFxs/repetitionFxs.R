@@ -276,8 +276,7 @@ curiosityTrial = function(paras, cond, scheduledWait){
 
 heuristicRL =  function(paras, cond, scheduledWait){
   phi = paras[1]
-  threshd = paras[2]
-  ini = paras[3]
+  ini = paras[2]
   
   nTrial = length(scheduledWait)
   
@@ -298,14 +297,14 @@ heuristicRL =  function(paras, cond, scheduledWait){
     # determine thisScheduledWait
     thisScheduledWait = scheduledWait[tIdx]
     # determine timeWaited, trialEarnings, sellTime and elapsedTime 
-    if(thisScheduledWait <= (expectedDuration * threshd)){
+    if(thisScheduledWait <= expectedDuration ){
       trialEarnings[tIdx] = tokenValue
       timeWaited[tIdx] = thisScheduledWait
       sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
       elapsedTime = elapsedTime + timeWaited[tIdx] + iti
     }else{
       trialEarnings[tIdx] = 0
-      timeWaited[tIdx] = expectedDuration * threshd
+      timeWaited[tIdx] = expectedDuration 
       sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
       elapsedTime = elapsedTime + timeWaited[tIdx] + iti
     }

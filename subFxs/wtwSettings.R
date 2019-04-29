@@ -18,7 +18,7 @@ tGrid = seq(0, blockSecs, 0.1)
 ######### reward variable ########
 tokenValue = 10 #value of the token
 loseValue = 0
-stepDuration = 0.5
+stepDuration = 0.
 ########## supporting vairbales ########
 # time ticks within a trial for timeEarnings or wtw analysis
 trialTicks = list(
@@ -86,7 +86,8 @@ optimRewardRates = list()
 optimRewardRates$HP = max(HP)
 optimRewardRates$LP = max(LP)
 
+paraColors = list("phi" = "#e41a1c", "tau" = "#377eb8", "gamma" = "#4daf4a", "sigma" = "#fe9929")
 save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", "tGrid", 
      "tokenValue", "stepDuration", "trialTicks", "pareto", "rewardDelayCDF", 
      "rewardDelayPDF", "meanRewardDelay", "rewardRate", "optimRewardRates", 
-     "optimWaitTimes", "loseValue", file = "wtwSettings.RData")
+     "optimWaitTimes", "loseValue", "paraColors", file = "wtwSettings.RData")

@@ -8,11 +8,11 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
   tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
   condIdx = ifelse(cond =="HP", 1, 2)
   nChain = 4
-  nIter = 5000
+  nIter = 10000
   nTimeSteps = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
   # determine the initial williness to wait
-  firstQuitTidx = which.min(trialEarnings ==0)
+  firstQuitTidx = match(trialEarnings ==0)
   ini = ifelse(firstQuitTidx == 1, timeWaited[1], ifelse(is.na(firstQuitTidx), max(timeWaited),
                                                      max(timeWaited[1 : (firstQuitTidx - 1)])))
   # If using the least distance loss function
