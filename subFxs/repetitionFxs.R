@@ -8,8 +8,8 @@ getRepModelFun = function(modelName){
     repModelFun = curiosityTrial
   }else if(modelName == "functionRL"){
     repModelFun = functionRL
-  }else if(modelName == "functionRLWT"){
-    repModelFun = functionRLWT
+  }else if(modelName == "functionLinear"){
+    repModelFun = functionLinear
   }else{
     return("wrong model name!")
   }

@@ -44,6 +44,7 @@ timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
 Ts = round(ceiling(timeWaited / stepDuration) + 1)
 
 yHat = matrix(0, 80, 42)
+quitTime = vector(length = 42)
 for(k in 1 : 42){
   nTrial = k
   x = unlist(lapply(1 : nTrial, function(i) 1 : (Ts[i] - 1)))
@@ -51,8 +52,32 @@ for(k in 1 : 42){
                     function(i) rev(  (trialEarnings[i] + 1) * 2 / (1 : (Ts[i] - 1)) )))
   fit = lm(y ~ x)
   yHat[, k] = predict(fit, newdata=data.frame(x=1:80))
+  if(sum(tempt$rrBars[k] >= yHat[, k]) == 80 || sum(tempt$rrBars[k] < yHat[, k]) == 80){
+    quitTime[k] = NA
+  }else{
+    quitTime[k] = which.min(abs(tempt$rrBars[k] - yHat[, k]))
+  }
 }
 
+nTimeStep = tMaxs[2] / stepDuration
+beta.prior = c(1.2, 0)
+Sigma.prior = matrix(c(0.5, 0, 0, 0.5), nrow = 2, ncol = 2)
+sigma.prior = 100
+for(k in 1 : 42){
+  nTrial = k
+  x = unlist(lapply(1 : nTrial, function(i) 1 : (Ts[i] - 1)))
+  y = unlist(lapply(1 : nTrial,
+                    function(i) rev(  (trialEarnings[i] + 1) * 2 / (1 : (Ts[i] - 1)) )))
+  X = cbind(rep(1, length(x)), x)
+  Y = y
+  x.star = cbind(rep(1, nTimeStep), 1 : nTimeStep)
+  A = solve(Sigma.prior) + t(X) %*% X / sigma.prior
+  betaHat.mu = solve(A)  %*% (t(X) %*% Y / sigma.prior + )
+  yHat.mu = x.star %*% solve(A)  %*% t(X) %*% Y / sigma.prior
+  plot(yHat.mu)
+  readline()
+}
+ 
 # simulate 
 source('subFxs/simulationFxs.R') # 
 paraTable = list("phi" = c(0.025, 0.05, 0.1), "tau" = c(5, 25, 45))
