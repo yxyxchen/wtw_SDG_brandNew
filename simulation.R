@@ -46,7 +46,7 @@ Ts = round(ceiling(timeWaited / stepDuration) + 1)
 yHat = matrix(0, 80, 42)
 for(k in 1 : 42){
   nTrial = k
-  x = unlist(lapply(1 : nTrial, functio n(i) 1 : (Ts[i] - 1)))
+  x = unlist(lapply(1 : nTrial, function(i) 1 : (Ts[i] - 1)))
   y = unlist(lapply(1 : nTrial,
                     function(i) rev(  (trialEarnings[i] + 1) * 2 / (1 : (Ts[i] - 1)) )))
   fit = lm(y ~ x)
