@@ -60,24 +60,37 @@ for(k in 1 : 42){
 }
 
 nTimeStep = tMaxs[2] / stepDuration
-beta.prior = c(1.2, 0)
-Sigma.prior = matrix(c(0.5, 0, 0, 0.5), nrow = 2, ncol = 2)
-sigma.prior = 100
-for(k in 1 : 42){
+beta.prior = matrix(c(1.2, 0), ncol = 1)
+Sigma.prior = matrix(c(0.005, 0, 0, 0.05), nrow = 2, ncol = 2)
+sigma.prior = 10
+x.star = cbind(rep(1, nTimeStep), 1 : nTimeStep)
+
+
+yHat = matrix(0, nTimeStep, 42)
+quitTime = vector(length = 42)
+yHat[, 1] =  x.star %*% beta.prior
+quitTime[1] = nTimeStep
+for(k in 1 : 41){
   nTrial = k
   x = unlist(lapply(1 : nTrial, function(i) 1 : (Ts[i] - 1)))
   y = unlist(lapply(1 : nTrial,
                     function(i) rev(  (trialEarnings[i] + 1) * 2 / (1 : (Ts[i] - 1)) )))
   X = cbind(rep(1, length(x)), x)
-  Y = y
-  x.star = cbind(rep(1, nTimeStep), 1 : nTimeStep)
+  Y = matrix(y, ncol = 1)
   A = solve(Sigma.prior) + t(X) %*% X / sigma.prior
-  betaHat.mu = solve(A)  %*% (t(X) %*% Y / sigma.prior + )
-  yHat.mu = x.star %*% solve(A)  %*% t(X) %*% Y / sigma.prior
-  plot(yHat.mu)
-  readline()
+  betaHat.mu = solve(A)  %*% (t(X) %*% Y / sigma.prior + solve(Sigma.prior) %*% beta.prior )
+  yHat.mu = x.star %*% betaHat.mu
+  yHat[, k+1] = yHat.mu
+  if(sum(tempt$rrBars[k] >= yHat[, k]) == nTimeStep || sum(tempt$rrBars[k] < yHat[, k]) == nTimeStep){
+    quitTime[k+1] = NA
+  }else{
+    quitTime[k+1] = which.min(abs(tempt$rrBars[k] - yHat[, k]))
+  }
 }
  
+
+plot(yHat[,40], ylim = c(-5, 5))
+
 # simulate 
 source('subFxs/simulationFxs.R') # 
 paraTable = list("phi" = c(0.025, 0.05, 0.1), "tau" = c(5, 25, 45))
