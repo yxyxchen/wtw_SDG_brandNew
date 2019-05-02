@@ -6,10 +6,10 @@ getRepModelFun = function(modelName){
     repModelFun = curiosityTrialR
   }else if(modelName == "curiosityTrial"){
     repModelFun = curiosityTrial
-  }else if(modelName == "heuristicRL"){
-    repModelFun = heuristicRL
-  }else if(modelName == "heuristicRLAve"){
-    repModelFun = heuristicRLAve
+  }else if(modelName == "functionRL"){
+    repModelFun = functionRL
+  }else if(modelName == "functionRLWT"){
+    repModelFun = functionRLWT
   }else{
     return("wrong model name!")
   }
@@ -273,46 +273,85 @@ curiosityTrial = function(paras, cond, scheduledWait){
 
 
 
-
-heuristicRL =  function(paras, cond, scheduledWait){
+ 
+functionRL =  function(paras, cond, scheduledWait){
+  # parse paras
   phi = paras[1]
-  ini = paras[2]
+  tau = paras[2]
   
+  # parse the data
   nTrial = length(scheduledWait)
+  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  nTimeStep = tMax / stepDuration
   
   # initialize outputs 
   trialEarnings = rep(0, nTrial)
   timeWaited = rep(0, nTrial)
   sellTime = rep(0, nTrial)
-  expectedDurations = rep(0, nTrial)
-  
+
   # initialize elapsed time
   elapsedTime = 0
   
-  # initialize expectedDuration
-  expectedDuration = ini
+  # initialize varibales for debugs 
+  rrs = matrix(NA, nTimeStep, nTrial);
+  rrBars = vector(length = nTrial);
+  deltas = matrix(NA, nTimeStep, nTrial)
+  targets = matrix(NA, nTimeStep, nTrial)
+  
+  rr = rep(1.2, nTimeStep)
+  rrBar = ifelse(cond == "HP", 5 / 6, 0.93)
+  rrs[,1] = rr
+  rrBars[1] = rrBar
+  
   
   # loop over trials
   for(tIdx in 1 : nTrial) {
-    # determine thisScheduledWait
+    # determine 
     thisScheduledWait = scheduledWait[tIdx]
-    # determine timeWaited, trialEarnings, sellTime and elapsedTime 
-    if(thisScheduledWait <= expectedDuration ){
-      trialEarnings[tIdx] = tokenValue
-      timeWaited[tIdx] = thisScheduledWait
-      sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
-      elapsedTime = elapsedTime + timeWaited[tIdx] + iti
-    }else{
-      trialEarnings[tIdx] = 0
-      timeWaited[tIdx] = expectedDuration 
-      sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
-      elapsedTime = elapsedTime + timeWaited[tIdx] + iti
-    }
-    # record expectedDurations
-    expectedDurations[tIdx] = expectedDuration
-    # update threshold
-    expectedDuration = expectedDuration + phi*(timeWaited[tIdx] - expectedDuration)
-  }  
+    # clear cached values
+    target = rep(0, nTimeStep)
+    delta = rep(0, nTimeStep)
+    # loop for each timestep t and determine At
+    t = 1
+    while(t <= nTimeStep){
+      # determine At
+      waitRate =  1 / sum(1  + exp((rrBar - rr[t])* tau))
+      action = ifelse(runif(1) < waitRate, 'wait', 'quit')
+      # observe St+1 and Rt+1
+      rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
+      getReward = (action == 'wait' && rewardOccur);
+      nextReward = ifelse(getReward, tokenValue, 0) 
+      
+      # dertime whether St+1 is the terminal state
+      # if the trial terminates, track terminal timestep index T, trialEarnings, timeWaited, sellTime and elapsedTime
+      # otherwise, continue
+      nextStateTerminal = (getReward || action == "quit")
+      if(nextStateTerminal){
+        T = t+1
+        trialEarnings[tIdx] = nextReward;
+        timeWaited[tIdx] = ifelse(getReward, thisScheduledWait, t * stepDuration)
+        sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+        elapsedTime = elapsedTime + timeWaited[tIdx] + iti
+        break
+      }else{
+        t = t + 1
+      }
+    }# end of the action selection section
+    
+    # update reward rates 
+    if(tIdx < nTrial){
+      target[1 : (T-1)]= rev(nextReward / (1 : (T-1) * stepDuration))
+      delta[1 : (T-1)] = target[1 : (T-1)] - rr[1 : (T-1)]
+      rr = rr + phi*delta
+      rrBar = rrBar + phi * (nextReward / ((T-1) * stepDuration + iti) - rrBar)
+      
+      # record updated values
+      rrs[,tIdx + 1] = rr
+      rrBars[tIdx + 1] = rrBar
+      deltas[,tIdx] = delta
+      targets[,tIdx] = target
+    }# end of the value update section
+  } # end of the trial loop
   
   outputs = list( 
     "trialNum" = 1 : nTrial,
@@ -320,51 +359,92 @@ heuristicRL =  function(paras, cond, scheduledWait){
     "timeWaited" = timeWaited,
     "sellTime" = sellTime, # used in wtw analysis
     "scheduledWait" = scheduledWait,
-    "expectedDurations" = expectedDuration
+    "rrs" = rrs,
+    "rrBars" = rrBars,
+    "targets" = targets,
+    "deltas" = deltas
   )
   return(outputs)
 }
 
-
-heuristicRLAve =  function(paras, cond, scheduledWait){
-  threshd = paras[1]
-  ini = paras[2]
+functionLinear =  function(paras, cond, scheduledWait){
+  # parse paras
+  phi = paras[1]
+  tau = paras[2]
   
+  # parse the data
   nTrial = length(scheduledWait)
+  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  nTimeStep = tMax / stepDuration
   
   # initialize outputs 
   trialEarnings = rep(0, nTrial)
   timeWaited = rep(0, nTrial)
   sellTime = rep(0, nTrial)
-  expectedDurations = rep(0, nTrial)
   
   # initialize elapsed time
   elapsedTime = 0
   
-  # initialize expectedDuration
-  expectedDuration = ini
+  # initialize varibales for debugs 
+  rrs = matrix(NA, nTimeStep, nTrial);
+  rrBars = vector(length = nTrial);
+  deltas = matrix(NA, nTimeStep, nTrial)
+  targets = matrix(NA, nTimeStep, nTrial)
+  
+  rr = rep(1.2, nTimeStep)
+  rrBar = ifelse(cond == "HP", 5 / 6, 0.93)
+  rrs[,1] = rr
+  rrBars[1] = rrBar
+  
   
   # loop over trials
   for(tIdx in 1 : nTrial) {
-    # determine thisScheduledWait
+    # determine 
     thisScheduledWait = scheduledWait[tIdx]
-    # determine timeWaited, trialEarnings, sellTime and elapsedTime 
-    if(thisScheduledWait <= (expectedDuration * threshd)){
-      trialEarnings[tIdx] = tokenValue
-      timeWaited[tIdx] = thisScheduledWait
-      sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
-      elapsedTime = elapsedTime + timeWaited[tIdx] + iti
-    }else{
-      trialEarnings[tIdx] = 0
-      timeWaited[tIdx] = expectedDuration * threshd
-      sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
-      elapsedTime = elapsedTime + timeWaited[tIdx] + iti
-    }
-    # record expectedDurations
-    expectedDurations[tIdx] = expectedDuration
-    # update threshold
-    expectedDuration = expectedDuration + 1 / (tIdx + 1) *(timeWaited[tIdx] - expectedDuration)
-  }  
+    # clear cached values
+    target = rep(0, nTimeStep)
+    delta = rep(0, nTimeStep)
+    # loop for each timestep t and determine At
+    t = 1
+    while(t <= nTimeStep){
+      # determine At
+      waitRate =  1 / sum(1  + exp((rrBar - rr[t])* tau))
+      action = ifelse(runif(1) < waitRate, 'wait', 'quit')
+      # observe St+1 and Rt+1
+      rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
+      getReward = (action == 'wait' && rewardOccur);
+      nextReward = ifelse(getReward, tokenValue, 0) 
+      
+      # dertime whether St+1 is the terminal state
+      # if the trial terminates, track terminal timestep index T, trialEarnings, timeWaited, sellTime and elapsedTime
+      # otherwise, continue
+      nextStateTerminal = (getReward || action == "quit")
+      if(nextStateTerminal){
+        T = t+1
+        trialEarnings[tIdx] = nextReward;
+        timeWaited[tIdx] = ifelse(getReward, thisScheduledWait, t * stepDuration)
+        sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+        elapsedTime = elapsedTime + timeWaited[tIdx] + iti
+        break
+      }else{
+        t = t + 1
+      }
+    }# end of the action selection section
+    
+    # update reward rates 
+    if(tIdx < nTrial){
+      target[1 : (T-1)]= rev((nextReward + 1) / (1 : (T-1) * stepDuration))
+      delta[1 : (T-1)] = target[1 : (T-1)] - rr[1 : (T-1)]
+      rr = rr + phi*delta
+      rrBar = rrBar + phi * ((nextReward + 1)/ ((T-1) * stepDuration + iti) - rrBar)
+      
+      # record updated values
+      rrs[,tIdx + 1] = rr
+      rrBars[tIdx + 1] = rrBar
+      deltas[,tIdx] = delta
+      targets[,tIdx] = target
+    }# end of the value update section
+  } # end of the trial loop
   
   outputs = list( 
     "trialNum" = 1 : nTrial,
@@ -372,7 +452,15 @@ heuristicRLAve =  function(paras, cond, scheduledWait){
     "timeWaited" = timeWaited,
     "sellTime" = sellTime, # used in wtw analysis
     "scheduledWait" = scheduledWait,
-    "expectedDurations" = expectedDuration
+    "rrs" = rrs,
+    "rrBars" = rrBars,
+    "targets" = targets,
+    "deltas" = deltas
   )
   return(outputs)
 }
+
+# add 1 to stablize the results
+
+
+

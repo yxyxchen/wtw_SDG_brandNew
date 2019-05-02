@@ -4,6 +4,9 @@
 # yet in wtwSettingsEnd.R, to unfiy different algorithms, we assume rewards happen at the end of the gap
 # however, results for LP still change with the stepDuration
 # we do all the calculation by stepDuration = 0.5, and the optimWaitTime, you know is not that...
+
+# we use this script to get stepDuration
+# we don't use the reward rate here, it is close to the normal analysis, but not that good.
 ######## condition varibles #########
 conditions = c("HP", "LP")
 conditionColors = c("#008837", "#7b3294")
@@ -18,7 +21,7 @@ tGrid = seq(0, blockSecs, 0.1)
 ######### reward variable ########
 tokenValue = 10 #value of the token
 loseValue = 0
-stepDuration = 0.
+stepDuration = 1
 ########## supporting vairbales ########
 # time ticks within a trial for timeEarnings or wtw analysis
 trialTicks = list(
@@ -91,3 +94,5 @@ save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", 
      "tokenValue", "stepDuration", "trialTicks", "pareto", "rewardDelayCDF", 
      "rewardDelayPDF", "meanRewardDelay", "rewardRate", "optimRewardRates", 
      "optimWaitTimes", "loseValue", "paraColors", file = "wtwSettings.RData")
+
+

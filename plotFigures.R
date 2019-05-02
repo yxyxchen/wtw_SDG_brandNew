@@ -107,3 +107,83 @@ plotData = data.frame(trialNum = x, curiosity = y)
 ggplot(plotData, aes(trialNum, curiosity)) + geom_point() + saveTheme
 ggsave("curiosity.png", width =6, height = 4)
 
+###### plot rewardRate for the new model
+conditions = c("HP", "LP")
+conditionColors = c("#008837", "#7b3294")
+
+######## timing variables ########
+tMaxs = c(20, 40) # trial durations
+blockMins = 7 # block duration in mins
+blockSecs = blockMins * 60 # block duration in secs
+iti = 2 # iti duration in secs
+tGrid = seq(0, blockSecs, 0.1)
+
+######### reward variable ########
+tokenValue = 10 #value of the token
+stepDuration = 1
+########## supporting vairbales ########
+# time ticks within a trial for timeEarnings or wtw analysis
+trialTicks = list(
+  'HP' = round(seq(0, tMaxs[1], by = stepDuration), 1),
+  'LP' = round(seq(0, tMaxs[2], by = stepDuration), 1)
+)
+
+trialGapValues = list(
+  "HP" = round(seq(stepDuration, tMaxs[1], by = stepDuration), 2),
+  "LP" = round(seq(stepDuration, tMaxs[2], by = stepDuration), 2)
+)
+
+trialGapIdxs = list(
+  "HP" = 1 : length(trialGapValues$HP),
+  "LP" = 1 : length(trialGapValues$LP)
+)
+
+
+########## additional  variables for optimal analysis ########
+# CDF of reward delays: p(t_reward <= T)
+k = 4 # shape
+mu = 0 # location
+sigma = 2 # scale
+pareto = list()
+pareto[['k']] = k # shape
+pareto[['mu']] = mu # location
+pareto[['sigma']] = sigma # scale
+HP = 1 / length(trialGapIdxs$HP) * trialGapIdxs$HP
+LP = 1 - (1 + k * (trialGapValues$LP - mu) / sigma) ^ (-1 / k)
+LP[length(trialGapValues$LP)] = 1 
+rewardDelayCDF = list(
+  HP = HP,
+  LP = LP
+)
+
+#  PDF of reward delays: p(t_reward = T)
+#  there is no gap before the first tick, therefore the first element is NaN
+#  remmember to use the middle value to the gap when calculating the mean
+HP = diff(c(0, rewardDelayCDF$HP))
+LP = diff(c(0, rewardDelayCDF$LP))
+rewardDelayPDF = list(
+  "HP" = HP,
+  "LP" = LP
+)
+
+# E(delay | elapsed time) for 0 to 19.9 or 39.9, namly at the begining of the gap
+# close to the normal analysis so we assume the reward occurs at the middle of the gap
+nTimeStep = tMaxs[1] / stepDuration
+HP = sapply(1 : nTimeStep, function(i) sum((trialGapValues$HP[i : nTimeStep] - 0.5 * stepDuration - trialTicks$HP[i]) *
+                                             rewardDelayPDF$HP[i : nTimeStep])/
+              sum(rewardDelayPDF$HP[i : nTimeStep]))
+
+nTimeStep = tMaxs[2] / stepDuration
+LP = sapply(1 : nTimeStep, function(i) sum((trialGapValues$LP[i : nTimeStep] - 0.5 * stepDuration - trialTicks$LP[i]) *
+                                             rewardDelayPDF$LP[i : nTimeStep])/
+              sum(rewardDelayPDF$LP[i : nTimeStep]))
+meanRewardDelay = list('HP' = HP, 'LP' = LP)
+
+HP = 1 / (HP + 2)
+LP = 1 / (LP + 2)
+rewardRate = list('HP' = HP, 'LP' = LP)
+plot(rewardRate$HP)
+plot(rewardRate$LP)
+
+
+plot(meanRewardDelay$LP)

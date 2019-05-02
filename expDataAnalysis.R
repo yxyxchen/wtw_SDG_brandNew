@@ -19,10 +19,10 @@ n = length(allIDs)                    # n
 cat('Analyzing data for',n,'subjects.\n')
 
 # define nBlock
-nBlock = 1
+nBlock = 3
 
 # control which individual-level plots to generate
-plotTrialwiseData =T
+plotTrialwiseData =F
 plotKMSC = F
 plotWTW = F
 
@@ -35,6 +35,7 @@ wtwEarly = numeric(length =n * nBlock)
 kmOnGrid_ = vector(mode = "list", length = n * nBlock)
 varQuitTime = numeric(length =n * nBlock)
 cvQuitTime = numeric(length =n * nBlock)
+nTrial = numeric(length =n * nBlock)
 # descriptive statistics for individual subjects and blocks
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
@@ -59,7 +60,7 @@ for (sIdx in 1 : n) {
     scheduledWait = thisTrialData$scheduledWait
     timeWaited[trialEarnings > loseValue] = scheduledWait[trialEarnings > loseValue]
     nAction[noIdx] = sum(round(ifelse(trialEarnings > loseValue, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1)))
-    
+    nTrial[noIdx] = length(timeWaited)
     # calculate varQuitTime
     varQuitTime[noIdx] = ifelse(totalEarnings == 0, NA, var(timeWaited[trialEarnings == 0]))
     cvQuitTime[noIdx] = ifelse(totalEarnings == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
@@ -91,7 +92,7 @@ save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridBlock.RData')
 blockData = data.frame(id = rep(allIDs, each = nBlock), blockNum = rep( t(1 : nBlock), n),
                        cbal = rep(hdrData$cbal, each = nBlock), condition = factor(rep(hdrData$condition, each = nBlock), levels = c("HP", "LP")),
                        stress = factor(rep(hdrData$stress, each = nBlock), levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
-                       totalEarnings = totalEarnings, nAction = nAction, varQuitTime = varQuitTime, cvQuitTime = cvQuitTime)
+                       totalEarnings = totalEarnings, nAction = nAction, varQuitTime = varQuitTime, cvQuitTime = cvQuitTime, nTrial = nTrial)
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
 
 # get session data 
