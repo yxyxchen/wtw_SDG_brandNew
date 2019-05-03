@@ -23,7 +23,7 @@ n = length(idList)
 paras = c(0.05, 30)
 modelName = "functionLinear"
 repModelFun = getRepModelFun(modelName)
-sIdx = 1
+sIdx = 6
 id = idList[[sIdx]]
 cond = hdrData$cond[hdrData$ID == id]
 thisExpTrialData = expTrialData[[id]]
