@@ -298,7 +298,7 @@ functionRL =  function(paras, cond, scheduledWait){
   deltas = matrix(NA, nTimeStep, nTrial)
   targets = matrix(NA, nTimeStep, nTrial)
   
-  rr = rep(1.2, nTimeStep)
+  rr = rep(2, nTimeStep)
   rrBar = ifelse(cond == "HP", 5 / 6, 0.93)
   rrs[,1] = rr
   rrBars[1] = rrBar
@@ -368,19 +368,25 @@ functionRL =  function(paras, cond, scheduledWait){
 }
 
 functionLinear =  function(paras, cond, scheduledWait){
-  # parse paras
-  phi = paras[1]
-  tau = paras[2]
-  
   # parse the data
   nTrial = length(scheduledWait)
   tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
   nTimeStep = tMax / stepDuration
   
+  # parse paras
+  phi = paras[1]
+  tau = paras[2]
+  
+  rrIni = 2
+  beta.prior = matrix(c(rrIni, -0.05), ncol = 1)
+  sigmaSq.prior = matrix(c(0.01, 0, 0, 0.01), nrow = 2, ncol = 2)
+  x.star = cbind(rep(1, nTimeStep), (1 : nTimeStep - 1) * stepDuration)
+  
   # initialize outputs 
   trialEarnings = rep(0, nTrial)
   timeWaited = rep(0, nTrial)
   sellTime = rep(0, nTrial)
+  Ts = rep(0, nTrial)
   
   # initialize elapsed time
   elapsedTime = 0
@@ -388,10 +394,10 @@ functionLinear =  function(paras, cond, scheduledWait){
   # initialize varibales for debugs 
   rrs = matrix(NA, nTimeStep, nTrial);
   rrBars = vector(length = nTrial);
-  deltas = matrix(NA, nTimeStep, nTrial)
-  targets = matrix(NA, nTimeStep, nTrial)
-  
-  rr = rep(1.2, nTimeStep)
+  beta0Hat = vector(length = nTrial);
+  beta1Hat = vector(length = nTrial);
+
+  rr = x.star %*% beta.prior
   rrBar = ifelse(cond == "HP", 5 / 6, 0.93)
   rrs[,1] = rr
   rrBars[1] = rrBar
@@ -421,6 +427,7 @@ functionLinear =  function(paras, cond, scheduledWait){
       nextStateTerminal = (getReward || action == "quit")
       if(nextStateTerminal){
         T = t+1
+        Ts[tIdx] = T
         trialEarnings[tIdx] = nextReward;
         timeWaited[tIdx] = ifelse(getReward, thisScheduledWait, t * stepDuration)
         sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
@@ -433,16 +440,32 @@ functionLinear =  function(paras, cond, scheduledWait){
     
     # update reward rates 
     if(tIdx < nTrial){
-      target[1 : (T-1)]= rev((nextReward + 1) / (1 : (T-1) * stepDuration))
-      delta[1 : (T-1)] = target[1 : (T-1)] - rr[1 : (T-1)]
-      rr = rr + phi*delta
-      rrBar = rrBar + phi * ((nextReward + 1)/ ((T-1) * stepDuration + iti) - rrBar)
+      x = unlist(lapply(1 : tIdx, function(i) 1 : (Ts[i] - 1)))
+      y = unlist(lapply(1 : tIdx,
+                        function(i) rev(  (trialEarnings[i] + 1) * 2 / (1 : (Ts[i] - 1)) )))
+      tempt = data.frame(x,y)
+      junk = summarise(group_by(tempt, x), mean(y), length(x))
+      weights = junk$`length(x)`
+      x.mu = junk$x
+      y.mu = junk$`mean(y)`
+      n.x.mu = length(x.mu)
+      x = unlist(sapply(1 : n.x.mu, function(i) rep(x.mu[i], weights[i])))
+      y = unlist(sapply(1 : n.x.mu, function(i) rep(y.mu[i], weights[i])))
+      X = cbind(rep(1, length(x)), x)
+      Y = matrix(y, ncol = 1)
+      
+      sigmaSq = sum((y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y)^2) / (length(y) - 2)
+      A = solve(sigmaSq.prior) + t(X) %*% X / sigmaSq 
+      betaHat.mu = solve(A)  %*% (t(X) %*% Y/sigmaSq + solve(sigmaSq.prior) %*% beta.prior)
+      yHat.mu = x.star %*% betaHat.mu
+      rr = yHat.mu
+      rrBar = rrBar + phi * (nextReward / ((T-1) * stepDuration + iti) - rrBar)
       
       # record updated values
       rrs[,tIdx + 1] = rr
       rrBars[tIdx + 1] = rrBar
-      deltas[,tIdx] = delta
-      targets[,tIdx] = target
+      beta0Hat[tIdx] = betaHat.mu[1]
+      beta1Hat[tIdx] = betaHat.mu[2]
     }# end of the value update section
   } # end of the trial loop
   
@@ -454,8 +477,8 @@ functionLinear =  function(paras, cond, scheduledWait){
     "scheduledWait" = scheduledWait,
     "rrs" = rrs,
     "rrBars" = rrBars,
-    "targets" = targets,
-    "deltas" = deltas
+    "beta0Hat" = beta0Hat,
+    "beta1Hat" = beta1Hat
   )
   return(outputs)
 }

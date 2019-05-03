@@ -20,8 +20,8 @@ n = length(idList)
 
 ##### get a sense of the model ######
 # simluation for one para and one scheduledWait from simulation or ...
-paras = c(0.05, 100)
-modelName = "functionRL"
+paras = c(0.05, 30)
+modelName = "functionLinear"
 repModelFun = getRepModelFun(modelName)
 sIdx = 1
 id = idList[[sIdx]]
@@ -43,29 +43,36 @@ nTrial = length(scheduledWait)
 timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
 Ts = round(ceiling(timeWaited / stepDuration) + 1)
 
-yHat = matrix(0, 80, 42)
+yHat = matrix(0, nTimeStep, 42)
+beta0Hat = vector(length = 42)
+beta1Hat = vector(length = 42)
 quitTime = vector(length = 42)
-for(k in 1 : 42){
+
+beta0Hat[,1] = 1.2
+beta1Hat[,1] = 0
+yHat[,1] = 1.2
+quitTime[,1] = nTimeStep
+for(k in 1 : 41){
   nTrial = k
   x = unlist(lapply(1 : nTrial, function(i) 1 : (Ts[i] - 1)))
   y = unlist(lapply(1 : nTrial,
                     function(i) rev(  (trialEarnings[i] + 1) * 2 / (1 : (Ts[i] - 1)) )))
   fit = lm(y ~ x)
-  yHat[, k] = predict(fit, newdata=data.frame(x=1:80))
-  if(sum(tempt$rrBars[k] >= yHat[, k]) == 80 || sum(tempt$rrBars[k] < yHat[, k]) == 80){
-    quitTime[k] = NA
+  yHat[, k+1] = predict(fit, newdata=data.frame(x=1:nTimeStep))
+  beta0Hat[k+1] = fit$coefficients[1]
+  beta1Hat[k+1] = fit$coefficients[2]
+  if(sum(tempt$rrBars[k] >= yHat[, k]) == nTimeStep || sum(tempt$rrBars[k] < yHat[, k]) == nTimeStep){
+    quitTime[k+1] = NA
   }else{
-    quitTime[k] = which.min(abs(tempt$rrBars[k] - yHat[, k]))
+    quitTime[k+1] = which.min(abs(tempt$rrBars[k] - yHat[, k]))
   }
 }
 
+
 nTimeStep = tMaxs[2] / stepDuration
 beta.prior = matrix(c(1.2, 0), ncol = 1)
-Sigma.prior = matrix(c(0.005, 0, 0, 0.05), nrow = 2, ncol = 2)
-sigma.prior = 10
-x.star = cbind(rep(1, nTimeStep), 1 : nTimeStep)
-
-
+sigmaSq.prior = matrix(c(0.1, 0, 0, 0.1), nrow = 2, ncol = 2)
+x.star =  cbind(rep(1, nTimeStep), (1 : nTimeStep - 1) * stepDuration)s
 yHat = matrix(0, nTimeStep, 42)
 quitTime = vector(length = 42)
 yHat[, 1] =  x.star %*% beta.prior
@@ -77,19 +84,19 @@ for(k in 1 : 41){
                     function(i) rev(  (trialEarnings[i] + 1) * 2 / (1 : (Ts[i] - 1)) )))
   X = cbind(rep(1, length(x)), x)
   Y = matrix(y, ncol = 1)
-  A = solve(Sigma.prior) + t(X) %*% X / sigma.prior
-  betaHat.mu = solve(A)  %*% (t(X) %*% Y / sigma.prior + solve(Sigma.prior) %*% beta.prior )
+  sigmaSq = sum((y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y)^2) / (length(y) - 2)
+  A = solve(sigmaSq.prior) + t(X) %*% X / sigmaSq 
+  betaHat.mu = solve(A)  %*% (t(X) %*% Y/sigmaSq + solve(sigmaSq.prior) %*% beta.prior)
   yHat.mu = x.star %*% betaHat.mu
   yHat[, k+1] = yHat.mu
+  
   if(sum(tempt$rrBars[k] >= yHat[, k]) == nTimeStep || sum(tempt$rrBars[k] < yHat[, k]) == nTimeStep){
     quitTime[k+1] = NA
   }else{
     quitTime[k+1] = which.min(abs(tempt$rrBars[k] - yHat[, k]))
   }
 }
- 
-
-plot(yHat[,40], ylim = c(-5, 5))
+plot(yHat[,20], ylim = c(-5, 5))
 
 # simulate 
 source('subFxs/simulationFxs.R') # 
