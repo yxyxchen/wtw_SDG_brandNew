@@ -380,10 +380,13 @@ functionLinear =  function(paras, cond, scheduledWait){
   # parse paras
   phi = paras[1]
   tau = paras[2]
+  rrIni = paras[3]
+  sigma = paras[4]
   
-  rrIni = 2
+  yIni = 0
+  
   beta.prior = matrix(c(rrIni, -0.05), ncol = 1)
-  sigmaSq.prior = diag(c(0.05, 0.05))
+  sigmaSq.prior = diag(c(sigma, sigma))
   x.star = cbind(rep(1, nTimeStep), (1 : nTimeStep) * stepDuration)
   
   # initialize outputs 
@@ -400,14 +403,19 @@ functionLinear =  function(paras, cond, scheduledWait){
   ws = matrix(NA, nTimeStep, nTrial);
   ys = matrix(NA, nTimeStep, nTrial);
   rrBars = vector(length = nTrial);
-  beta0Hat = vector(length = nTrial);
-  beta1Hat = vector(length = nTrial);
+  betaPosts =  matrix(NA, 2, nTrial);
+  betaLiks =  matrix(NA, 2, nTrial);
+  sigmaSqs =  vector(length = nTrial);
   
+  # initialize cached values
   rr = x.star %*% beta.prior
   rrBar = ifelse(cond == "HP", 5 / 6, 0.93)
+  w = rep(0, nTimeStep)
+  x.mu = (1 : nTimeStep) * stepDuration
+  y.mu = rep(yIni, nTimeStep)
   rrs[,1] = rr
   rrBars[1] = rrBar
-  
+
   
   # loop over trials
   for(tIdx in 1 : nTrial) {
@@ -446,40 +454,33 @@ functionLinear =  function(paras, cond, scheduledWait){
     
     # update reward rates 
     if(tIdx < nTrial){
-      x = unlist(lapply(1 : tIdx, function(i) stepDuration * (1 : (Ts[i] - 1))))
-      r = unlist(lapply(1 : tIdx, function(i) rep(trialEarnings[i], Ts[i] - 1)))
-      y = r / x
-      x = c((1 : nTimeStep) * stepDuration, x)
-      y = c(rep(rrIni, nTimeStep), y)
-      tempt = data.frame(x,y)
-      junk = summarise(group_by(tempt, x), mean(y), length(x))
-      weights = junk$`length(x)`
-      x.mu = junk$x
-      y.mu = junk$`mean(y)`
-      n.x.mu = length(x.mu)
-      x = unlist(sapply(1 : n.x.mu, function(i) rep(x.mu[i], weights[i])))
-      y = unlist(sapply(1 : n.x.mu, function(i) rep(y.mu[i], weights[i])))
-      X = cbind(rep(1, length(x)), x)
-      Y = matrix(y, ncol = 1)
-      
-      sigmaSq = sum((y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y)^2) / (length(y) - 2) + 
-        100 / sqrt(tIdx)
-      # print(t(X) %*% X / sigmaSq )
-      A = solve(sigmaSq.prior) + t(X) %*% X / sigmaSq 
-      betaHat.mu = solve(A)  %*% (t(X) %*% Y/sigmaSq + solve(sigmaSq.prior) %*% beta.prior)
-      yHat.mu = x.star %*% betaHat.mu
-      rr = yHat.mu
-      rrBar = rrBar + phi * (nextReward / ((T-1) * stepDuration + iti) - rrBar)
-      
+      # updated averaged observation
+      if(T > 2){
+        r = trialEarnings[tIdx] / rev(stepDuration * (1 : (T - 1)))
+        w[1 : (T - 1)] = w[1 : (T - 1)]  + 1
+        y.mu[1 : (T - 1)] = y.mu[1 : (T - 1)] + 1 / w[1 : (T - 1)] * (r - y.mu[1 : (T - 1)] )
+        x = unlist(lapply(1 : nTimeStep, function(i) rep(x.mu[i], w[i])))
+        y = unlist(lapply(1 : nTimeStep, function(i) rep(y.mu[i], w[i])))
+        X = cbind(rep(1, length(x)), x)
+        Y = matrix(y, ncol = 1)
+        
+        # Bayesian 
+        betaLik = solve(t(X) %*% X) %*% t(X) %*% Y
+        sigmaSq = sum((y - X %*% betaLik)^2) / (length(y) - 2) + 10 / sqrt(tIdx)
+        A = solve(sigmaSq.prior) + t(X) %*% X / sigmaSq 
+        betaPost = solve(A)  %*% (t(X) %*% Y/sigmaSq + solve(sigmaSq.prior) %*% beta.prior)
+        yHat.mu = x.star %*% betaPost
+        rr = yHat.mu
+        rrBar = rrBar + phi * (nextReward / ((T-1) * stepDuration + iti) - rrBar)
+      }
       # record updated values
       rrs[,tIdx + 1] = rr
       rrBars[tIdx + 1] = rrBar
-      beta0Hat[tIdx] = betaHat.mu[1]
-      beta1Hat[tIdx] = betaHat.mu[2]
-      xUnique = unique(x)
-      nX= length(unique(x))
-      ys[((1 : nTimeStep) %in% xUnique),tIdx] = y[match(xUnique, x)]
-      ws[((1 : nTimeStep) %in% xUnique),tIdx] = sapply(1 : nX, function(i) sum(x == xUnique[i]))
+      betaPosts[,tIdx] = betaPost
+      betaLiks[,tIdx] = betaLik
+      sigmaSqs[tIdx] = sigmaSq
+      ys[,tIdx] = y.mu
+      ws[,tIdx] = w
     }# end of the value update section
   } # end of the trial loop
   
@@ -491,8 +492,9 @@ functionLinear =  function(paras, cond, scheduledWait){
     "scheduledWait" = scheduledWait,
     "rrs" = rrs,
     "rrBars" = rrBars,
-    "beta0Hat" = beta0Hat,
-    "beta1Hat" = beta1Hat,
+    "betaPosts" = betaPosts,
+    "betaLiks" = betaLiks,
+    "sigmaSqs" = sigmaSqs,
     "ys" = ys,
     "ws" = ws
   )
