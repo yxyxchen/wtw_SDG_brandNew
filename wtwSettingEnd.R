@@ -15,7 +15,7 @@ tGrid = seq(0, blockSecs, 0.1)
 
 ######### reward variable ########
 tokenValue = 10 #value of the token
-stepDuration = 0.1
+stepDuration = 0.5
 ########## supporting vairbales ########
 # time ticks within a trial for timeEarnings or wtw analysis
 trialTicks = list(
@@ -139,14 +139,51 @@ getPreward = function(gapIdx, quitAfter, gammaPerStep, cond){
   return(pReward)
 }
 
-cond = "HP"
-gammaPerStep = 0.80# discount per 0.5s 
+cond = "LP"
+gammaPerStep = 0.80 # discount per 0.5s 
 gamma = gammaPerStep ^ 2
 kd = -log(gamma)
 nGap = length(trialGapValues[[cond]]) 
 nTick =  length(trialTicks[[cond]]) 
 Qquit_ = vector(length = nGap)
 Qwait_ = vector(mode = "list", length = nGap)
+# calculate rewardRate rr_
+rr_ = vector(mode = "list", length = nGap)
+potential_ = vector(mode = "list", length = nGap)
+rewardTimes_ = vector(mode = "list", length = nGap)
+pRewards_ = vector(mode = "list", length = nGap)
+rrBar_ = vector(length = nGap)
+for(quitGap in 1 : nGap){
+  quitAfter = stepDuration * quitGap
+  meanWaitDelay = getMeanWaitDelay(1, quitAfter, gammaPerStep, cond)
+  pReward = getPreward(j, quitAfter, gammaPerStep, cond)
+  rrBar = pReward * tokenValue / meanWaitDelay$time
+  rrBar_[[quitGap]] = rrBar
+  
+  rr = vector(length = quitGap)
+  potential = vector(length = quitGap)
+  pRewards = vector(length = quitGap)
+  rewardTimes  = vector(length = quitGap)
+  for(j in 1 : quitGap){
+    meanRewardDelay = getMeanRewardDelay(j, quitAfter, gammaPerStep, cond)
+    rewardTime = meanRewardDelay$time
+    pReward = getPreward(j, quitAfter, gammaPerStep, cond)
+
+    pRewards[j] = pReward
+    rewardTimes[j] = meanRewardDelay$time
+    rr[j] = tokenValue * pReward  / rewardTime
+    potential[j] = tokenValue * pReward - rrBar * rewardTime
+  }
+  rr_[[quitGap]] = rr
+  potential_[[quitGap]] = potential
+  pRewards_[[quitGap]] = pRewards
+  rewardTimes_[[quitGap]] = rewardTime
+}
+# rr_HP = rr_
+# rr_LP = rr_
+plot(potential_[[40]])
+plot(potential_[[20]])
+plot(rr_[[100]])
 # t means quitting after t
 for(quitGap in 1 : nGap){
   quitAfter = stepDuration * quitGap

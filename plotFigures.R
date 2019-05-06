@@ -1,6 +1,7 @@
 library("ggplot2")
 load("wtwSettings.RData")
 source("subFxs/plotThemes.R")
+dir.create("figures")
 dir.create("figures/plotFigures")
 
 
@@ -178,12 +179,46 @@ LP = sapply(1 : nTimeStep, function(i) sum((trialGapValues$LP[i : nTimeStep] - 0
                                              rewardDelayPDF$LP[i : nTimeStep])/
               sum(rewardDelayPDF$LP[i : nTimeStep]))
 meanRewardDelay = list('HP' = HP, 'LP' = LP)
-
 HP = 1 / (HP + 2)
 LP = 1 / (LP + 2)
 rewardRate = list('HP' = HP, 'LP' = LP)
 plot(rewardRate$HP)
 plot(rewardRate$LP)
-
-
 plot(meanRewardDelay$LP)
+
+
+
+
+# I want to compare the different policy effects
+nTimeStep = tMaxs[2] / stepDuration
+for(quitTime in 1 : nTimeStep){
+  
+}
+
+
+# plot MVT 
+ini = 10
+gamma = 0.9
+lowTh = 6
+highTh = 8
+t = seq(0, 10, by = 0.1)
+r = ini * gamma^(t)
+library(ggplot2)
+lowColor = "black"
+highColor = "#e31a1c"
+lowE = t[which.min(abs(r - lowTh))]
+highE = t[which.min(abs(r - highTh))]
+plotData = data.frame(r = r, t = t)
+ggplot(plotData, aes(t, r)) + geom_line(size = 2) + geom_hline(yintercept = lowTh, color = lowColor, size = 2) +
+  geom_hline(yintercept = highTh, color = highColor, size = 2) + saveTheme + xlab("Time foraging in patch")+
+  ylab("Reward rate") +
+  geom_segment(x = lowE, xend = lowE, y = 0, yend = lowTh, color = lowColor, linetype = 2, size = 2) +
+  geom_segment(x = highE, xend = highE, y = 0, yend = highTh, color = highColor, linetype = 2, size = 2)
+ggsave("MTV.png", width = 5, height = 5)
+
+
+ggplot(plotData, aes(t, r)) + geom_line(size = 2) + geom_hline(yintercept = lowTh, color = lowColor, size = 2) + 
+  saveTheme + xlab("Time foraging in patch")+
+  ylab("Reward rate") +
+  geom_segment(x = lowE, xend = lowE, y = 0, yend = lowTh, color = lowColor, linetype = 2, size = 2) 
+ggsave("MTV.png", width = 5, height = 5)
