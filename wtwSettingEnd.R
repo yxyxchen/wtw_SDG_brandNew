@@ -181,9 +181,8 @@ for(quitGap in 1 : nGap){
 }
 # rr_HP = rr_
 # rr_LP = rr_
-plot(potential_[[40]])
-plot(potential_[[20]])
-plot(rr_[[100]])
+plot(potential_[[1]])
+
 # t means quitting after t
 for(quitGap in 1 : nGap){
   quitAfter = stepDuration * quitGap

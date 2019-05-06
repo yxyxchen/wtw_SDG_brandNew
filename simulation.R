@@ -21,8 +21,8 @@ n = length(idList)
 ##### get a sense of the model ######
 # simluation for one para and one scheduledWait from simulation or ...
 # error prone.. try 3 and everything changes 
-paras = c(0.05, 30, 2.8, 0.0001)
-modelName = "functionLinear"
+paras = c(0.05, 30)
+modelName = "functionRL"
 repModelFun = getRepModelFun(modelName)
 sIdx = 2
 id = idList[[sIdx]]
@@ -35,6 +35,12 @@ set.seed(123)
 # scheduledWait = unlist(lapply(1:1000, function(x) drawSample(cond)))
 tempt = repModelFun(paras, cond, scheduledWait)
 trialPlots(tempt, cond)
+# 
+plotData = data.frame(target = as.vector(tempt$targets), t = rep(1 : 40, length(tempt$trialNum)),
+             trial = rep(tempt$trialNum, each = 40))
+ggplot(plotData, aes(t, target))+geom_point()
+meanTarget = sapply(1 : nrow(tempt$targets), function(i) mean(tempt$targets[i,], na.rm = T))
+plot(meanTarget)
 
 ## try to make some predictions
 scheduledWait = thisExpTrialData$scheduledWait
