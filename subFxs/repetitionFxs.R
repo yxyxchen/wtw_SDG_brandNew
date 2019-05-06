@@ -24,11 +24,7 @@ curiosityTrialR = function(paras, cond, scheduledWait){
   phi = paras[1]
   tau = paras[2]
   phiR = paras[3]
-  
-  # coefficient of curiosity
-  curSlope = 0.2
-  curIntercept = 2
-  
+
   # determine number of trials and nTimeSteps 
   nTrial = length(scheduledWait)
   tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
@@ -66,9 +62,6 @@ curiosityTrialR = function(paras, cond, scheduledWait){
   for(tIdx in 1 : nTrial) {
     # determine 
     thisScheduledWait = scheduledWait[tIdx]
-    #curiosity =  curIntercept * exp(-curSlope*(tIdx-1))
-    curiosity =  0
-    
     # loop for each timestep t and determine At
     t = 1
     while(t <= nTimeStep){
@@ -147,11 +140,7 @@ curiosityTrial = function(paras, cond, scheduledWait){
   phi = paras[1]
   tau = paras[2]
   gamma = paras[3]
-  
-  # coefficient of curiosity
-  curSlope = 0.2
-  curIntercept = 2
-  
+
   # determine number of trials and nTimeSteps 
   nTrial = length(scheduledWait)
   tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])

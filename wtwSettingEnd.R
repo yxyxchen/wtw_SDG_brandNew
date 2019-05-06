@@ -15,7 +15,7 @@ tGrid = seq(0, blockSecs, 0.1)
 
 ######### reward variable ########
 tokenValue = 10 #value of the token
-stepDuration = 0.5
+stepDuration = 0.1
 ########## supporting vairbales ########
 # time ticks within a trial for timeEarnings or wtw analysis
 trialTicks = list(
@@ -156,7 +156,7 @@ rrBar_ = vector(length = nGap)
 for(quitGap in 1 : nGap){
   quitAfter = stepDuration * quitGap
   meanWaitDelay = getMeanWaitDelay(1, quitAfter, gammaPerStep, cond)
-  pReward = getPreward(j, quitAfter, gammaPerStep, cond)
+  pReward = getPreward(1, quitAfter, gammaPerStep, cond)
   rrBar = pReward * tokenValue / meanWaitDelay$time
   rrBar_[[quitGap]] = rrBar
   
@@ -172,7 +172,8 @@ for(quitGap in 1 : nGap){
     pRewards[j] = pReward
     rewardTimes[j] = meanRewardDelay$time
     rr[j] = tokenValue * pReward  / rewardTime
-    potential[j] = tokenValue * pReward - rrBar * rewardTime
+    # potential[j] = tokenValue * pReward - rrBar * (rewardTime - 0.5 * stepDuration)
+    potential[j] = tokenValue * pReward - rrBar * rewardTime 
   }
   rr_[[quitGap]] = rr
   potential_[[quitGap]] = potential
@@ -181,7 +182,10 @@ for(quitGap in 1 : nGap){
 }
 # rr_HP = rr_
 # rr_LP = rr_
-plot(potential_[[1]])
+exits = sapply(1 : nGap, function(i) which(potential_[[i]] < 0)[1])
+plotData = data.frame(policy = trialGapValues$LP, quitTime = exits * stepDuration)
+ggplot(plotData, aes(policy, quitTime)) + geom_point() +
+  geom_abline(slope = 1, intercept = 0) + xlim(c(0, 5)) + ylim(c(0, 5))
 
 # t means quitting after t
 for(quitGap in 1 : nGap){
