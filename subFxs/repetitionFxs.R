@@ -10,6 +10,8 @@ getRepModelFun = function(modelName){
     repModelFun = functionRL
   }else if(modelName == "functionLinear"){
     repModelFun = functionLinear
+  }else if(modelName == "functionParabolic"){
+    repModelFun = functionParabolic
   }else{
     return("wrong model name!")
   }
@@ -298,7 +300,8 @@ functionRL =  function(paras, cond, scheduledWait){
   deltas = matrix(NA, nTimeStep, nTrial)
   targets = matrix(NA, nTimeStep, nTrial)
   
-  rr = rep(2, nTimeStep)
+  rrIni = 1.2
+  rr = rep(rrIni, nTimeStep)
   rrBar = ifelse(cond == "HP", 5 / 6, 0.93)
   rrs[,1] = rr
   rrBars[1] = rrBar
@@ -367,6 +370,7 @@ functionRL =  function(paras, cond, scheduledWait){
   return(outputs)
 }
 
+
 functionLinear =  function(paras, cond, scheduledWait){
   # parse the data
   nTrial = length(scheduledWait)
@@ -376,11 +380,14 @@ functionLinear =  function(paras, cond, scheduledWait){
   # parse paras
   phi = paras[1]
   tau = paras[2]
+  rrIni = paras[3]
+  sigma = paras[4]
   
-  rrIni = 2
+  yIni = 0
+  
   beta.prior = matrix(c(rrIni, -0.05), ncol = 1)
-  sigmaSq.prior = matrix(c(0.01, 0, 0, 0.01), nrow = 2, ncol = 2)
-  x.star = cbind(rep(1, nTimeStep), (1 : nTimeStep - 1) * stepDuration)
+  sigmaSq.prior = diag(c(sigma, sigma))
+  x.star = cbind(rep(1, nTimeStep), (1 : nTimeStep) * stepDuration)
   
   # initialize outputs 
   trialEarnings = rep(0, nTrial)
@@ -393,15 +400,22 @@ functionLinear =  function(paras, cond, scheduledWait){
   
   # initialize varibales for debugs 
   rrs = matrix(NA, nTimeStep, nTrial);
+  ws = matrix(NA, nTimeStep, nTrial);
+  ys = matrix(NA, nTimeStep, nTrial);
   rrBars = vector(length = nTrial);
-  beta0Hat = vector(length = nTrial);
-  beta1Hat = vector(length = nTrial);
-
+  betaPosts =  matrix(NA, 2, nTrial);
+  betaLiks =  matrix(NA, 2, nTrial);
+  sigmaSqs =  vector(length = nTrial);
+  
+  # initialize cached values
   rr = x.star %*% beta.prior
   rrBar = ifelse(cond == "HP", 5 / 6, 0.93)
+  w = rep(0, nTimeStep)
+  x.mu = (1 : nTimeStep) * stepDuration
+  y.mu = rep(yIni, nTimeStep)
   rrs[,1] = rr
   rrBars[1] = rrBar
-  
+
   
   # loop over trials
   for(tIdx in 1 : nTrial) {
@@ -440,32 +454,33 @@ functionLinear =  function(paras, cond, scheduledWait){
     
     # update reward rates 
     if(tIdx < nTrial){
-      x = unlist(lapply(1 : tIdx, function(i) 1 : (Ts[i] - 1)))
-      y = unlist(lapply(1 : tIdx,
-                        function(i) rev(  (trialEarnings[i] + 1) * 2 / (1 : (Ts[i] - 1)) )))
-      tempt = data.frame(x,y)
-      junk = summarise(group_by(tempt, x), mean(y), length(x))
-      weights = junk$`length(x)`
-      x.mu = junk$x
-      y.mu = junk$`mean(y)`
-      n.x.mu = length(x.mu)
-      x = unlist(sapply(1 : n.x.mu, function(i) rep(x.mu[i], weights[i])))
-      y = unlist(sapply(1 : n.x.mu, function(i) rep(y.mu[i], weights[i])))
-      X = cbind(rep(1, length(x)), x)
-      Y = matrix(y, ncol = 1)
-      
-      sigmaSq = sum((y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y)^2) / (length(y) - 2)
-      A = solve(sigmaSq.prior) + t(X) %*% X / sigmaSq 
-      betaHat.mu = solve(A)  %*% (t(X) %*% Y/sigmaSq + solve(sigmaSq.prior) %*% beta.prior)
-      yHat.mu = x.star %*% betaHat.mu
-      rr = yHat.mu
-      rrBar = rrBar + phi * (nextReward / ((T-1) * stepDuration + iti) - rrBar)
-      
+      # updated averaged observation
+      if(T > 2){
+        r = trialEarnings[tIdx] / rev(stepDuration * (1 : (T - 1)))
+        w[1 : (T - 1)] = w[1 : (T - 1)]  + 1
+        y.mu[1 : (T - 1)] = y.mu[1 : (T - 1)] + 1 / w[1 : (T - 1)] * (r - y.mu[1 : (T - 1)] )
+        x = unlist(lapply(1 : nTimeStep, function(i) rep(x.mu[i], w[i])))
+        y = unlist(lapply(1 : nTimeStep, function(i) rep(y.mu[i], w[i])))
+        X = cbind(rep(1, length(x)), x)
+        Y = matrix(y, ncol = 1)
+        
+        # Bayesian 
+        betaLik = solve(t(X) %*% X) %*% t(X) %*% Y
+        sigmaSq = sum((y - X %*% betaLik)^2) / (length(y) - 2) + 10 / sqrt(tIdx)
+        A = solve(sigmaSq.prior) + t(X) %*% X / sigmaSq 
+        betaPost = solve(A)  %*% (t(X) %*% Y/sigmaSq + solve(sigmaSq.prior) %*% beta.prior)
+        yHat.mu = x.star %*% betaPost
+        rr = yHat.mu
+        rrBar = rrBar + phi * (nextReward / ((T-1) * stepDuration + iti) - rrBar)
+      }
       # record updated values
       rrs[,tIdx + 1] = rr
       rrBars[tIdx + 1] = rrBar
-      beta0Hat[tIdx] = betaHat.mu[1]
-      beta1Hat[tIdx] = betaHat.mu[2]
+      betaPosts[,tIdx] = betaPost
+      betaLiks[,tIdx] = betaLik
+      sigmaSqs[tIdx] = sigmaSq
+      ys[,tIdx] = y.mu
+      ws[,tIdx] = w
     }# end of the value update section
   } # end of the trial loop
   
@@ -477,13 +492,12 @@ functionLinear =  function(paras, cond, scheduledWait){
     "scheduledWait" = scheduledWait,
     "rrs" = rrs,
     "rrBars" = rrBars,
-    "beta0Hat" = beta0Hat,
-    "beta1Hat" = beta1Hat
+    "betaPosts" = betaPosts,
+    "betaLiks" = betaLiks,
+    "sigmaSqs" = sigmaSqs,
+    "ys" = ys,
+    "ws" = ws
   )
   return(outputs)
 }
-
-# add 1 to stablize the results
-
-
 

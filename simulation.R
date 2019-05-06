@@ -20,10 +20,11 @@ n = length(idList)
 
 ##### get a sense of the model ######
 # simluation for one para and one scheduledWait from simulation or ...
-paras = c(0.05, 30)
+# error prone.. try 3 and everything changes 
+paras = c(0.05, 30, 2.8, 0.0001)
 modelName = "functionLinear"
 repModelFun = getRepModelFun(modelName)
-sIdx = 1
+sIdx = 2
 id = idList[[sIdx]]
 cond = hdrData$cond[hdrData$ID == id]
 thisExpTrialData = expTrialData[[id]]
