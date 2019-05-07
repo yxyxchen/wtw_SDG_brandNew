@@ -83,7 +83,7 @@ optimRewardRates = list()
 optimRewardRates$HP = max(HP)
 optimRewardRates$LP = max(LP)
 
-# calculate action values in Qlearning
+# the mean waited time without ITI, counting from the every begining of the gap.
 getMeanRewardDelay = function(gapIdx, quitAfter, gammaPerStep, cond){
   gamma = gammaPerStep^2 # discount per 1s
   nGap = length(trialTicks[[cond]]) - 1
@@ -95,11 +95,11 @@ getMeanRewardDelay = function(gapIdx, quitAfter, gammaPerStep, cond){
   }else{
     discount =sum(gamma ^ (seq(0, quitGap - gapIdx) * stepDuration) * rewardDelayPDF[[cond]][gapIdx : quitGap]) /
       sum(rewardDelayPDF[[cond]][gapIdx : quitGap])
-    time = sum((seq(0, quitGap - gapIdx) * stepDuration) * rewardDelayPDF[[cond]][gapIdx : quitGap]) /
+    time = sum((seq(1, quitGap - gapIdx + 1) * stepDuration) * rewardDelayPDF[[cond]][gapIdx : quitGap]) /
       sum(rewardDelayPDF[[cond]][gapIdx : quitGap])
   }
   # meanRewardDelay = list(discount = discount, time = time)
-  meanRewardDelay = list(discount = discount * gamma ^ stepDuration, time = time + stepDuration)
+  meanRewardDelay = list(discount = discount * gamma ^ stepDuration, time = time)
   return(meanRewardDelay)
 }
 
@@ -117,11 +117,11 @@ getMeanWaitDelay = function(gapIdx, quitAfter, gammaPerStep, cond){
     discount =sum(gamma ^ pmin(seq(0, nGap - gapIdx) * stepDuration, quitAfter - gapIdx * stepDuration)
                   * rewardDelayPDF[[cond]][gapIdx : nGap]) /
       sum(rewardDelayPDF[[cond]][gapIdx : nGap]) 
-    time = sum(pmin(seq(0, nGap - gapIdx) * stepDuration, quitAfter - gapIdx * stepDuration ) * rewardDelayPDF[[cond]][gapIdx : nGap]) /
+    time = sum(pmin(seq(1, 1 + nGap - gapIdx) * stepDuration, quitAfter - gapIdx * stepDuration ) * rewardDelayPDF[[cond]][gapIdx : nGap]) /
       sum(rewardDelayPDF[[cond]][gapIdx : nGap])
   }
   # meanWaitDelay = list(discount = discount, time = time)
-  meanWaitDelay = list(discount = discount * gamma ^ stepDuration, time = time + stepDuration)
+  meanWaitDelay = list(discount = discount * gamma ^ stepDuration, time = time)
   return(meanWaitDelay)
 }
 
@@ -169,7 +169,7 @@ for(quitGap in 1 : nGap){
     meanRewardDelay = getMeanRewardDelay(j, quitAfter, gammaPerStep, cond)
     rewardTime = meanRewardDelay$time
     pReward = getPreward(j, quitAfter, gammaPerStep, cond)
-
+    
     pRewards[j] = pReward
     rewardTimes[j] = meanRewardDelay$time
     rr[j] = tokenValue * pReward  / rewardTime
@@ -179,7 +179,7 @@ for(quitGap in 1 : nGap){
   rr_[[quitGap]] = rr
   potential_[[quitGap]] = potential
   pRewards_[[quitGap]] = pRewards
-  rewardTimes_[[quitGap]] = rewardTime
+  rewardTimes_[[quitGap]] = rewardTimes
 }
 # rr_HP = rr_
 # rr_LP = rr_
@@ -187,117 +187,3 @@ exits = sapply(1 : nGap, function(i) which(potential_[[i]] < 0)[1])
 plotData = data.frame(policy = trialGapValues$LP, quitTime = exits * stepDuration)
 ggplot(plotData, aes(policy, quitTime)) + geom_point() +
   geom_abline(slope = 1, intercept = 0) + xlim(c(0, 5)) + ylim(c(0, 5))
-
-# t means quitting after t
-for(quitGap in 1 : nGap){
-  quitAfter = stepDuration * quitGap
-  meanRewardDelay = getMeanRewardDelay(1, quitAfter, gammaPerStep, cond)
-  rewardedDiscount = meanRewardDelay$discount * gamma ^ iti
-  meanWaitDelay = getMeanWaitDelay(1, quitAfter, gammaPerStep, cond) 
-  discount =  meanWaitDelay$discount * gamma ^ iti
-  pReward = getPreward(1, quitAfter, gammaPerStep, cond)
-  Qquit =  pReward * tokenValue * rewardedDiscount / (1 - discount)
-  # Qquit =  sum(pReward * tokenValue * meanRewardDiscount * meanWaitDiscount ^ (0 : 10))
-  Qquit_[quitGap] = Qquit
-  Qwait = vector(length = quitGap)
-  for(j in 1 : quitGap){
-    meanRewardDelay = getMeanRewardDelay(j, quitAfter, gammaPerStep, cond)
-    meanWaitDelay = getMeanWaitDelay(j, quitAfter, gammaPerStep, cond)
-    rewardedDiscount = meanRewardDelay$discount
-    discount = meanWaitDelay$discount
-    pReward = getPreward(j, quitAfter, gammaPerStep, cond)
-    Qwait[j] = tokenValue * rewardedDiscount * pReward + Qquit * discount
-  }
-  Qwait_[[quitGap]] = Qwait
-}
-
-library("ggplot2")
-library("dplyr")
-library("tidyr")
-source("subFxs/plotThemes.R")
-# ok there are the same
-nQuitGap = 20
-nGap = length(trialGapValues[[cond]])
-QHP = vector(length = length(nGap))
-for(lastWaitGap in 1 : nGap){
-  # define the transition matrix
-  trans = matrix(rep(0, length = (lastWaitGap + nQuitGap)^2), nrow = lastWaitGap + nQuitGap)
-  if(lastWaitGap > 1) trans[1 : (lastWaitGap - 1), lastWaitGap + 1]  =
-      unlist(lapply(1:(lastWaitGap-1), function(i) rewardDelayPDF[[cond]][i] / sum(rewardDelayPDF[[cond]][i : nGap])))
-  trans[lastWaitGap, lastWaitGap + 1] = 1
-  if(lastWaitGap > 1) for(i in 1 : (lastWaitGap - 1)) trans[i, i+1] = 1 - trans[i, lastWaitGap + 1]
-  if(nQuitGap > 1) for(i in (lastWaitGap+1) : (lastWaitGap + nQuitGap-1)) trans[i, i + 1] = 1
-  trans[lastWaitGap + nQuitGap, 1] = 1
-  
-  # calculate the steady state
-  n = ncol(trans)
-  A = t(trans - diag(n))
-  A = rbind(A, rep(1, n))
-  b = c(rep(0, n), 1)
-  UHP = qr.solve(A, b)
-  QquitList = Qquit_[[lastWaitGap]] * gamma ^ (-(0 : (nQuitGap - 1)) * stepDuration)
-  QHP[[lastWaitGap]] =  sum(UHP[1:lastWaitGap] * Qwait_[[lastWaitGap]]) + sum(UHP[lastWaitGap + (1 : nQuitGap)] * QquitList)
-}
-
-# calculate reward rate defined in the R-learning, actually it is the reward rate for every steps
-# I assume no gamma here
-Rt = vector(length = length(trialGapValues[[cond]]))
-Rstep= vector(length = length(trialGapValues[[cond]]))
-Tstep = vector(length = length(trialGapValues$H))
-for(lastWaitGap in 1 : nGap){
-  # define the transition matrix
-  trans = matrix(rep(0, length = (lastWaitGap + nQuitGap)^2), nrow = lastWaitGap + nQuitGap)
-  if(lastWaitGap > 1) trans[1 : (lastWaitGap - 1), lastWaitGap + 1]  =
-      unlist(lapply(1:(lastWaitGap-1), function(i) rewardDelayPDF[[cond]][i] / sum(rewardDelayPDF[[cond]][i : nGap])))
-  trans[lastWaitGap, lastWaitGap + 1] = 1
-  if(lastWaitGap > 1) for(i in 1 : (lastWaitGap - 1)) trans[i, i+1] = 1 - trans[i, lastWaitGap + 1]
-  if(nQuitGap > 1) for(i in (lastWaitGap+1) : (lastWaitGap + nQuitGap-1)) trans[i, i + 1] = 1
-  trans[lastWaitGap + nQuitGap, 1] = 1
-  # calculate the steady state
-  n = ncol(trans)
-  A = t(trans - diag(n))
-  A = rbind(A, rep(1, n))
-  b = c(rep(0, n), 1)
-  UHP = qr.solve(A, b)
-  rHP = c(unlist(lapply(1 : lastWaitGap, function(i) {
-    rewardDelayPDF[[cond]][i] / sum(rewardDelayPDF[[cond]][i: nGap]) 
-  })), rep(0, nQuitGap))
-  timeInGaps = c(unlist(lapply(1 : lastWaitGap, function(i) {
-    junk = rewardDelayPDF[[cond]][i] / sum(rewardDelayPDF[[cond]][i : nGap])
-    junk * stepDuration + (1 - junk) * stepDuration
-  })), rep(iti / nQuitGap, nQuitGap))
-  meanTimePerAction = sum(UHP * timeInGaps)
-  Rt[lastWaitGap] = sum(UHP * rHP * tokenValue) / meanTimePerAction
-  Tstep[lastWaitGap] = meanTimePerAction
-  Rstep[lastWaitGap] = sum(UHP * rHP * tokenValue)
-}
-
-# the reward rate in R_learning is the same as that calculated by MVT
-# though one is for per action and one is for per seconds, we can normalize Rstep by stepDuration
-# it is also true when the events not occur at the end of the gap, so that the meanTimePerAction changes
-data.frame(Rt, rewardRates$HP)
-
-# plot state values
-# only true when all action have the same time
-tau = 10
-nGap = length(trialGapValues$HP)
-waitRate_ = vector(mode = "list", length = nGap)
-stateValueHP_ = vector(mode = "list", length = nGap)
-for(lastWaitGap in 1 : nGap){
-  Qwait = Qwait_[[lastWaitGap]]
-  Qquit = Qquit_[[lastWaitGap]]
-  waitRate = unlist(lapply(1 : lastWaitGap, function(i) exp(tau * Qwait[i]) / sum(exp(tau * Qwait[i]), exp(tau * Qquit))))
-  stateValueHP = unlist(lapply(1 : lastWaitGap, function(i) waitRate[i] * Qwait[i] + (1 - waitRate[i]) * Qquit))
-  stateValueHP_[[lastWaitGap]] = stateValueHP
-}
-# ok now they are the same
-# I think it is maybe because, in my calculation, I always assume the rewards happens at the end of it right.
-plot(Rstep * gamma ^ stepDuration / (1 - gamma ^ stepDuration) / QHP)
-
-stepDuration = 0.001
-QHPAp = rewardRate$HP * stepDuration * gamma ^ stepDuration / (1 - gamma ^ stepDuration)
-
-QHPAp[[200]]
-
-
-                                 
