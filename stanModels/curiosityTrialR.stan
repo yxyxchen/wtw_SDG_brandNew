@@ -87,7 +87,7 @@ transformed parameters{
 model {
   phi ~ uniform(0, 0.3);
   tau ~ uniform(2, 50);
-  //phiR ~ uniform(0, 0.3);
+  phiR ~ uniform(0, 0.3);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){
