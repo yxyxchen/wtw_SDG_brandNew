@@ -23,7 +23,10 @@ expModelFitting = function(modelName, paras){
   model = stan_model(file = sprintf("stanModels/%s.stan", modelName))
   
   # determine wIni
-  wIni = ifelse(modelName == "curiosityTrialR", 0.4408333, 4.408333)
+  QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9) 
+  QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
+  wIni = ifelse(modelName == "curiosityTrialR", 0.88 * stepDuration,
+                (QHPApOptim + OLPApOPtim) / 2)
   # load expData
   allData = loadAllData()
   hdrData = allData$hdrData           

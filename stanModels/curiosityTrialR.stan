@@ -16,12 +16,12 @@ transformed data {
   real iti = 2;
   real tokenValue = 10;
   int totalSteps = sum(Ts) - N;
-  real phiR = 0.005;
+  real QwaitIni = 1;
   }
 parameters {
   real<lower = 0, upper = 0.3> phi;
   real<lower = 2, upper = 50> tau;
-  //real<lower = 0, upper = 0.3> phiR;
+  real<lower = 0, upper = 0.3> phiR;
 }
 transformed parameters{
   // initialize action values 
@@ -31,7 +31,7 @@ transformed parameters{
   real Rrate = wIni;
   
   // initialize variables to record action values 
-  matrix[nTimeSteps, N] Qwaits = rep_matrix(0, nTimeSteps, N);
+  matrix[nTimeSteps, N] Qwaits = rep_matrix(QwaitIni, nTimeSteps, N);
   vector[N] Rrates = rep_vector(0, N);
   vector[N] Qquits = rep_vector(0, N);
   vector[N] Vitis = rep_vector(0, N);
@@ -93,7 +93,6 @@ model {
   for(tIdx in 1 : N){
     int action;
     vector[2] values;
-    real curiosity = 2 * exp(-0.2 * (tIdx - 1));
     int T = Ts[tIdx];
     for(i in 1 : (T - 1)){
       if(trialEarnings[tIdx] == 0 && i == (T-1)){
@@ -101,7 +100,7 @@ model {
       }else{
         action = 1; // wait
       }
-      values[1] = (Qwaits[i, tIdx] + curiosity ) * tau;
+      values[1] = (Qwaits[i, tIdx]) * tau;
       values[2] = Qquits[tIdx] * tau;
       //action ~ categorical_logit(values);
       target += categorical_logit_lpmf(action | values);
@@ -117,7 +116,6 @@ generated quantities {
   // loop over trials
   for(tIdx in 1 : N){
     int action;
-    real curiosity = 2 * exp(-0.2 * (tIdx - 1));
     int T = Ts[tIdx];
     for(i in 1 : (T - 1)){
       if(trialEarnings[tIdx] == 0 && i == (T-1)){
@@ -125,7 +123,7 @@ generated quantities {
       }else{
         action = 1; // wait
       }
-      values[1] = (Qwaits[i, tIdx] + curiosity ) * tau;
+      values[1] = (Qwaits[i, tIdx]) * tau;
       values[2] = Qquits[tIdx] * tau;
       log_lik[no] =categorical_logit_lpmf(action | values);
       no = no + 1;
@@ -133,3 +131,4 @@ generated quantities {
   }// end of the loop
   LL_all =sum(log_lik);
 }
+

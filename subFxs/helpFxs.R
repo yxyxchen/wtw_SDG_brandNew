@@ -1,6 +1,6 @@
 library("stringr")
 getParas = function(modelName){
-  if(str_detect(modelName, "curiosityTrial")) paras = c("phi", "tau", "gamma")
+  if(modelName == "curiosityTrial") paras = c("phi", "tau", "gamma")
   else if(str_detect(modelName, "curiosityTrialR")) paras = c("phi", "tau", "phiR")
   else if(str_detect(modelName, "heuristicRL")) paras = c("phi", "sigma")
   else return("wrong model name")

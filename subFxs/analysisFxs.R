@@ -45,8 +45,6 @@ trialPlots <- function(blockData,label) {
 }
 
 
-
-
 # calculate kaplan-meier and area under the curve
 kmsc <- function(blockData,tMax,blockLabel='',makePlot=FALSE,grid=0) {
   library(survival)
@@ -157,7 +155,8 @@ wtwTS <- function(blockData, tGrid, wtwCeiling, blockLabel, plotWTW) {
       displayTheme
     print(p)
   }
-  return(timeWTW)
+  outputs = list(timeWTW = timeWTW,  trialWTW = trialWTW)
+  return(outputs)
 }
 
 # correlation plot

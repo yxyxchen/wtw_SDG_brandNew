@@ -22,7 +22,7 @@ cat('Analyzing data for',n,'subjects.\n')
 nBlock = 3
 
 # control which individual-level plots to generate
-plotTrialwiseData =T
+plotTrialwiseData =F
 plotKMSC = F
 plotWTW = F
 
@@ -32,6 +32,8 @@ AUC = numeric(length =n * nBlock)
 totalEarnings =  numeric(length =n * nBlock)
 nAction = numeric(length =n * nBlock)
 wtwEarly = numeric(length =n * nBlock)
+timeWTW_ = vector(mode = "list", length = n * nBlock)
+trialWTW_ = vector(mode = "list", length = n * nBlock)
 kmOnGrid_ = vector(mode = "list", length = n * nBlock)
 varQuitTime = numeric(length =n * nBlock)
 cvQuitTime = numeric(length =n * nBlock)
@@ -77,7 +79,9 @@ for (sIdx in 1 : n) {
     # WTW time series
     wtwCeiling = tMax
     wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
-    wtwEarly[noIdx] = mean(wtwtsResults[1 : (1 * 60 * 10)])
+    timeWTW_[[noIdx]] = wtwtsResults$timeWTW
+    trialWTW_[[noIdx]] = wtwtsResults$trialWTW
+    wtwEarly[noIdx] = mean(timeWTW_[[noIdx]][1 : (1 * 60 * 10)])
     
     # wait for input before continuing, if individual plots were requested
     if (any(plotTrialwiseData, plotKMSC, plotWTW)) {
@@ -94,6 +98,16 @@ blockData = data.frame(id = rep(allIDs, each = nBlock), blockNum = rep( t(1 : nB
                        stress = factor(rep(hdrData$stress, each = nBlock), levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
                        totalEarnings = totalEarnings, nAction = nAction, varQuitTime = varQuitTime, cvQuitTime = cvQuitTime, nTrial = nTrial)
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
+
+
+idListHP =  as.numeric(row.names(hdrData)[hdrData$condition == "LP"])
+plotData = data.frame(wtw = unlist(lapply(1:60, function(i) timeWTW_[[idListHP[i]*3-2]])), id = rep(idListHP, each = length(tGrid)),
+                      time = rep(1: length(tGrid), 60))
+summaryData =  dplyr::summarise(group_by(plotData, time), mu = mean(wtw), std = sd(wtw))
+plotData2 = data.frame(mu = summaryData$mu, std = summaryData$std, time = tGrid)
+ggplot(plotData2, aes(time, mu)) + geom_line(group = 1)
+
+
 
 # get session data 
 AUC = numeric(length =n)

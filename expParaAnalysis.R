@@ -80,7 +80,7 @@ dir.create("figures/expParaAnalysis")
 saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
 dir.create(saveDir)
 # full_model
-modelName = "heuristicRL"
+modelName = "curiosityTrialR"
 paras = getParas(modelName)
 expPara = loadExpPara(modelName, paras)
 useID = getUseID(blockData, expPara, paras)

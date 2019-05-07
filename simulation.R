@@ -123,7 +123,7 @@ set.seed(123)
 for(lIdx in 1 : 3){
   seqLen = seqLens[lIdx]
   scheduledWaitList = replicate(nSeq, replicate(seqLen, drawSample(cond)), simplify = F)
-  trialData = simulate("functionRL", nRep, paraTable, scheduledWaitList, cond)
+  trialData = simulate("curiosityTrialR", nRep, paraTable, scheduledWaitList, cond)
   # extract rrs
   rrs_ = array(t(seq(1 : (nComb * nSeq * nRep * nTimeStep))), dim = c(nRep, nSeq, nComb, nTimeStep)) 
   load("genData/simulation/functionRL/simParas.RData")
