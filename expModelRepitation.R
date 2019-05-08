@@ -25,9 +25,9 @@ idList = hdrData$ID
 n = length(idList)
 
 # inputs
-modelName = "heuristicRL"
+modelName = "curiosityTrialR"
 # paras = getParas(modelName)
-paras = c("phi", "sigma")
+paras = c("phi", "tau", "phiR")
 # load expPara
 expPara = loadExpPara(modelName, paras)
 #tempt= loadExpParaExtra(modelName, pars)

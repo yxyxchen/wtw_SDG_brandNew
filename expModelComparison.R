@@ -6,10 +6,7 @@ library("ggplot2")
 source("subFxs/helpFxs.R")
 
 # load model names
-modelNames = c("curiosityTrial", "curiosityTrialR",
-               "full_model")
-modelNames = c("no_learning_2",
-               "full_model")
+modelNames = c("curiosityTrial", "curiosityTrialNC")
 nModel = length(modelNames)
 
 # load experimental data
