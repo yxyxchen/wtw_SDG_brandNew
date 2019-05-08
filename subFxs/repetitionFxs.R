@@ -160,6 +160,7 @@ curiosityTrialR = function(paras, cond, scheduledWait){
   phi = paras[1]
   tau = paras[2]
   phiR = paras[3]
+  zeroPoint = paras[4]
 
   # determine number of trials and nTimeSteps 
   nTrial = length(scheduledWait)
@@ -169,10 +170,24 @@ curiosityTrialR = function(paras, cond, scheduledWait){
   # initialize actionValues
   # here we use the optimal reward rates from the normative analysis in Lempert 2018
   # it is more accurate then the one I calcualte in wtwSettings.R
-  wIni = (5/6 + 0.93)/ 2 * stepDuration # change wIni didn't change anything
+  wIni = (5/6 + 0.93)/ 2 * stepDuration * 0.5# change wIni didn't change anything
   # wIni = 0 # chaneg to 0 therefore to encourage explore
   
-  Qwait = c(rep(1, nTimeStep))
+
+  # Qwait = c(5 -(1:35) * 0.2, 5 -(36:40) * 2) # linear with sudden fall
+  # Qwait = -(1:40 / 10)^1.5 + 5 # the tail doesn't fall enough
+  # Qwait = -(1:20 / 10)^1.5 + 2 # good for HP
+  if(zeroPoint == nTimeStep){
+    Qwait = rev((1:zeroPoint)-1) * 0.2
+  }else{
+    Qwait = c(rev((1:zeroPoint)-1) * 0.2, -0.2*(1 : (nTimeStep - zeroPoint)))
+  }
+  
+  
+  plot(-(1:20 / 10)^1.5 + 2)
+  # Qwait = -6 / (rev(1:40) + 4) + 0.5
+  # plot(-6 / (rev(1:40) + 100) + 0.5) 
+  # Qwait = 3.5 -(1:20) * 0.2
   Qquit = 0
   Viti = 0
   Rrate = wIni
@@ -558,6 +573,7 @@ curiosityTrial = function(paras, cond, scheduledWait){
   phi = paras[1]
   tau = paras[2]
   gamma = paras[3]
+  zeroPoint = paras[4]
 
   # determine number of trials and nTimeSteps 
   nTrial = length(scheduledWait)
@@ -575,10 +591,19 @@ curiosityTrial = function(paras, cond, scheduledWait){
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
   wIni = (QHPApOptim + QLPApOptim)/ 2
   
-  Qwait = c(rep(wIni, 80), rep(0, nTimeStep - 80))
-  Qquit = wIni * 0.8
-  Viti = wIni * 0.8
-  
+  # Qwait = rep(wIni, nTimeStep)
+  # since the participants start the trial with , we assume max(Qwait0) = wini * 0.8
+  # again, we assume it has a slope 
+  Qquit = wIni * 0.9
+  Viti = wIni * 0.9
+  #Qwait = rep(wIni*0.93, nTimeStep)
+  if(zeroPoint == nTimeStep){
+    Qwait = rev((1:zeroPoint)-1) * 0.1 + Qquit
+  }else{
+    Qwait = c(rev((1:zeroPoint)-1) * 0.1+ Qquit, Qquit-0.1*(1 : (nTimeStep - zeroPoint)))
+  }
+  #Qwait = rep(wIni, nTimeStep)
+
   # initialize varibles for recording action values
   Qwaits = matrix(NA, nTimeStep, nTrial);
   Qwaits[,1] = Qwait
@@ -601,13 +626,11 @@ curiosityTrial = function(paras, cond, scheduledWait){
   for(tIdx in 1 : nTrial) {
     # determine 
     thisScheduledWait = scheduledWait[tIdx]
-    # curiosity =  curIntercept * exp(-curSlope*(tIdx-1))
-    curiosity = 0
     # loop for each timestep t and determine At
     t = 1
     while(t <= nTimeStep){
       # determine At
-      waitRate =  1 / sum(1  + exp((Qquit - Qwait[t] - curiosity)* tau))
+      waitRate =  1 / sum(1  + exp((Qquit - Qwait[t])* tau))
       action = ifelse(runif(1) < waitRate, 'wait', 'quit')
       # observe St+1 and Rt+1
       rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)

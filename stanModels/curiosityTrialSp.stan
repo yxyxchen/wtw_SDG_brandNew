@@ -21,13 +21,20 @@ parameters {
   real<lower = 0, upper = 0.3> phi;
   real<lower = 2, upper = 50> tau;
   real<lower = 0.7, upper = 1> gamma;
+  real<lower = 0, upper = tMax> zeroPoint; 
 }
 transformed parameters{
   // initialize action values 
-  vector[nTimeSteps] Qwait = rep_vector(wIni, nTimeSteps);
-  real Qquit = wIni;
-  real Viti = wIni;
-  
+  vector[nTimeSteps] Qwait;
+
+  real Qquit = wIni * 0.9;
+  real Viti = wIni * 0.9;
+  vector[zeroPoint] junk = 1:zeroPoint;
+  if(zeroPoint == tMax){
+    Qwait = 4 -junk * 0.1 + Qquit;
+  }else{
+    Qwait = c(4 -junk * 0.1+ Qquit, Qquit-0.1*(1 : (tMax - zeroPoint)));
+  }
   // initialize variables to record action values 
   matrix[nTimeSteps, N] Qwaits = rep_matrix(0, nTimeSteps, N);
   vector[N] Qquits = rep_vector(0, N);
@@ -63,10 +70,6 @@ transformed parameters{
         }
       }
     }
-    // update Qquit by counterfactual thiking
-    G1 =  RT  * gamma^(T - 2) + Viti * gamma^(T - 1);
-    Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
-
     // update Viti
     Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);
     
@@ -80,6 +83,7 @@ model {
   phi ~ uniform(0, 0.3);
   tau ~ uniform(2, 50);
   gamma ~ uniform(0.7, 1);
+  zeroPoint ~ uniform(0, tMax);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){

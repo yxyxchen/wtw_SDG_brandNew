@@ -103,6 +103,7 @@ getMeanRewardDelay = function(gapIdx, quitAfter, gammaPerStep, cond){
   return(meanRewardDelay)
 }
 
+# what it is this?
 getMeanWaitDelay = function(gapIdx, quitAfter, gammaPerStep, cond){
   gamma = gammaPerStep^2 # discount per 1s
   nGap = length(trialTicks[[cond]]) - 1
@@ -118,7 +119,7 @@ getMeanWaitDelay = function(gapIdx, quitAfter, gammaPerStep, cond){
                   * rewardDelayPDF[[cond]][gapIdx : nGap]) /
       sum(rewardDelayPDF[[cond]][gapIdx : nGap]) 
     time = sum(pmin(seq(1, 1 + nGap - gapIdx) * stepDuration, quitAfter - gapIdx * stepDuration ) * rewardDelayPDF[[cond]][gapIdx : nGap]) /
-      sum(rewardDelayPDF[[cond]][gapIdx : nGap])
+      sum(rewardDelayPDF[[cond]][gapIdx : nGap]) + iti
   }
   # meanWaitDelay = list(discount = discount, time = time)
   meanWaitDelay = list(discount = discount * gamma ^ stepDuration, time = time)
@@ -140,7 +141,7 @@ getPreward = function(gapIdx, quitAfter, gammaPerStep, cond){
   return(pReward)
 }
 
-cond = "HP"
+cond = "LP"
 gammaPerStep = 0.80 # discount per 0.5s 
 gamma = gammaPerStep ^ 2
 kd = -log(gamma)
@@ -158,7 +159,7 @@ for(quitGap in 1 : nGap){
   quitAfter = stepDuration * quitGap
   meanWaitDelay = getMeanWaitDelay(1, quitAfter, gammaPerStep, cond)
   pReward = getPreward(1, quitAfter, gammaPerStep, cond)
-  rrBar = pReward * tokenValue / meanWaitDelay$time
+  rrBar = pReward * tokenValue / (meanWaitDelay$time- 0.5 * stepDuration)
   rrBar_[[quitGap]] = rrBar
   
   rr = vector(length = quitGap)
@@ -187,3 +188,18 @@ exits = sapply(1 : nGap, function(i) which(potential_[[i]] < 0)[1])
 plotData = data.frame(policy = trialGapValues$LP, quitTime = exits * stepDuration)
 ggplot(plotData, aes(policy, quitTime)) + geom_point() +
   geom_abline(slope = 1, intercept = 0) + xlim(c(0, 5)) + ylim(c(0, 5))
+
+potentialMatrix = matrix(NA, nrow = 400, ncol = 400)
+for(i in 1 : 400){
+  potentialMatrix[1:i, i] = potential_[[i]]
+}
+policyList = c(140, 220, 300, 380)
+nPolicy = length(policyList)
+plotData = data.frame(potential = unlist(lapply(1:nPolicy,
+                                         function(i) potentialMatrix[,policyList[i]])),
+                      exist_threshold = as.factor(rep(policyList, each = 400)*stepDuration),
+                      time = rep(1:400, nPolicy))
+ggplot(plotData, aes(time, potential, color = exist_threshold)) + geom_point(size = 1) +
+  ylab("Potential") + xlab("Time / s") + saveTheme + geom_hline(yintercept = 0)
+ggsave("potenTialLP.png",width = 8, height = 4)
+
