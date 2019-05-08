@@ -1,6 +1,6 @@
 # we don't need lp__ which is a sum loglikelyhood scaled by a constant, something like a dispersion 
 # we don't need lp__ for model comparison 
-# we save LL_all 
+# we save LL_all in both the summary and the all samples data since some times out of memory will change it a lot
 # we use log_like to calculate WAIC and looStat
 # but we don't save log_like
 modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, pars, model){
@@ -29,7 +29,7 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
                iter = nIter) 
   # extract parameters
   extractedPara = fit %>%
-    rstan::extract(permuted = F, pars = pars)
+    rstan::extract(permuted = F, pars = c(pars, "LL_all"))
   # save sampling sequences
   tempt = extractedPara %>%
     adply(2, function(x) x) %>%  # change arrays into 2-d dataframe 

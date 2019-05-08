@@ -21,10 +21,10 @@ n = length(idList)
 ##### get a sense of the model ######
 # simluation for one para and one scheduledWait from simulation or ...
 # error prone.. try 3 and everything changes 
-paras = c(0.05, 10, 0.03)
-modelName = "curiosityTrialR"
+paras = c(0.1, 10, 0.9, 20)
+modelName = "curiosityTrial"
 repModelFun = getRepModelFun(modelName)
-sIdx = 2
+sIdx = 1
 id = idList[[sIdx]]
 cond = hdrData$cond[hdrData$ID == id]
 thisExpTrialData = expTrialData[[id]]
@@ -32,79 +32,31 @@ thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
 scheduledWait = thisExpTrialData$scheduledWait
 set.seed(123)
 # cond = "LP"
-# scheduledWait = unlist(lapply(1:1000, function(x) drawSample(cond)))
+# scheduledWait = unlist(lapply(1:100, function(x) drawSample(cond)))
 tempt = repModelFun(paras, cond, scheduledWait)
 trialPlots(tempt, cond)
 
-# 
-plotData = data.frame(target = as.vector(tempt$targets), t = rep(1 : 40, length(tempt$trialNum)),
-             trial = rep(tempt$trialNum, each = 40))
-ggplot(plotData, aes(t, target))+geom_point()
-meanTarget = sapply(1 : nrow(tempt$targets), function(i) mean(tempt$targets[i,], na.rm = T))
-plot(meanTarget)
+trialPlots(truncateTrials(tempt, 1, 100), cond)
+# simulate using generated seqs as examples
+paras = c(0.02, 5, 0.01)
+modelName = "curiosityTrialR"
+repModelFun = getRepModelFun(modelName)
+set.seed(231)
+cond = "LP"
+nSeq = 500
+scheduledWait = unlist(lapply(1:nSeq, function(x) drawSample(cond)))
+tempt = repModelFun(paras, cond, scheduledWait)
+trialPlots(tempt, cond)
+pWait = lapply(1 : nSeq, function(i) (1 / (1 + exp((tempt$Qquit[i] -tempt$Qwaits[,i]) * paras[2]))))
+stateValue = sapply(1 : nSeq, function(i) tempt$Qwaits[,i]*pWait[[i]] +
+                      tempt$Qquit[i]*(1 - pWait[[i]]))
+decisionValue =  sapply(1 : nSeq, function(i) tempt$Qwaits[,i] -
+                          tempt$Qquit[i])
+pWait = sapply(1 : nSeq, function(i) (1 / (1 + exp((tempt$Qquit[i] -tempt$Qwaits[,i]) * paras[2]))))
 
-## try to make some predictions
-scheduledWait = thisExpTrialData$scheduledWait
-trialEarnings = thisExpTrialData$trialEarnings
-timeWaited = thisExpTrialData$timeWaited
-nTrial = length(scheduledWait)
-timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
-Ts = round(ceiling(timeWaited / stepDuration) + 1)
-
-yHat = matrix(0, nTimeStep, 42)
-beta0Hat = vector(length = 42)
-beta1Hat = vector(length = 42)
-quitTime = vector(length = 42)
-
-beta0Hat[,1] = 1.2
-beta1Hat[,1] = 0
-yHat[,1] = 1.2
-quitTime[,1] = nTimeStep
-for(k in 1 : 41){
-  nTrial = k
-  x = unlist(lapply(1 : nTrial, function(i) 1 : (Ts[i] - 1)))
-  y = unlist(lapply(1 : nTrial,
-                    function(i) rev(  (trialEarnings[i] + 1) * 2 / (1 : (Ts[i] - 1)) )))
-  fit = lm(y ~ x)
-  yHat[, k+1] = predict(fit, newdata=data.frame(x=1:nTimeStep))
-  beta0Hat[k+1] = fit$coefficients[1]
-  beta1Hat[k+1] = fit$coefficients[2]
-  if(sum(tempt$rrBars[k] >= yHat[, k]) == nTimeStep || sum(tempt$rrBars[k] < yHat[, k]) == nTimeStep){
-    quitTime[k+1] = NA
-  }else{
-    quitTime[k+1] = which.min(abs(tempt$rrBars[k] - yHat[, k]))
-  }
-}
-
-
-nTimeStep = tMaxs[2] / stepDuration
-beta.prior = matrix(c(1.2, 0), ncol = 1)
-sigmaSq.prior = matrix(c(0.1, 0, 0, 0.1), nrow = 2, ncol = 2)
-x.star =  cbind(rep(1, nTimeStep), (1 : nTimeStep - 1) * stepDuration)s
-yHat = matrix(0, nTimeStep, 42)
-quitTime = vector(length = 42)
-yHat[, 1] =  x.star %*% beta.prior
-quitTime[1] = nTimeStep
-for(k in 1 : 41){
-  nTrial = k
-  x = unlist(lapply(1 : nTrial, function(i) 1 : (Ts[i] - 1)))
-  y = unlist(lapply(1 : nTrial,
-                    function(i) rev(  (trialEarnings[i] + 1) * 2 / (1 : (Ts[i] - 1)) )))
-  X = cbind(rep(1, length(x)), x)
-  Y = matrix(y, ncol = 1)
-  sigmaSq = sum((y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y)^2) / (length(y) - 2)
-  A = solve(sigmaSq.prior) + t(X) %*% X / sigmaSq 
-  betaHat.mu = solve(A)  %*% (t(X) %*% Y/sigmaSq + solve(sigmaSq.prior) %*% beta.prior)
-  yHat.mu = x.star %*% betaHat.mu
-  yHat[, k+1] = yHat.mu
-  
-  if(sum(tempt$rrBars[k] >= yHat[, k]) == nTimeStep || sum(tempt$rrBars[k] < yHat[, k]) == nTimeStep){
-    quitTime[k+1] = NA
-  }else{
-    quitTime[k+1] = which.min(abs(tempt$rrBars[k] - yHat[, k]))
-  }
-}
-plot(yHat[,20], ylim = c(-5, 5))
+library("R.matlab")
+writeMat("Rlearning.mat", pWait = pWait, stateValue = stateValue,
+         decisionValue = decisionValue)
 
 # simulate 
 source('subFxs/simulationFxs.R') # 

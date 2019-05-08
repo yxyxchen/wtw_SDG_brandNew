@@ -65,8 +65,6 @@ transformed parameters{
     }
     // update Qquit by counterfactual thiking
     G1 =  RT  * gamma^(T - 2) + Viti * gamma^(T - 1);
-    Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
-
     // update Viti
     Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);
     

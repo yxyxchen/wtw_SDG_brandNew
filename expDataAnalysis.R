@@ -22,7 +22,7 @@ cat('Analyzing data for',n,'subjects.\n')
 nBlock = 3
 
 # control which individual-level plots to generate
-plotTrialwiseData =F
+plotTrialwiseData =T
 plotKMSC = F
 plotWTW = F
 
@@ -39,7 +39,7 @@ varQuitTime = numeric(length =n * nBlock)
 cvQuitTime = numeric(length =n * nBlock)
 nTrial = numeric(length =n * nBlock)
 # descriptive statistics for individual subjects and blocks
-for (sIdx in 1 : n) {
+for (sIdx in 14 : n) {
   thisID = allIDs[sIdx]
   #if(blockData[blockData$id == thisID, "AUC"] > 20 & blockData$condition[blockData$id == thisID] == "LP"){
   for (bkIdx in 1: nBlock){
@@ -113,6 +113,9 @@ ggplot(plotData2, aes(time, mu)) + geom_line(group = 1)
 AUC = numeric(length =n)
 totalEarnings =  numeric(length =n)
 kmOnGrid_ = vector(mode = "list", length = n)
+plotTrialwiseData =F
+plotKMSC = F
+plotWTW = T
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
   # select data 
@@ -125,10 +128,18 @@ for (sIdx in 1 : n) {
   
   totalEarnings[sIdx] =  sum(blockData$totalEarnings[blockData$id == thisID])
   
+  trialPlots(thisTrialData,label)
+  readline("continue")
   # survival analysis
-  kmscResults = kmsc(thisTrialData,tMax,label,plotKMSC,kmGrid)
-  AUC[sIdx] = kmscResults[['auc']]
-  kmOnGrid_[[sIdx]] = kmscResults$kmOnGrid
+  # kmscResults = kmsc(thisTrialData,tMax,label,plotKMSC,kmGrid)
+  # AUC[sIdx] = kmscResults[['auc']]
+  # kmOnGrid_[[sIdx]] = kmscResults$kmOnGrid
+  
+  # wtw
+  # WTW time series
+  wtwCeiling = tMax
+  wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
+  readline(prompt = paste('subject',thisID,'(hit ENTER to continue)'))
 }
 subData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")),
                        stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, 

@@ -12,7 +12,7 @@ data {
 }
 transformed data {
   // constant
-  real stepDuration = 0.5;
+  real stepDuration = 1;
   real iti = 2;
   real tokenValue = 10;
   int totalSteps = sum(Ts) - N;
@@ -87,7 +87,7 @@ transformed parameters{
 model {
   phi ~ uniform(0, 0.3);
   tau ~ uniform(2, 50);
-  //phiR ~ uniform(0, 0.3);
+  phiR ~ uniform(0, 0.3);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){
