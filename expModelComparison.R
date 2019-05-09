@@ -6,7 +6,7 @@ library("ggplot2")
 source("subFxs/helpFxs.R")
 
 # load model names
-modelNames = c("curiosityTrial", "curiosityTrialNC")
+modelNames = c("curiosityTrial", "curiosityTrialR")
 nModel = length(modelNames)
 
 # load experimental data
@@ -40,7 +40,7 @@ nUse = length(useID)
 medianLogLik_ = matrix(NA, n, nModel)
 for(m in 1 : nModel){
   modelName = modelNames[m]
-  pars = getPars(modelName)
+  pars = getParas(modelName)
   tempt = loadExpParaExtra(modelName, pars)
   expParaMedian = tempt$expParaMedian
   medianLogLik_[,m] = expParaMedian[,(length(pars) +1)]

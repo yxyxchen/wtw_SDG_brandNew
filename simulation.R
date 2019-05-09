@@ -21,8 +21,8 @@ n = length(idList)
 ##### get a sense of the model ######
 # simluation for one para and one scheduledWait from simulation or ...
 # error prone.. try 3 and everything changes 
-paras = c(0.1, 10, 0.9, 20)
-modelName = "curiosityTrial"
+paras = c(0.1, 10, 0.05, 20)
+modelName = "curiosityTrialR"
 repModelFun = getRepModelFun(modelName)
 sIdx = 1
 id = idList[[sIdx]]

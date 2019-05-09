@@ -1,0 +1,2 @@
+load("/Users/cdlab_admin/Documents/first_kick/wtw_SDG_brandNew/stanModels/curiosityTrial.rds")
+load("/Users/cdlab_admin/Documents/first_kick/wtw_SDG_brandNew/stanModels/curiosityTrialSp.rds")
