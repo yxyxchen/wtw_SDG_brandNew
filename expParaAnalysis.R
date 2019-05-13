@@ -4,6 +4,7 @@ source("subFxs/loadFxs.R")
 source("subFxs/helpFxs.R")
 library("dplyr")
 library("Hmisc")
+library("coin")
 source("subFxs/analysisFxs.R")
 load("wtwSettings.RData")
 
@@ -18,7 +19,7 @@ dir.create("figures/expParaAnalysis")
 saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
 dir.create(saveDir)
 # full_model
-modelName = "curiosityTrialSp"
+modelName = "curiosityTrialRSp"
 paras = getParas(modelName)
 expPara = loadExpPara(modelName, paras)
 useID = getUseID(blockData, expPara, paras)
@@ -134,9 +135,9 @@ rownames(rhoTableLP) = paras
 colnames(rhoTableLP) = traitNames
 library("corrplot")
 
-png('spLP.png')
-corrplot(rhoTableLP, 
-         p.mat = pTableLP, 
+png('spHP.png')
+corrplot(rhoTableHP, 
+         p.mat = pTableHP, 
          is.corr = F, 
          method = "color",
          insig = "label_sig") 

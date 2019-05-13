@@ -3,6 +3,7 @@ getParas = function(modelName){
   if(modelName == "curiosityTrial") paras = c("phi", "tau", "gamma")
   else if(modelName == "curiosityTrialR") paras = c("phi", "tau", "phiR")
   else if(modelName == "curiosityTrialSp") paras = c("phi", "tau", "gamma", "zeroPoint")
+  else if(modelName == "curiosityTrialRSp") paras = c("phi", "tau", "phiR", "zeroPoint")
   else if(modelName == "fullModel") paras = c("phi", "tau", "gamma", "QwaitIni")
   else if(modelName == "full_model") paras = c("phi", "tau", "gamma", "QwaitIni")
   else return("wrong model name")

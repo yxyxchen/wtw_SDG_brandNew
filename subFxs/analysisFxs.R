@@ -1,5 +1,5 @@
 # this script contains helper analysis functions 
-library("coin")
+library(coin)
 # check the distribution of scheduled delays
 # ...as measured in number of key presses (for the instrumental version of the task)
 scheduledDelays <- function(blockData,label) {
