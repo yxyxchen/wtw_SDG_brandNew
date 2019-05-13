@@ -21,21 +21,21 @@ n = length(idList)
 ##### get a sense of the model ######
 # simluation for one para and one scheduledWait from simulation or ...
 # error prone.. try 3 and everything changes 
-sIdx = 1
-paras = c(0.03, 4, 0.99, 30)
-modelName = "curiosityTrialSp"
+sIdx = 5
+paras = as.double(expPara[sIdx, 1:4])
+modelName = "curiosityTrialRSp"
 repModelFun = getRepModelFun(modelName)
-# id = idList[[sIdx]]
-# cond = hdrData$cond[hdrData$ID == id]
-# thisExpTrialData = expTrialData[[id]]
-# thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
-# scheduledWait = thisExpTrialData$scheduledWait
+id = idList[[sIdx]]
+cond = hdrData$cond[hdrData$ID == id]
+thisExpTrialData = expTrialData[[id]]
+thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
+scheduledWait = thisExpTrialData$scheduledWait
 set.seed(123)
-cond = "LP"
-scheduledWait = unlist(lapply(1:800, function(x) drawSample(cond)))
+# cond = "LP"
+# scheduledWait = unlist(lapply(1:800, function(x) drawSample(cond)))
 tempt = repModelFun(paras, cond, scheduledWait)
 trialPlots(tempt, cond)
-fileName = sprintf("simulation_gamma%.2f.png", paras[3])
+fileName = sprintf("simulation_s%d.png", sIdx)
 ggsave(fileName, width = 5, height = 4)
 
 # plotData = data.frame(actionValue = c(tempt$Qwaits[,500],rep(tempt$Qquits[500], 40)),

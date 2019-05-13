@@ -68,8 +68,8 @@ for(m in 1 : nModel){
     logLik_[sIdx, m] = paraSummary[ nrow(paraSummary) - 1, 1]
   }
 }
-output = data.frame(logEvidence_, condition = blockData$condition[blockData$id %in% useID &
-                                                                     blockData$blockNum == 1])
+output = data.frame(logEvidence_, condition = ifelse(blockData$condition[blockData$id %in% useID &
+                                                                     blockData$blockNum == 1] == "HP", 1, 2))
 
 f= "genData/expModelFitting/logEvidenceList.csv"
 write.table(file = f, output, sep = ",", col.names = F, row.names = F)
