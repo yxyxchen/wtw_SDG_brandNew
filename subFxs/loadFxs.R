@@ -90,8 +90,9 @@ loadExpPara = function(modelName, paras){
     ID = idList[i]
     fileName = sprintf("genData/expModelFitting/%s/s%d_summary.txt", modelName, ID)
     junk = read.csv(fileName, header = F)
-    if(ncol(junk) == 11){
-      junk = read.csv(fileName, header = T, row.names = 1)
+    # delete the lp__ in the old version
+    if(nrow(junk) > nE){
+      junk = junk[1:nE,]
     }
     
     expPara[i, 1:nE] = junk[,1]

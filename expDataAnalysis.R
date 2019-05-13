@@ -39,7 +39,7 @@ varQuitTime = numeric(length =n * nBlock)
 cvQuitTime = numeric(length =n * nBlock)
 nTrial = numeric(length =n * nBlock)
 # descriptive statistics for individual subjects and blocks
-for (sIdx in 14 : n) {
+for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
   #if(blockData[blockData$id == thisID, "AUC"] > 20 & blockData$condition[blockData$id == thisID] == "LP"){
   for (bkIdx in 1: nBlock){
@@ -64,11 +64,13 @@ for (sIdx in 14 : n) {
     nAction[noIdx] = sum(round(ifelse(trialEarnings > loseValue, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1)))
     nTrial[noIdx] = length(timeWaited)
     # calculate varQuitTime
-    varQuitTime[noIdx] = ifelse(totalEarnings == 0, NA, var(timeWaited[trialEarnings == 0]))
-    cvQuitTime[noIdx] = ifelse(totalEarnings == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
+    varQuitTime[noIdx] = ifelse(totalEarnings[noIdx] == 0, NA, var(timeWaited[trialEarnings == 0]))
+    cvQuitTime[noIdx] = ifelse(totalEarnings[noIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
     # plot trial-by-trial data
     if (plotTrialwiseData) {
       trialPlots(thisTrialData,label)
+      fileName = sprintf("exp_s%d_b%d.png", sIdx, bkIdx)
+      ggsave(fileName, width = 5, height = 4)
     }
     
     # survival analysis
@@ -82,7 +84,6 @@ for (sIdx in 14 : n) {
     timeWTW_[[noIdx]] = wtwtsResults$timeWTW
     trialWTW_[[noIdx]] = wtwtsResults$trialWTW
     wtwEarly[noIdx] = mean(timeWTW_[[noIdx]][1 : (1 * 60 * 10)])
-    
     # wait for input before continuing, if individual plots were requested
     if (any(plotTrialwiseData, plotKMSC, plotWTW)) {
       readline(prompt = paste('subject',thisID, "block", bkIdx, '(hit ENTER to continue)'))
@@ -99,6 +100,7 @@ blockData = data.frame(id = rep(allIDs, each = nBlock), blockNum = rep( t(1 : nB
                        totalEarnings = totalEarnings, nAction = nAction, varQuitTime = varQuitTime, cvQuitTime = cvQuitTime, nTrial = nTrial)
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
 
+# compare effect of stress
 
 idListHP =  as.numeric(row.names(hdrData)[hdrData$condition == "LP"])
 plotData = data.frame(wtw = unlist(lapply(1:60, function(i) timeWTW_[[idListHP[i]*3-2]])), id = rep(idListHP, each = length(tGrid)),

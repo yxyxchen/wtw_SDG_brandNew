@@ -2,10 +2,10 @@
 getRepModelFun = function(modelName){
   if(modelName == "full_model"){
     repModelFun = full_model
-  }else if(modelName == "curiosityTrialR"){
-    repModelFun = curiosityTrialR
-  }else if(modelName == "curiosityTrial"){
-    repModelFun = curiosityTrial
+  }else if(modelName == "curiosityTrialRSp"){
+    repModelFun = curiosityTrialRSp
+  }else if(modelName == "curiosityTrialSp"){
+    repModelFun = curiosityTrialSp
   }else if(modelName == "functionRL"){
     repModelFun = functionRL
   }else if(modelName == "functionLinear"){
@@ -18,10 +18,258 @@ getRepModelFun = function(modelName){
     repModelFun = curiosityTrialRBack
   }else if(modelName == "curiosityTrialRLog"){
     repModelFun = curiosityTrialRLog
+  }else if(modelName == "fullModel"){
+    repModelFun = fullModel
   }else{
     return("wrong model name!")
   }
   return(repModelFun)
+}
+
+################ monte ######################
+full_model = function(paras, cond, scheduledWait){
+  # parse para
+  phi = paras[1]
+  tau = paras[2]
+  gamma = paras[3]
+  QwaitIni = paras[4]
+  
+  # determine number of trials and nTimeSteps 
+  nTrial = length(scheduledWait)
+  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  nTimeStep = tMax / stepDuration
+  
+  #Qwait = rep(wIni*0.93, nTimeStep)
+  Qwait = rep(QwaitIni, nTimeStep)
+  #Qwait = rep(wIni, nTimeStep)
+  Qquit = QwaitIni * gamma ^ (iti / stepDuration)
+  Viti =  QwaitIni * gamma ^ (iti / stepDuration)
+  # initialize varibles for recording action values
+  Qwaits = matrix(NA, nTimeStep, nTrial);
+  Qwaits[,1] = Qwait
+  Qquits = vector(length = nTrial);
+  Qquits[1] = Qquit
+  Vitis = vector(length = nTrial);
+  Vitis[1] = Viti
+  deltas = matrix(NA, nTimeStep, nTrial)
+  Gs = matrix(NA, nTimeStep, nTrial)
+  
+  # initialize outputs 
+  trialEarnings = rep(0, nTrial)
+  timeWaited = rep(0, nTrial)
+  sellTime = rep(0, nTrial)
+  
+  # initialize elapsed time
+  elapsedTime = 0
+  
+  # loop over trials
+  for(tIdx in 1 : nTrial) {
+    # determine 
+    thisScheduledWait = scheduledWait[tIdx]
+    # loop for each timestep t and determine At
+    t = 1
+    while(t <= nTimeStep){
+      # determine At
+      waitRate =  1 / sum(1  + exp((Qquit - Qwait[t])* tau))
+      action = ifelse(runif(1) < waitRate, 'wait', 'quit')
+      # observe St+1 and Rt+1
+      rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
+      getReward = (action == 'wait' && rewardOccur);
+      nextReward = ifelse(getReward, tokenValue, 0) 
+      
+      # dertime whether St+1 is the terminal state
+      # if the trial terminates, track terminal timestep index T, trialEarnings, timeWaited, sellTime and elapsedTime
+      # otherwise, continue
+      nextStateTerminal = (getReward || action == "quit")
+      if(nextStateTerminal){
+        T = t+1
+        trialEarnings[tIdx] = ifelse(nextReward == tokenValue, tokenValue, 0);
+        timeWaited[tIdx] = ifelse(getReward, thisScheduledWait, t * stepDuration)
+        sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+        elapsedTime = elapsedTime + timeWaited[tIdx] + iti
+        break
+      }else{
+        t = t + 1
+      }
+    }# end of the action selection section
+    
+    # update values 
+    if(tIdx < nTrial){
+      
+      # update action values for each timestep t
+      returns = sapply(1 : (T-1), function(t) gamma^(T-t-1) *nextReward + gamma^(T-t) * Viti)
+      # returns = sapply(1 : (T-1), function(t) gamma^(T-t-1) *nextReward + gamma^(T-t) * Viti)
+      # when the agent always wait and get the reward, update Qwait[1:(T-1)]
+      # otherwise, update Qquit and Qwait[1 : (T-2)]      
+      if(getReward){
+        Gs[1 : (T-1), tIdx] = returns[1 : (T-1)]
+        deltas[1 : (T-1), tIdx] = returns[1 : (T-1)] - Qwait[1 : (T-1)]
+        Qwait[1 : (T-1)] = Qwait[1 : (T-1)] + phi*(returns[1 : (T-1)] - Qwait[1 : (T-1)])
+      }else{
+        Qquit = Qquit + phi*(returns[T-1] - Qquit)
+        if(T > 2){
+          Gs[1 : (T-2), tIdx] = returns[1 : (T-2)]
+          deltas[1 : (T-2), tIdx] = returns[1 : (T-2)] - Qwait[1 : (T-2)]
+          Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phi*(returns[1 : (T-2)] - Qwait[1 : (T-2)])
+        }
+      }
+      
+      # update Viti
+      Viti = Viti + phi*(gamma^(iti / stepDuration) * returns[1] - Viti)
+      
+      # record updated values
+      Qwaits[,tIdx + 1] = Qwait
+      Qquits[tIdx + 1] = Qquit
+      Vitis[tIdx + 1] = Viti
+    }# end of the value update section
+    
+  } # end of the trial loop
+  
+  outputs = list( 
+    "trialNum" = 1 : nTrial,
+    "trialEarnings" = trialEarnings,
+    "timeWaited" = timeWaited,
+    "sellTime" = sellTime, # used in wtw analysis
+    "scheduledWait" = scheduledWait,
+    "Qwaits" = Qwaits,
+    "Qquits" = Qquits,
+    "Gs" = Gs,
+    "deltas" = deltas,
+    "Vitis" = Vitis
+  )
+  return(outputs)
+}
+
+################ monte ######################
+fullModel = function(paras, cond, scheduledWait){
+  # parse para
+  phi = paras[1]
+  tau = paras[2]
+  gamma = paras[3]
+  QwaitIni = paras[4]
+  
+  # determine number of trials and nTimeSteps 
+  nTrial = length(scheduledWait)
+  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  nTimeStep = tMax / stepDuration
+  
+  # initialize actionValues
+  # here we use the optimal reward rates from the normative analysis in Lempert 2018
+  # it is more accurate then the one I calcualte in wtwSettings.R
+  # in addition, I use the gamma from 0.5s stepDuration, just hope the Q is similiar to the asympototic value in this RL
+  # finally, we use / (1 - gamma) instead of the gamma / (1 - gamma), it assumes the results always happen as the begging 
+  # so it is a upper
+  # here we use 0.9 as the discount rate for one stepDuration
+  QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9) 
+  QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
+  wIni = (QHPApOptim + QLPApOptim)/ 2
+  
+  # Qwait = rep(wIni, nTimeStep)
+  # since the participants start the trial with , we assume max(Qwait0) = wini * 0.8
+  # again, we assume it has a slope 
+  Qquit = wIni * 0.9
+  Viti = wIni * 0.9
+  #Qwait = rep(wIni*0.93, nTimeStep)
+  Qwait = rep(QwaitIni, nTimeStep)
+  #Qwait = rep(wIni, nTimeStep)
+  
+  # initialize varibles for recording action values
+  Qwaits = matrix(NA, nTimeStep, nTrial);
+  Qwaits[,1] = Qwait
+  Qquits = vector(length = nTrial);
+  Qquits[1] = Qquit
+  Vitis = vector(length = nTrial);
+  Vitis[1] = Viti
+  deltas = matrix(NA, nTimeStep, nTrial)
+  Gs = matrix(NA, nTimeStep, nTrial)
+  
+  # initialize outputs 
+  trialEarnings = rep(0, nTrial)
+  timeWaited = rep(0, nTrial)
+  sellTime = rep(0, nTrial)
+  
+  # initialize elapsed time
+  elapsedTime = 0
+  
+  # loop over trials
+  for(tIdx in 1 : nTrial) {
+    # determine 
+    thisScheduledWait = scheduledWait[tIdx]
+    # loop for each timestep t and determine At
+    t = 1
+    while(t <= nTimeStep){
+      # determine At
+      waitRate =  1 / sum(1  + exp((Qquit - Qwait[t])* tau))
+      action = ifelse(runif(1) < waitRate, 'wait', 'quit')
+      # observe St+1 and Rt+1
+      rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
+      getReward = (action == 'wait' && rewardOccur);
+      nextReward = ifelse(getReward, tokenValue, 0) 
+      
+      # dertime whether St+1 is the terminal state
+      # if the trial terminates, track terminal timestep index T, trialEarnings, timeWaited, sellTime and elapsedTime
+      # otherwise, continue
+      nextStateTerminal = (getReward || action == "quit")
+      if(nextStateTerminal){
+        T = t+1
+        trialEarnings[tIdx] = ifelse(nextReward == tokenValue, tokenValue, 0);
+        timeWaited[tIdx] = ifelse(getReward, thisScheduledWait, t * stepDuration)
+        sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+        elapsedTime = elapsedTime + timeWaited[tIdx] + iti
+        break
+      }else{
+        t = t + 1
+      }
+    }# end of the action selection section
+    
+    # update values 
+    if(tIdx < nTrial){
+      
+      # update action values for each timestep t
+      returns = sapply(1 : (T-1), function(t) gamma^(T-t-1) *nextReward + gamma^(T-t) * Viti)
+      # returns = sapply(1 : (T-1), function(t) gamma^(T-t-1) *nextReward + gamma^(T-t) * Viti)
+      # when the agent always wait and get the reward, update Qwait[1:(T-1)]
+      # otherwise, update Qquit and Qwait[1 : (T-2)]      
+      if(getReward){
+        Gs[1 : (T-1), tIdx] = returns[1 : (T-1)]
+        deltas[1 : (T-1), tIdx] = returns[1 : (T-1)] - Qwait[1 : (T-1)]
+        Qwait[1 : (T-1)] = Qwait[1 : (T-1)] + phi*(returns[1 : (T-1)] - Qwait[1 : (T-1)])
+      }else{
+        Qquit = Qquit + phi*(returns[T-1] - Qquit)
+        if(T > 2){
+          Gs[1 : (T-2), tIdx] = returns[1 : (T-2)]
+          deltas[1 : (T-2), tIdx] = returns[1 : (T-2)] - Qwait[1 : (T-2)]
+          Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phi*(returns[1 : (T-2)] - Qwait[1 : (T-2)])
+        }
+      }
+      
+      # update Viti
+      Viti = Viti + phi*(gamma^(iti / stepDuration) * returns[1] - Viti)
+      
+      # update Qquit by counterfactual learning
+      Qquit = Qquit + phi*(gamma^(iti / stepDuration + 1) * returns[1] - Qquit)
+      
+      # record updated values
+      Qwaits[,tIdx + 1] = Qwait
+      Qquits[tIdx + 1] = Qquit
+      Vitis[tIdx + 1] = Viti
+    }# end of the value update section
+    
+  } # end of the trial loop
+  
+  outputs = list( 
+    "trialNum" = 1 : nTrial,
+    "trialEarnings" = trialEarnings,
+    "timeWaited" = timeWaited,
+    "sellTime" = sellTime, # used in wtw analysis
+    "scheduledWait" = scheduledWait,
+    "Qwaits" = Qwaits,
+    "Qquits" = Qquits,
+    "Gs" = Gs,
+    "deltas" = deltas,
+    "Vitis" = Vitis
+  )
+  return(outputs)
 }
 
 ################ curiosityTrial model using the Rlearning  ######################
@@ -155,7 +403,7 @@ curiosityTrialRBack = function(paras, cond, scheduledWait){
 } #end of the function
 
 ################ curiosityTrial model using the Rlearning  ######################
-curiosityTrialR = function(paras, cond, scheduledWait){
+curiosityTrialRSp = function(paras, cond, scheduledWait){
   # parse para
   phi = paras[1]
   tau = paras[2]
@@ -177,14 +425,9 @@ curiosityTrialR = function(paras, cond, scheduledWait){
   # Qwait = c(5 -(1:35) * 0.2, 5 -(36:40) * 2) # linear with sudden fall
   # Qwait = -(1:40 / 10)^1.5 + 5 # the tail doesn't fall enough
   # Qwait = -(1:20 / 10)^1.5 + 2 # good for HP
-  if(zeroPoint == nTimeStep){
-    Qwait = rev((1:zeroPoint)-1) * 0.2
-  }else{
-    Qwait = c(rev((1:zeroPoint)-1) * 0.2, -0.2*(1 : (nTimeStep - zeroPoint)))
-  }
+  Qwait = zeroPoint*0.2 - 0.2 *(1 : nTimeStep - 1)
   
-  
-  plot(-(1:20 / 10)^1.5 + 2)
+
   # Qwait = -6 / (rev(1:40) + 4) + 0.5
   # plot(-6 / (rev(1:40) + 100) + 0.5) 
   # Qwait = 3.5 -(1:20) * 0.2
@@ -568,7 +811,7 @@ curiosityTrialRUp = function(paras, cond, scheduledWait){
   return(outputs)
 } #end of the function
 ################ monte ######################
-curiosityTrial = function(paras, cond, scheduledWait){
+curiosityTrialSp = function(paras, cond, scheduledWait){
   # parse para
   phi = paras[1]
   tau = paras[2]
@@ -597,11 +840,7 @@ curiosityTrial = function(paras, cond, scheduledWait){
   Qquit = wIni * 0.9
   Viti = wIni * 0.9
   #Qwait = rep(wIni*0.93, nTimeStep)
-  if(zeroPoint == nTimeStep){
-    Qwait = rev((1:zeroPoint)-1) * 0.1 + Qquit
-  }else{
-    Qwait = c(rev((1:zeroPoint)-1) * 0.1+ Qquit, Qquit-0.1*(1 : (nTimeStep - zeroPoint)))
-  }
+  Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
   #Qwait = rep(wIni, nTimeStep)
 
   # initialize varibles for recording action values
@@ -703,6 +942,137 @@ curiosityTrial = function(paras, cond, scheduledWait){
   return(outputs)
 }
 
+################ monte ######################
+curiosityTrialSp = function(paras, cond, scheduledWait){
+  # parse para
+  phi = paras[1]
+  tau = paras[2]
+  gamma = paras[3]
+  zeroPoint = paras[4]
+  
+  # determine number of trials and nTimeSteps 
+  nTrial = length(scheduledWait)
+  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  nTimeStep = tMax / stepDuration
+  
+  # initialize actionValues
+  # here we use the optimal reward rates from the normative analysis in Lempert 2018
+  # it is more accurate then the one I calcualte in wtwSettings.R
+  # in addition, I use the gamma from 0.5s stepDuration, just hope the Q is similiar to the asympototic value in this RL
+  # finally, we use / (1 - gamma) instead of the gamma / (1 - gamma), it assumes the results always happen as the begging 
+  # so it is a upper
+  # here we use 0.9 as the discount rate for one stepDuration
+  QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9) 
+  QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
+  wIni = (QHPApOptim + QLPApOptim)/ 2
+  
+  # Qwait = rep(wIni, nTimeStep)
+  # since the participants start the trial with , we assume max(Qwait0) = wini * 0.8
+  # again, we assume it has a slope 
+  Qquit = wIni * 0.9
+  Viti = wIni * 0.9
+  #Qwait = rep(wIni*0.93, nTimeStep)
+  Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
+  #Qwait = rep(wIni, nTimeStep)
+  
+  # initialize varibles for recording action values
+  Qwaits = matrix(NA, nTimeStep, nTrial);
+  Qwaits[,1] = Qwait
+  Qquits = vector(length = nTrial);
+  Qquits[1] = Qquit
+  Vitis = vector(length = nTrial);
+  Vitis[1] = Viti
+  deltas = matrix(NA, nTimeStep, nTrial)
+  Gs = matrix(NA, nTimeStep, nTrial)
+  
+  # initialize outputs 
+  trialEarnings = rep(0, nTrial)
+  timeWaited = rep(0, nTrial)
+  sellTime = rep(0, nTrial)
+  
+  # initialize elapsed time
+  elapsedTime = 0
+  
+  # loop over trials
+  for(tIdx in 1 : nTrial) {
+    # determine 
+    thisScheduledWait = scheduledWait[tIdx]
+    # loop for each timestep t and determine At
+    t = 1
+    while(t <= nTimeStep){
+      # determine At
+      waitRate =  1 / sum(1  + exp((Qquit - Qwait[t])* tau))
+      action = ifelse(runif(1) < waitRate, 'wait', 'quit')
+      # observe St+1 and Rt+1
+      rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
+      getReward = (action == 'wait' && rewardOccur);
+      nextReward = ifelse(getReward, tokenValue, 0) 
+      
+      # dertime whether St+1 is the terminal state
+      # if the trial terminates, track terminal timestep index T, trialEarnings, timeWaited, sellTime and elapsedTime
+      # otherwise, continue
+      nextStateTerminal = (getReward || action == "quit")
+      if(nextStateTerminal){
+        T = t+1
+        trialEarnings[tIdx] = ifelse(nextReward == tokenValue, tokenValue, 0);
+        timeWaited[tIdx] = ifelse(getReward, thisScheduledWait, t * stepDuration)
+        sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+        elapsedTime = elapsedTime + timeWaited[tIdx] + iti
+        break
+      }else{
+        t = t + 1
+      }
+    }# end of the action selection section
+    
+    # update values 
+    if(tIdx < nTrial){
+      
+      # update action values for each timestep t
+      returns = sapply(1 : (T-1), function(t) gamma^(T-t-1) *nextReward + gamma^(T-t) * Viti)
+      # returns = sapply(1 : (T-1), function(t) gamma^(T-t-1) *nextReward + gamma^(T-t) * Viti)
+      # when the agent always wait and get the reward, update Qwait[1:(T-1)]
+      # otherwise, update Qquit and Qwait[1 : (T-2)]      
+      if(getReward){
+        Gs[1 : (T-1), tIdx] = returns[1 : (T-1)]
+        deltas[1 : (T-1), tIdx] = returns[1 : (T-1)] - Qwait[1 : (T-1)]
+        Qwait[1 : (T-1)] = Qwait[1 : (T-1)] + phi*(returns[1 : (T-1)] - Qwait[1 : (T-1)])
+      }else{
+        Qquit = Qquit + phi*(returns[T-1] - Qquit)
+        if(T > 2){
+          Gs[1 : (T-2), tIdx] = returns[1 : (T-2)]
+          deltas[1 : (T-2), tIdx] = returns[1 : (T-2)] - Qwait[1 : (T-2)]
+          Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phi*(returns[1 : (T-2)] - Qwait[1 : (T-2)])
+        }
+      }
+      
+      # update Viti
+      Viti = Viti + phi*(gamma^(iti / stepDuration) * returns[1] - Viti)
+      
+      # update Qquit by counterfactual learning
+      Qquit = Qquit + phi*(gamma^(iti / stepDuration + 1) * returns[1] - Qquit)
+      
+      # record updated values
+      Qwaits[,tIdx + 1] = Qwait
+      Qquits[tIdx + 1] = Qquit
+      Vitis[tIdx + 1] = Viti
+    }# end of the value update section
+    
+  } # end of the trial loop
+  
+  outputs = list( 
+    "trialNum" = 1 : nTrial,
+    "trialEarnings" = trialEarnings,
+    "timeWaited" = timeWaited,
+    "sellTime" = sellTime, # used in wtw analysis
+    "scheduledWait" = scheduledWait,
+    "Qwaits" = Qwaits,
+    "Qquits" = Qquits,
+    "Gs" = Gs,
+    "deltas" = deltas,
+    "Vitis" = Vitis
+  )
+  return(outputs)
+}
 
 
  

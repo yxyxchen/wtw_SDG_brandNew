@@ -25,9 +25,9 @@ idList = hdrData$ID
 n = length(idList)
 
 # inputs
-modelName = "curiosityTrialR"
+modelName = "curiosityTrialSp"
 # paras = getParas(modelName)
-paras = c("phi", "tau", "phiR")
+paras = c("phi", "tau", "gamma", "zeroPoint")
 # load expPara
 expPara = loadExpPara(modelName, paras)
 #tempt= loadExpParaExtra(modelName, pars)
@@ -39,7 +39,6 @@ RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(paras)]
 EffeCols = which(str_detect(colnames(expPara), "Effe"))[1 : length(paras)]
 useID = idList[apply(expPara[,RhatCols] < 1.1, MARGIN = 1, sum) == length(paras) & 
                          apply(expPara[,EffeCols] >100, MARGIN = 1, sum) == length(paras)]
-
 
 
 # simluation using sample para
@@ -84,20 +83,15 @@ for(sIdx in 1 : n){
   label = "asda"
   nTrial = nrow(thisExpTrialData)
   # initialize
-  timeWaitedMatrix = matrix(0, nTrial, nRep)
   kmOnGridMatrix = matrix(0, length(kmGrid), nRep)
   for(rIdx in 1 : nRep){
     thisTrialData = trialData[[repNo[sIdx, rIdx]]]
     junk = thisTrialData$timeWaited
-    timeWaitedMatrix[,rIdx] = junk
-    
     totalEarningsRep_[sIdx, rIdx] =  sum(thisTrialData$trialEarnings)
     kmscResults = kmsc(thisTrialData,tMax,label,plotKMSC,kmGrid)
     AUCRep_[sIdx, rIdx] = kmscResults[['auc']]
     kmOnGridMatrix[,rIdx] = kmscResults$kmOnGrid
   }
-  timeWaitedRep_[[sIdx]] = apply(timeWaitedMatrix, MARGIN = 1, mean)
-  timeWaitedRepSd_[[sIdx]] = apply(timeWaitedMatrix, MARGIN = 1, sd)
   kmOnGridRep_[[sIdx]] = apply(kmOnGridMatrix, MARGIN = 1, mean)
   kmOnGridRepSd_[[sIdx]] = apply(kmOnGridMatrix, MARGIN = 1, sd)
 }
@@ -132,9 +126,11 @@ for(sIdx in 1 : n){
     kmOnGridRep = kmOnGridRep_[[which(idList== thisID)]]
     junk = data.frame(time = kmGrid, exp = kmOnGrid, rep= kmOnGridRep)
     plotData = gather(junk, source, survival_rate, -time)
-    p = ggplot(plotData, aes(time, survival_rate, color = source)) + geom_line() + ggtitle(label) + displayTheme
+    p = ggplot(plotData, aes(time, survival_rate, color = source)) + geom_line(size = 2) + ggtitle(label) + displayTheme
     print(p)
     readline("continue")
+    fileName = sprintf("%s_s%d.png", modelName, thisID)
+    #ggsave(fileName, width = 4, height =4)
   }
 }
 

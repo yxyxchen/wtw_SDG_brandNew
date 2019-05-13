@@ -1,5 +1,5 @@
 # this script contains helper analysis functions 
-
+library("coin")
 # check the distribution of scheduled delays
 # ...as measured in number of key presses (for the instrumental version of the task)
 scheduledDelays <- function(blockData,label) {
@@ -161,17 +161,19 @@ wtwTS <- function(blockData, tGrid, wtwCeiling, blockLabel, plotWTW) {
 
 # correlation plot
 # the first col of plotData is x, the second col is y, the third col is the group
-plotCorrelation = function(data, dotColor, cor.method, isRank){
+plotCorrelation = function(data, dotColor,isRank){
   conditions = c("HP", "LP")
   colnames(data) = c("x", "y", "cond")
   
   # calculate correlations
-  corTests = lapply(1:2, function(i) cor.test(data[data$cond == conditions[i], "x"],
-                                              data[data$cond == conditions[i], "y"],
-                                              method = cor.method))
-  
-  rhos = sapply(1:2, function(i) round(corTests[[i]]$estimate, 3))
-  ps = sapply(1:2, function(i) round(corTests[[i]]$p.value, 3))
+  # corTests = lapply(1:2, function(i) cor.test(data[data$cond == conditions[i], "x"],
+  #                                             data[data$cond == conditions[i], "y"],
+  #                                             method = cor.method))
+
+  corTests = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~
+                                              data[data$cond == conditions[i], "y"])) 
+  rhos = sapply(1:2, function(i) round(corTests[[i]]@statistic@teststatistic, 3))
+  ps = sapply(1:2, function(i) round(pvalue(corTests[[i]]), 3))
   textColors = ifelse(ps < 0.05, "red", "blue")
   textData = data.frame(label = paste(rhos, "(p =", ps, ")"),
                         cond= c("HP", "LP"), color = textColors)
@@ -191,4 +193,20 @@ plotCorrelation = function(data, dotColor, cor.method, isRank){
               hjust   = -0.2,vjust = -1,color = "blue",size = 5, fontface = 2, color = textColors) +
     facet_grid(~cond)
  return(p)
+} 
+
+getCorrelation = function(data, dotColor,isRank){
+  conditions = c("HP", "LP")
+  colnames(data) = c("x", "y", "cond")
+  
+  # calculate correlations
+  # corTests = lapply(1:2, function(i) cor.test(data[data$cond == conditions[i], "x"],
+  #                                             data[data$cond == conditions[i], "y"],
+  #                                             method = cor.method))
+  
+  corTests = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~
+                                                     data[data$cond == conditions[i], "y"])) 
+  rhos = sapply(1:2, function(i) round(corTests[[i]]@statistic@teststatistic, 3))
+  ps = sapply(1:2, function(i) round(pvalue(corTests[[i]]), 3))
+  return(list(rhos = rhos, ps = ps))
 } 

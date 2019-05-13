@@ -21,20 +21,48 @@ n = length(idList)
 ##### get a sense of the model ######
 # simluation for one para and one scheduledWait from simulation or ...
 # error prone.. try 3 and everything changes 
-paras = c(0.1, 10, 0.05, 20)
-modelName = "curiosityTrialR"
-repModelFun = getRepModelFun(modelName)
 sIdx = 1
-id = idList[[sIdx]]
-cond = hdrData$cond[hdrData$ID == id]
-thisExpTrialData = expTrialData[[id]]
-thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
-scheduledWait = thisExpTrialData$scheduledWait
+paras = c(0.03, 4, 0.99, 30)
+modelName = "curiosityTrialSp"
+repModelFun = getRepModelFun(modelName)
+# id = idList[[sIdx]]
+# cond = hdrData$cond[hdrData$ID == id]
+# thisExpTrialData = expTrialData[[id]]
+# thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
+# scheduledWait = thisExpTrialData$scheduledWait
 set.seed(123)
-# cond = "LP"
-# scheduledWait = unlist(lapply(1:100, function(x) drawSample(cond)))
+cond = "LP"
+scheduledWait = unlist(lapply(1:800, function(x) drawSample(cond)))
 tempt = repModelFun(paras, cond, scheduledWait)
 trialPlots(tempt, cond)
+fileName = sprintf("simulation_gamma%.2f.png", paras[3])
+ggsave(fileName, width = 5, height = 4)
+
+# plotData = data.frame(actionValue = c(tempt$Qwaits[,500],rep(tempt$Qquits[500], 40)),
+plotData = data.frame(valueDiff = c(tempt1$Qwaits[,500] - tempt1$Qquits[500],
+                                        tempt2$Qwaits[,500] - tempt2$Qquits[500],
+                                        tempt3$Qwaits[,500] - tempt3$Qquits[500]),
+                      time = rep(1 : 40, 3),
+                      gamma = rep(c("0.5", "0.8", "0.99"), each = 40))
+ggplot(plotData, aes(time, valueDiff,color = gamma)) + geom_point() + saveTheme+ ylab("Qwait - Qquit")
+ggsave("valueDiff.png", width = 5, height = 4) 
+
+
+plotData = data.frame(valueRatio = c(tempt1$Qwaits[,500] / tempt1$Qquits[500],
+                                        tempt2$Qwaits[,500] / tempt2$Qquits[500],
+                                        tempt3$Qwaits[,500] / tempt3$Qquits[500]),
+                      time = rep(1 : 40, 3),
+                      gamma = rep(c("0.5", "0.8", "0.99"), each = 40))
+ggplot(plotData, aes(time, valueRatio,color = gamma)) + geom_point() + saveTheme+ ylab("Qwait / Qquit")
+ggsave("valueRatio.png", width = 5, height = 4) 
+# two action values
+plotData = data.frame(actionValue = c(tempt$Qwaits[,500],rep(tempt$Qquits[500], 40)),
+                      time = rep(1 : 40, 2),
+                      action = rep(c("wait", "quit"), each = 40))
+ggplot(plotData, aes(time, actionValue,color = action)) + geom_point() + saveTheme+
+  ylim(c(-1,31)) + ggtitle(sprintf("gamma = %.2f", paras[3]))
+fileName = sprintf("simulation_gamma%.2f.png", paras[3])
+ggsave(fileName, width = 5, height = 4)
 
 trialPlots(truncateTrials(tempt, 1, 100), cond)
 # simulate using generated seqs as examples

@@ -25,8 +25,15 @@ expModelFitting = function(modelName, paras){
   # determine wIni
   QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9) 
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-  wIni = ifelse(modelName == "curiosityTrialR", 0.88 * stepDuration,
-                (QHPApOptim + QLPApOptim) / 2)
+  if(modelName == "curiosityTrialRSp"){
+    wIni = (5/6 + 0.93) / 2 * stepDuration
+  }else if(modelName == "curiosityTrialSp"){
+    wIni = (QHPApOptim + QLPApOptim) / 2
+  }else{
+    print("wrong model name!")
+    break
+  }
+
   # load expData
   allData = loadAllData()
   hdrData = allData$hdrData           
