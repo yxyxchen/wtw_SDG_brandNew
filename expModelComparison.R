@@ -55,28 +55,37 @@ write.table(file = f, medianLogLik_, sep = ",", col.names = F, row.names = F)
 # since p_waic is very noise, therefore pay more attention to logLik_
 logEvidence_ = matrix(NA, nUse, nModel)
 logLik_ = matrix(NA, nUse, nModel)
-logLikPerAct_ = matrix(NA, nUse, nModel)
-logEvidencePerAct_ = matrix(NA, nUse, nModel) # save later for model comparison 
 pWaic_ = matrix(NA, nUse, nModel)
 for(m in 1 : nModel){
   modelName = modelNames[m]
   for(sIdx in 1 : nUse ){
     id = useID[sIdx]
-    nAction = blockData$nAction[blockData$id == id & blockData$blockNum == 1]
     fileName = sprintf("genData/expModelFitting/%s/s%d_waic.RData", modelName, id)
     load(fileName)
     logEvidence_[sIdx, m] = WAIC$elpd_waic
-    logEvidencePerAct_[sIdx, m] = WAIC$elpd_waic/ nAction
     pWaic_[sIdx, m] = WAIC$p_waic
     paraSummary = read.csv(sprintf("genData/expModelFitting/%s/s%d_summary.txt", modelName, id), header = F)
     logLik_[sIdx, m] = paraSummary[ nrow(paraSummary) - 1, 1]
   }
 }
-waic_ = -2 * logEvidence_
-mean(waic_[,1] - waic_[,2])
-f= "genData/expModelFitting/logEvidenceList.csv"
-write.table(file = f, logEvidence_, sep = ",", col.names = F, row.names = F)
+output = data.frame(logEvidence_, condition = ifelse(blockData$condition[blockData$id %in% useID &
+                                                                     blockData$blockNum == 1] == "HP", 1, 2))
 
+f= "genData/expModelFitting/logEvidenceList.csv"
+write.table(file = f, output, sep = ",", col.names = F, row.names = F)
+waic_ = -2 * logEvidence_
+png('diffBICHP.png', width = 400, height = 250,
+    units = "px")
+hist((waic_[output$condition == "HP",1] - waic_[output$condition == "HP",2]),
+     xlab="BIC_Qlearn - BIC_Rlearn",
+     xlim=c(-450, 40), main = "HP", breaks = 3)
+dev.off()
+png('diffBICLP.png', width = 400, height = 250,
+    units = "px")
+hist((waic_[output$condition == "LP",1] - waic_[output$condition == "LP",2]),
+     xlab="BIC_Qlearn - BIC_Rlearn",
+     xlim=c(-450, 40), main = "LP", breaks = 30)
+dev.off()
 # is there any logLik differences within a subset of data?
 zoomInID = unique(blockData$id[blockData$AUC> 11 & blockData$AUC < 25 & blockData$condition == "LP"])
 a = medianLogLik_[useID %in% zoomInID, ]

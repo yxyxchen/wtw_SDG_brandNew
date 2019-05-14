@@ -4,6 +4,7 @@ source("subFxs/loadFxs.R")
 source("subFxs/helpFxs.R")
 library("dplyr")
 library("Hmisc")
+library("coin")
 source("subFxs/analysisFxs.R")
 load("wtwSettings.RData")
 
@@ -18,7 +19,7 @@ dir.create("figures/expParaAnalysis")
 saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
 dir.create(saveDir)
 # full_model
-modelName = "curiosityTrialSp"
+modelName = "curiosityTrialRSp"
 paras = getParas(modelName)
 expPara = loadExpPara(modelName, paras)
 useID = getUseID(blockData, expPara, paras)
@@ -47,38 +48,7 @@ for(i in 1 : length(paras)){
   ggsave(fileName, width = 6, height = 3)
 }
 
-# # plot diagonise statistics
-# meanData = as.double(dplyr::summarise(expPara[expPara$id %in% useID,], phi = mean(phiRhat), tau = mean(tauRhat),
-#                   gamma = mean(gammaRhat), QwaitIni = mean(QwaitIniRhat)))
-# stdData = as.double(dplyr::summarise(expPara[expPara$id %in% useID,], phi = sd(phiRhat), tau = sd(tauRhat),
-#                           gamma = sd(gammaRhat), QwaitIni = sd(QwaitIniRhat)))
 # 
-# plotData = data.frame(para = factor(paras, levels = paras), mean = meanData, std = stdData,
-#                       ymin = meanData - stdData, ymax = meanData + stdData
-#                       )
-# ggplot(plotData, aes(para, mean))+ geom_bar(stat = "identity") +
-#   geom_errorbar(aes(ymin = ymin,ymax = ymax), width = 0.2) + saveTheme +
-#   xlab("Parameter")+ ylab("Rhat")
-# ggsave("figures/expParaAnalysis/Rhat.pdf", width = 6, height = 4)
-
-
-
-# meanData = as.double(dplyr::summarise(expPara[expPara$id %in% useID,], phi = mean(phiEffe) / 5000,
-#                                       tau = mean(tauEffe) / 5000,
-#                                       gamma = mean(gammaEffe) / 5000, QwaitIni = mean(QwaitIniEffe)/ 5000))
-# stdData = as.double(dplyr::summarise(expPara[expPara$id %in% useID,], phi = sd(phiEffe) / (5000^2),
-#                                      tau = sd(tauEffe) / (5000^2),
-#                                      gamma = sd(gammaEffe) / (5000^2), QwaitIni = sd(QwaitIniEffe) / (5000^2)))
-# 
-# plotData = data.frame(para = factor(paras, levels = paras), mean = meanData, std = stdData,
-#                       ymin = meanData - stdData, ymax = meanData + stdData
-# )
-# ggplot(plotData, aes(para, mean))+ geom_bar(stat = "identity") +
-#   geom_errorbar(aes(ymin = ymin,ymax = ymax), width = 0.2) + saveTheme +
-#   xlab("Parameter")+ ylab("Effective Sample Proportion / %")
-# ggsave("figures/expParaAnalysis/Effe.pdf", width = 6, height = 4)
-
-## parameter correlation
 nPara = length(paras)
 for(i in 1 : nPara){
   paraX = paras[i]
@@ -109,7 +79,6 @@ for(pIdx in 1 : length(paras)){
   for(trIdx in 1 : length(traits)){
     trait = traits[trIdx]
     traitName = traitNames[trIdx]
-
     input = data.frame(personality[,trait], expPara[[para]], blockData$condition)
     junk = getCorrelation(input, paraColors[i], T)
     # xName = sprintf("%sRank", para)
@@ -123,7 +92,7 @@ for(pIdx in 1 : length(paras)){
     pTableLP[pIdx, trIdx] = junk$p[2]   
   }
 }
-
+# plot correlations 
 rownames(pTableHP) = paras
 colnames(pTableHP) = traitNames
 rownames(pTableLP) = paras
@@ -133,10 +102,9 @@ colnames(rhoTableHP) = traitNames
 rownames(rhoTableLP) = paras
 colnames(rhoTableLP) = traitNames
 library("corrplot")
-
-png('spLP.png')
-corrplot(rhoTableLP, 
-         p.mat = pTableLP, 
+png('spHP.png')
+corrplot(rhoTableHP, 
+         p.mat = pTableHP, 
          is.corr = F, 
          method = "color",
          insig = "label_sig") 
@@ -144,20 +112,31 @@ mtext("parameter", side = 2, line = 1.5, cex = 1.5)
 mtext("personality", side = 3, line = 2, cex = 1.5, at = 2.5)
 dev.off()
 
-
 # divide into more
 data = data.frame(expPara$tau,
-                  y = blockData$varQuitTime[blockData$blockNum == 3],
+                  y = blockData$varQuitTime[blockData$blockNum == 1],
                   expPara$condition)
 data = data[expPara$id %in% useID & !is.na(data$y),]
-p = plotCorrelation(data, "green", T)
+p = plotCorrelation(data, "grey", T)
 p + xlab("Tau rank") + ylab("varQuitTime rank") + saveTheme
 ggsave("varQuitTime.png", width = 8, height = 4)
 
+# cvQuitTime
 data = data.frame(expPara$tau,
-                  y = personality$Delay.of.Gratification,
+                  y = blockData$cvQuitTime[blockData$blockNum == 1],
                   expPara$condition)
-data = data[expPara$id %in% useID,]
-p = plotCorrelation(data, "green", "spearman", T)
-p + xlab("Tau rank") + ylab("Impulsiveness") + saveTheme
-ggsave("delay.png", width = 8, height = 4)
+data = data[expPara$id %in% useID & !is.na(data$y),]
+p = plotCorrelation(data, "grey", T)
+p + xlab("Tau rank") + ylab("cvQuitTime rank") + saveTheme
+ggsave("cvQuitTime.png", width = 8, height = 4)
+
+# wtwEarly
+data = data.frame(expPara$zeroPoint,
+                  y = blockData$wtwEarly[blockData$blockNum == 1],
+                  expPara$condition)
+data = data[expPara$id %in% useID & !is.na(data$y),]
+p = plotCorrelation(data, "grey", T)
+p + xlab("zeroPoint rank") + ylab("wtwEarly rank") + saveTheme
+ggsave("wtwEarly.png", width = 8, height = 4)
+
+

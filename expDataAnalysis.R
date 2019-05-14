@@ -22,7 +22,7 @@ cat('Analyzing data for',n,'subjects.\n')
 nBlock = 3
 
 # control which individual-level plots to generate
-plotTrialwiseData =T
+plotTrialwiseData =F
 plotKMSC = F
 plotWTW = F
 
@@ -69,21 +69,25 @@ for (sIdx in 1 : n) {
     # plot trial-by-trial data
     if (plotTrialwiseData) {
       trialPlots(thisTrialData,label)
-      fileName = sprintf("exp_s%d_b%d.png", sIdx, bkIdx)
-      ggsave(fileName, width = 5, height = 4)
+      readline(prompt = paste('subject',thisID, "block", bkIdx, '(hit ENTER to continue)'))
+      graphics.off()
     }
     
     # survival analysis
     kmscResults = kmsc(thisTrialData,tMax,label,plotKMSC,kmGrid)
     AUC[noIdx] = kmscResults[['auc']]
     kmOnGrid_[[noIdx]] = kmscResults$kmOnGrid
+    if (plotKMSC) {
+      readline(prompt = paste('subject',thisID, "block", bkIdx, '(hit ENTER to continue)'))
+      graphics.off()
+    }
 
     # WTW time series
     wtwCeiling = tMax
     wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
     timeWTW_[[noIdx]] = wtwtsResults$timeWTW
     trialWTW_[[noIdx]] = wtwtsResults$trialWTW
-    wtwEarly[noIdx] = mean(timeWTW_[[noIdx]][1 : (1 * 60 * 10)])
+    wtwEarly[noIdx] =   wtwtsResults$trialWTW[1]
     # wait for input before continuing, if individual plots were requested
     if (any(plotTrialwiseData, plotKMSC, plotWTW)) {
       readline(prompt = paste('subject',thisID, "block", bkIdx, '(hit ENTER to continue)'))
