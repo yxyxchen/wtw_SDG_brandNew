@@ -187,7 +187,8 @@ for(quitGap in 1 : nGap){
 exits = sapply(1 : nGap, function(i) which(potential_[[i]] < 0)[1])
 plotData = data.frame(policy = trialGapValues$LP, quitTime = exits * stepDuration)
 ggplot(plotData, aes(policy, quitTime)) + geom_point() +
-  geom_abline(slope = 1, intercept = 0) + xlim(c(0, 5)) + ylim(c(0, 5))
+  geom_abline(slope = 1, intercept = 0) + ylim(c(0, 10))
+
 
 potentialMatrix = matrix(NA, nrow = 400, ncol = 400)
 for(i in 1 : 400){

@@ -50,7 +50,7 @@ expModelFitting = function(modelName, paras){
   # useID = getUseID(blockData, expPara, getParas("full_model"))
 
   # loop over suvject
-  for(i in 1 : n){
+  for(i in 1 : 5){
       thisID = idList[[i]]
       thisTrialData = trialData[[thisID]]
       thisTrialData = thisTrialData[thisTrialData$blockNum == 1,]

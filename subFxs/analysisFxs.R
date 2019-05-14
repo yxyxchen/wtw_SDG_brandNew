@@ -118,6 +118,7 @@ wtwTS <- function(blockData, tGrid, wtwCeiling, blockLabel, plotWTW) {
   firstQuit = which(quitIdx)[1]
   if (is.na(firstQuit)) {firstQuit = length(blockData$trialEarnings)} # if no quit, set to the last trial
   currentWTW = max(timeWaited[1:firstQuit])
+  # start from the trial before the current quit
   thisTrialIdx = firstQuit - 1
   trialWTW[1:thisTrialIdx] = currentWTW
   ### iterate through the remaining trials, updating currentWTW
