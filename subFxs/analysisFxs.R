@@ -16,7 +16,7 @@ scheduledDelays <- function(blockData,label) {
 
 
 # plot trialwise responses in detail
-trialPlots <- function(thisTrialData,label) {
+trialPlots <- function(thisTrialData,label = " ") {
   # change the trialNum to accumulated trialNum if needed
   if(length(unique(thisTrialData$blockNum)) > 1){
     nTrial1 = sum(thisTrialData$blockNum == 1)
@@ -222,3 +222,16 @@ getCorrelation = function(data, dotColor,isRank){
   ps = sapply(1:2, function(i) round(pvalue(corTests[[i]]), 3))
   return(list(rhos = rhos, ps = ps))
 } 
+
+# convert data of multiple blocks into one session
+block2session = function(tempt){
+  nBlock = length(unique(tempt$blockNum))
+  nTrials = sapply(1:nBlock, function(i) sum(tempt$blockNum == i))
+  thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:2]), time = nTrials);
+  sellTime = sellTime + rep((1:3-1) * blockSecs, time = nTrials);
+  trialStartTime = trialStartTime + rep((1:3-1) * blockSecs, time = nTrials);
+  totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:2]]),
+                                       time = nTrials)
+  })
+  return(thisTrialData)
+}

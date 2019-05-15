@@ -50,8 +50,6 @@ expModelFitting = function(modelName, paras){
   for(i in 1 : n){
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
-    # delete the last trial, since the decision is interuptted
-    deleteTrials = c(which(thisTrialData$trialNum == 1)[2:3]-1, nrow(thisTrialData))
     thisTrialData = thisTrialData[-deleteTrials,]
     timeWaited = thisTrialData$timeWaited
     scheduledWait = thisTrialData$scheduledWait
