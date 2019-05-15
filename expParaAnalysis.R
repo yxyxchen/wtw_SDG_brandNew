@@ -1,29 +1,32 @@
 library("ggplot2")
-source("subFxs/plotThemes.R")
-source("subFxs/loadFxs.R")
-source("subFxs/helpFxs.R")
 library("dplyr")
 library("Hmisc")
 library("coin")
-source("subFxs/analysisFxs.R")
+source("subFxs/plotThemes.R")
+source("subFxs/loadFxs.R") # load blockData and expPara
+source("subFxs/helpFxs.R") # getParas
+source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 load("wtwSettings.RData")
+
+# create output directories
+dir.create("figures/expParaAnalysis")
+saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
+dir.create(saveDir)
 
 # load blockdata data
 load("genData/expDataAnalysis/blockData.RData")
 blockData = blockData[blockData$blockNum == 1,]
-idList = unique(blockData$id) 
-n = length(idList)
+load("genData/expDataAnalysis/sessionData.RData")
+allIDs= unique(blockData$id) 
 
 
-dir.create("figures/expParaAnalysis")
-saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
-dir.create(saveDir)
-# full_model
-modelName = "curiosityTrialRSp"
+# load expPara
+modelName = "curiosityTrialSp"
 paras = getParas(modelName)
-expPara = loadExpPara(modelName, paras)
-useID = getUseID(blockData, expPara, paras)
-blockData = blockData[blockData$blockNum == 1, ]
+dirName = sprintf("genData/expModelFittingSub/%s", modelName)
+expPara = loadExpPara(paras, dirName)
+useID = getUseID(expPara, paras)
+
 for(pIdx in 1 : length(paras)){
   para = paras[pIdx]
   # plotParaAUC(expPara, para, blockData, useID)
@@ -80,6 +83,7 @@ for(pIdx in 1 : length(paras)){
     trait = traits[trIdx]
     traitName = traitNames[trIdx]
     input = data.frame(personality[,trait], expPara[[para]], blockData$condition)
+    input = input[allIDs %in% useID, ]
     junk = getCorrelation(input, paraColors[i], T)
     # xName = sprintf("%sRank", para)
     # yName = sprintf("%sRank", traitName)

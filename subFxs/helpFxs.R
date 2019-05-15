@@ -10,9 +10,8 @@ getParas = function(modelName){
   return(paras)
 }
 
-getUseID = function(blockData, expPara, paras){
-  idList = unique(blockData$id)
-  n = length(idList)
+getUseID = function(expPara, paras){
+  idList = expPara$id
   RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(paras)]
   EffeCols = which(str_detect(colnames(expPara), "Effe"))[1 : length(paras)]
   useID = idList[apply(expPara[,RhatCols] < 1.1, MARGIN = 1, sum) == length(paras) & 

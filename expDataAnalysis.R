@@ -1,3 +1,4 @@
+# in this dataset, only trials within the 7 mins will be kept. Therefore, we don't need to delete any data
 # load libraries
 source('subFxs/loadFxs.R') # for loading data 
 source('subFxs/analysisFxs.R') # for analysis 
@@ -35,8 +36,10 @@ wtwEarly = numeric(length =n * nBlock)
 timeWTW_ = vector(mode = "list", length = n * nBlock)
 trialWTW_ = vector(mode = "list", length = n * nBlock)
 kmOnGrid_ = vector(mode = "list", length = n * nBlock)
-varQuitTime = numeric(length =n * nBlock)
+stdQuitTime = numeric(length =n * nBlock)
 cvQuitTime = numeric(length =n * nBlock)
+muQuitTime = numeric(length =n * nBlock)
+nQuit = numeric(length =n * nBlock)
 nTrial = numeric(length =n * nBlock)
 # descriptive statistics for individual subjects and blocks
 for (sIdx in 1 : n) {
@@ -47,8 +50,6 @@ for (sIdx in 1 : n) {
     thisTrialData = trialData[[thisID]]
     thisBlockIdx = (thisTrialData$blockNum == bkIdx)
     thisTrialData = thisTrialData[thisBlockIdx,]
-    # delete the NA row
-    if(any(is.na(thisTrialData[nrow(thisTrialData),]))) thisTrialData = thisTrialData[1 : (nrow(thisTrialData) -1),]
     # generate arguments for later analysis 
     label = sprintf('Subject %s, Cond %s, %s',thisID, unique(thisTrialData$condition), hdrData$stress[sIdx])
     noIdx = (sIdx - 1) * nBlock + bkIdx # 
@@ -64,8 +65,11 @@ for (sIdx in 1 : n) {
     nAction[noIdx] = sum(round(ifelse(trialEarnings > loseValue, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1)))
     nTrial[noIdx] = length(timeWaited)
     # calculate varQuitTime
-    varQuitTime[noIdx] = ifelse(totalEarnings[noIdx] == 0, NA, var(timeWaited[trialEarnings == 0]))
+    stdQuitTime[noIdx] = ifelse(totalEarnings[noIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]))
     cvQuitTime[noIdx] = ifelse(totalEarnings[noIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
+    muQuitTime[noIdx] = mean(timeWaited[trialEarnings == 0])
+    nQuit = sum(trialEarnings == 0)
+      
     # plot trial-by-trial data
     if (plotTrialwiseData) {
       trialPlots(thisTrialData,label)
@@ -101,10 +105,12 @@ save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridBlock.RData')
 blockData = data.frame(id = rep(allIDs, each = nBlock), blockNum = rep( t(1 : nBlock), n),
                        cbal = rep(hdrData$cbal, each = nBlock), condition = factor(rep(hdrData$condition, each = nBlock), levels = c("HP", "LP")),
                        stress = factor(rep(hdrData$stress, each = nBlock), levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
-                       totalEarnings = totalEarnings, nAction = nAction, varQuitTime = varQuitTime, cvQuitTime = cvQuitTime, nTrial = nTrial)
+                       totalEarnings = totalEarnings, nAction = nAction, stdQuitTime = stdQuitTime, cvQuitTime = cvQuitTime,
+                       muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial)
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
 
-# compare effect of stress
+# I think I would like to know the cv values
+hist(varQuitTime[blockData$blockNum == 1 & blockData$condition == "HP"])
 
 idListHP =  as.numeric(row.names(hdrData)[hdrData$condition == "LP"])
 plotData = data.frame(wtw = unlist(lapply(1:60, function(i) timeWTW_[[idListHP[i]*3-2]])), id = rep(idListHP, each = length(tGrid)),
@@ -113,44 +119,86 @@ summaryData =  dplyr::summarise(group_by(plotData, time), mu = mean(wtw), std = 
 plotData2 = data.frame(mu = summaryData$mu, std = summaryData$std, time = tGrid)
 ggplot(plotData2, aes(time, mu)) + geom_line(group = 1)
 
-
-
 # get session data 
-AUC = numeric(length =n)
-totalEarnings =  numeric(length =n)
+tGrid = seq(0, blockSecs * nBlock, by = 0.1)
+AUC = numeric(length = n)
+totalEarnings =  numeric(length = n)
+nAction = numeric(length = n)
+wtwEarly = numeric(length = n)
+timeWTW_ = vector(mode = "list", length = n)
+trialWTW_ = vector(mode = "list", length = n)
 kmOnGrid_ = vector(mode = "list", length = n)
+stdQuitTime = numeric(length = n)
+cvQuitTime = numeric(length = n)
+muQuitTime = numeric(length = n)
+nQuit = numeric(length = n)
+nTrial = numeric(length = n)
 plotTrialwiseData =F
 plotKMSC = F
-plotWTW = T
+plotWTW = F
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
-  # select data 
-  thisTrialData = trialData[[thisID]]
-  
+  tempt = trialData[[thisID]]
+  # change trialNum, sellTime, trialS, totalEarnings
+  nTrials = sapply(1:nBlock, function(i) sum(tempt$blockNum == i))
+  thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:2]), time = nTrials);
+                                  sellTime = sellTime + rep((1:3-1) * blockSecs, time = nTrials);
+                                  trialStartTime = trialStartTime + rep((1:3-1) * blockSecs, time = nTrials);
+                                  totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:2]]),
+                                                                         time = nTrials)
+                                  })
   # generate arguments for later analysis 
-  label = sprintf('Subject %s, Cond %s, Stress %s)',thisID, hdrData$condition[sIdx], hdrData$stress[sIdx])
-  tMax = ifelse(hdrData$condition[sIdx] == conditions[1], tMaxs[1], tMaxs[2])
-  kmGrid = seq(0, tMax, by= 0.1) # grid on which to average survival curves.
+  label = sprintf('Subject %s, Cond %s',thisID, unique(thisTrialData$condition))
+  tMax = ifelse(unique(thisTrialData$condition) == conditions[1], tMaxs[1], tMaxs[2])
+  kmGrid = seq(0, tMax, by=0.1) # grid on which to average survival curves.
   
-  totalEarnings[sIdx] =  sum(blockData$totalEarnings[blockData$id == thisID])
+  # calcualte totalEarnings
+  totalEarnings[sIdx] =  sum(thisTrialData$trialEarnings)
+  timeWaited = thisTrialData$timeWaited
+  trialEarnings = thisTrialData$trialEarnings
+  scheduledWait = thisTrialData$scheduledWait
+  timeWaited[trialEarnings > loseValue] = scheduledWait[trialEarnings > loseValue]
+  nAction[sIdx] = sum(round(ifelse(trialEarnings > loseValue, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1)))
+  nTrial[sIdx] = length(timeWaited)
+  # calculate varQuitTime
+  stdQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]))
+  cvQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
+  muQuitTime[sIdx] = mean(timeWaited[trialEarnings == 0])
+  nQuit = sum(trialEarnings == 0)
   
-  trialPlots(thisTrialData,label)
-  readline("continue")
+  # plot trial-by-trial data
+  if (plotTrialwiseData) {
+    trialPlots(thisTrialData,label)
+    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
+    graphics.off()
+  }
+  
   # survival analysis
-  # kmscResults = kmsc(thisTrialData,tMax,label,plotKMSC,kmGrid)
-  # AUC[sIdx] = kmscResults[['auc']]
-  # kmOnGrid_[[sIdx]] = kmscResults$kmOnGrid
+  kmscResults = kmsc(thisTrialData, tMax, label, plotKMSC, kmGrid)
+  AUC[sIdx] = kmscResults[['auc']]
+  kmOnGrid_[[sIdx]] = kmscResults$kmOnGrid
+  if (plotKMSC) {
+    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
+    graphics.off()
+  }
   
-  # wtw
   # WTW time series
   wtwCeiling = tMax
   wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
-  readline(prompt = paste('subject',thisID,'(hit ENTER to continue)'))
+  timeWTW_[[sIdx]] = wtwtsResults$timeWTW
+  trialWTW_[[sIdx]] = wtwtsResults$trialWTW
+  wtwEarly[sIdx] =   wtwtsResults$trialWTW[1]
+  # wait for input before continuing, if individual plots were requested
+  if (any(plotTrialwiseData, plotKMSC, plotWTW)) {
+    readline(prompt = paste('subject',thisID, "block", bkIdx, '(hit ENTER to continue)'))
+    graphics.off()
+  }
 }
-subData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")),
-                       stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, 
-                       totalEarnings = totalEarnings)
-save(subData, file = 'genData/expDataAnalysis/subData.RData')
+sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")), cbal = hdrData$cbal,
+                       stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
+                     totalEarnings = totalEarnings, nAction = nAction, stdQuitTime = stdQuitTime, cvQuitTime = cvQuitTime,
+                     muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial)
+save(sessionData, file = 'genData/expDataAnalysis/sessionData.RData')
 save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridSess.RData')
 
 

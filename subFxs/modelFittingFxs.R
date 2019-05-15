@@ -25,7 +25,7 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
                     trialEarnings = trialEarnings,
                     #ini = ini,
                     Ts = Ts)
-  fit = sampling(object = model, data = data_list, cores = min(nChain, 3), chains = nChain,
+  fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
                iter = nIter) 
   # extract parameters
   extractedPara = fit %>%

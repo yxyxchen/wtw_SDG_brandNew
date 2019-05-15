@@ -16,30 +16,41 @@ scheduledDelays <- function(blockData,label) {
 
 
 # plot trialwise responses in detail
-trialPlots <- function(blockData,label) {
-  # vectors to be plotted
-  rwdIdx = blockData$trialEarnings > loseValue
-  quitIdx = blockData$trialEarnings <= loseValue
-  rwdTrialNo = blockData$trialNum[rwdIdx]
-  quitTrialNo = blockData$trialNum[quitIdx]
-  rwdSchedDelay = blockData$scheduledWait[rwdIdx]
-  quitSchedDelay = blockData$scheduledWait[quitIdx]
-  waitDuration = blockData$timeWaited
+trialPlots <- function(thisTrialData,label) {
+  # change the trialNum to accumulated trialNum if needed
+  if(length(unique(thisTrialData$blockNum)) > 1){
+    nTrial1 = sum(thisTrialData$blockNum == 1)
+    nTrial1n2 = sum(thisTrialData$blockNum == 1 | thisTrialData$blockNum == 2)
+  }
+  # values to be plotted
+  rwdIdx = thisTrialData$trialEarnings > loseValue
+  quitIdx = thisTrialData$trialEarnings <= loseValue
+  rwdTrialNo = thisTrialData$trialNum[rwdIdx]
+  quitTrialNo = thisTrialData$trialNum[quitIdx]
+  rwdSchedDelay = thisTrialData$scheduledWait[rwdIdx]
+  quitSchedDelay = thisTrialData$scheduledWait[quitIdx]
+  waitDuration = thisTrialData$timeWaited
   quitTime = waitDuration[quitIdx]
   # other parameters
-  nTrials = length(blockData$trialEarnings)
-  # make the plot and add series
+  nTrials = length(thisTrialData$trialEarnings)
+  # prepare plotData
   plotData = data.frame("trialNum" = c(rwdTrialNo, quitTrialNo, quitTrialNo),
                         "trialDuration" = c(rwdSchedDelay, quitTime, quitSchedDelay),
                         "condition" = rep(c('reward', 'quit', 'quitSchedule'), time = 
                                         c(length(rwdTrialNo), length(quitTrialNo),
                                           length(quitTrialNo))))
   plotData$condition = factor( plotData$condition, levels = c('reward', 'quit', 'quitSchedule'))
+  # plot the main figure
   p = ggplot(plotData, aes(trialNum, trialDuration, color = condition)) + geom_point() +
   geom_line(data = plotData[plotData$condition != 'quitSchedule',],
             aes(trialNum, trialDuration, color = condition)) +
     scale_color_manual(values = c('blue', 'red', 'black')) + 
     xlab('Trial num') + ylab('Trial duration / s') + ggtitle(label) + displayTheme
+  # add block lines if we have multiple blocks 
+  if(length(unique(thisTrialData$blockNum)) > 1){
+    p = p + geom_vline(xintercept = c(nTrial1, nTrial1 + nTrial1n2),  linetype='dashed',
+                   color = "grey", size = 1)
+  }
   print(p)
   return(p)
 }

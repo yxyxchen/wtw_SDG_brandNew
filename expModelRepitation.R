@@ -1,68 +1,63 @@
  # be careful to always to use id in code, instead of expTrialData
-library("ggplot2")
-library("stringr")
+library("ggplot2") 
 library("dplyr")
 library("tidyr")
 source("subFxs/plotThemes.R")
-source("subFxs/helpFxs.R")
-source("subFxs/loadFxs.R") 
+load("wtwSettings.RData") 
+source("subFxs/helpFxs.R") # getPars
+source("subFxs/loadFxs.R") # load  expPara
+source("subFxs/taskFxs.R") # drawSamples
+source("subFxs/repetitionFxs.R") # getRepFunction
+source("subFxs/analysisFxs.R") # kmsc, trialPlot
 
-load("genData/expDataAnalysis/blockData.RData")
-source("subFxs/taskFxs.R") # used in repetition
-source("subFxs/repetitionFxs.R")
-source("subFxs/analysisFxs.R") # for analysis
-load("wtwSettings.RData") # used in repetition
-load("wtwSettings.RData")
-load("genData/expDataAnalysis/kmOnGridBlock.RData")
+# input 
+dataType = "sess"
 
+# load blockData or seesData
+if(dataType == "block"){
+  load("genData/expDataAnalysis/blockData.RData")
+  load("genData/expDataAnalysis/kmOnGridBlock.RData")
+}else{
+  load("genData/expDataAnalysis/sessionData.RData")
+  load("genData/expDataAnalysis/kmOnGridSess.RData")
+}
 
-# load raw data 
+# load trialData since we need scheduledWait 
 allData = loadAllData()
-hdrData = allData$hdrData  
-allIDs = hdrData$ID     
-expTrialData = allData$trialData   
-idList = hdrData$ID
-n = length(idList)
+hdrData = allData$hdrData           
+expTrialData = allData$trialData       
+allIDs = hdrData$ID 
 
-# inputs
-modelName = "curiosityTrialSp"
-# paras = getParas(modelName)
-paras = c("phi", "tau", "gamma", "zeroPoint")
 # load expPara
-expPara = loadExpPara(modelName, paras)
-#tempt= loadExpParaExtra(modelName, pars)
-#expParaMode = tempt$expParaMode
-#expParaMedian = tempt$expParaMedian
-idList = unique(blockData$id)
-n = length(idList)
-RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(paras)]
-EffeCols = which(str_detect(colnames(expPara), "Effe"))[1 : length(paras)]
-useID = idList[apply(expPara[,RhatCols] < 1.1, MARGIN = 1, sum) == length(paras) & 
-                         apply(expPara[,EffeCols] >100, MARGIN = 1, sum) == length(paras)]
+modelName = "curiosityTrialSp"
+paras = getParas(modelName)
+parentDir = ifelse(dataType == "block", "genData/expModelFitting", "genData/expModelFittingSub")
+dirName = sprintf("%s/%s",parentDir, modelName)
+expPara = loadExpPara(paras, dirName)
+useID = getUseID(expPara, paras)
 
-
-# simluation using sample para
-set.seed(231)
+# simulate nRep times for each participants, with different parameter samples
 repModelFun = getRepModelFun(modelName)
-nRep = 10# number of repetitions
-trialData = vector(length = n * nRep, mode ='list')
-repNo = matrix(1 : (n * nRep), nrow = n, ncol = nRep)
-for(sIdx in 1 : n){
-  id = idList[[sIdx]]
-  #para = as.double(expPara[sIdx, 1 : length(paras)])
-  paraList = read.table(sprintf("genData/expModelFitting/%s/s%d.txt", modelName, id),sep = ",", row.names = NULL)
-  cond = unique(blockData$condition[blockData$id == id])
+nComb = 10
+nSub = length(useID)
+trialData = vector(length = nSub * nRep, mode ='list')
+repNo = matrix(1 : (nSub * nRep), nrow = nRep, ncol = nSub)
+set.seed(231)
+for(sIdx in 1 : nSub){
+  id = useID[[sIdx]]
+  # load para samples
+  paraSamples = read.table(sprintf("%s/%s/s%d.txt", parentDir, modelName, id),sep = ",", row.names = NULL)
+  # load behavioral inputs
   thisExpTrialData = expTrialData[[id]]
-  thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
+  cond = unique(thisExpTrialData$condition)
+  if(dataType == "block") thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
   scheduledWait = thisExpTrialData$scheduledWait
-  for(rIdx in 1 : nRep){
-    para = as.double(paraList[sample(1 : nrow(paraList), 1), 1 : length(paras)])
+  
+  for(cbIdx in 1 : nComb){
+    paraSample = as.double(paraSample[sample(1 : nrow(paraSamples), 1), 1 : length(paras)])
     tempt = repModelFun(para, cond, scheduledWait)
-    trialData[[repNo[sIdx, rIdx]]] = tempt
-    # simDistMatrix[,rIdx] = abs(tempt$timeWaited - thisExpTrialData$timeWaited)
+    trialData[[repNo[combIdx, sIdx]]] = tempt
   }
-  # simDist_[[sIdx]] = apply(simDistMatrix, 1, mean)
-  # simDistSd_[[sIdx]] = apply(simDistMatrix, 1, sd)
 }
 
 # calculate AUC and timeWaited

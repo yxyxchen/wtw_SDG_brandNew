@@ -77,34 +77,49 @@ loadAllData = function() {
 
 # l
 
-loadExpPara = function(modelName, paras){
+loadExpPara = function(paras, dirName){
+  # number of paras 
   nE = length(paras) + 1
+  # number of files
+  fileNames = list.files(path= dirName, pattern=("*_summary.txt"))
+  n = length(fileNames) 
+  sprintf("load %d files", n)
+  
+  # load blockData   
   load("genData/expDataAnalysis/blockData.RData")
   blockData = blockData[blockData$blockNum == 1,]
-  idList = blockData$id
-  condition = blockData$condition
-  n = length(idList)
-  nE = (length(paras) + 1) 
+  
+  # initialize the outout variable 
   expPara = matrix(NA, n, nE * 4)
+  idList = vector(length = n)
+  # loop over files
   for(i in 1 : n){
-    ID = idList[i]
-    fileName = sprintf("genData/expModelFitting/%s/s%d_summary.txt", modelName, ID)
-    junk = read.csv(fileName, header = F)
+    fileName = fileNames[[i]]
+    address = sprintf("%s/%s", dirName, fileName)
+    junk = read.csv(address, header = F)
+    idList[i] = ifelse(is.na(as.numeric(substr(fileName, 2,4))),
+                       ifelse(is.na(as.numeric(substr(fileName, 2,3))),  as.numeric(substr(fileName, 2,2)),
+                              as.numeric(substr(fileName, 2,3))),
+                       as.numeric(substr(fileName, 2,4)))
     # delete the lp__ in the old version
     if(nrow(junk) > nE){
       junk = junk[1:nE,]
     }
-    
     expPara[i, 1:nE] = junk[,1]
     expPara[i, (nE + 1) : (2 * nE)] = junk[,2]
     expPara[i, (2*nE + 1) : (3 * nE)] = junk[,9]
     expPara[i, (3 * nE + 1) : (4 * nE)] = junk[,10]
   }
+  # transfer expPara to data.frame
   expPara = data.frame(expPara)
   junk = c(paras, "LL_all")
   colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"))
+  # add id, condition, stress
+  condition = blockData$condition[blockData$id %in% idList]
+  stress = blockData$stress[blockData$id %in% idList]
+  expPara[['id']] = idList  # needed for left_join
   expPara[["condition"]] = condition
-  expPara$id = idList  # needed for left_join
+  expPara[['stress']] = stress
   return(expPara)
 }
 

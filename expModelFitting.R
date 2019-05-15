@@ -6,13 +6,13 @@ expModelFitting = function(modelName, paras){
   dir.create("genData/expModelFitting")
   dir.create(sprintf("genData/expModelFitting/%s", modelName))
  #  load libraries and set environments
-  options(warn=-1, message =-1) # default settings borrowed somewhere
+  options(warn=-1, message =-1) # run without this for one participant to chec everything
   library('plyr'); library(dplyr); library(ggplot2);library('tidyr');library('rstan') #load libraries
-  Sys.setenv(USE_CXX14=1) # making rstan working on this device 
+  Sys.setenv(USE_CXX14=1) # needed in local computeres
   rstan_options(auto_write = TRUE) # default settings borrowed somewhere
-  options(mc.cores = parallel::detectCores())# enable multi-core precessors 
+  # options(mc.cores = parallel::detectCores()) # not encouranged, better to specify
+  # cores for each function
   library("loo")
-  # source scripts
   source('subFxs/modelFittingFxs.R') # for fitting single case 
   source('subFxs/loadFxs.R') # for load data
   source("subFxs/helpFxs.R")
@@ -45,24 +45,26 @@ expModelFitting = function(modelName, paras){
   # load empirical data
   load("genData/expDataAnalysis/blockData.RData")
   idList = unique(blockData$id)
-  # n = length(idList)
-  # expPara = loadExpPara("full_model", getParas("full_model"))
-  # useID = getUseID(blockData, expPara, getParas("full_model"))
 
-  # loop over suvject
-  for(i in 1 : 5){
-      thisID = idList[[i]]
-      thisTrialData = trialData[[thisID]]
-      thisTrialData = thisTrialData[thisTrialData$blockNum == 1,]
-      # delete the last trial, since the decision is interuptted
-      thisTrialData = thisTrialData[1 : (nrow(thisTrialData) - 1),]
-      timeWaited = thisTrialData$timeWaited
-      scheduledWait = thisTrialData$scheduledWait
-      trialEarnings = thisTrialData$trialEarnings
-      timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
-      cond = unique(thisTrialData$condition)
-      fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
-      modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
+  # loop over participants 
+  nCore = parallel::detectCores() -1 # only for the local computer
+  library("doMC")
+  library("foreach")
+  registerDoMC(nCore)
+  
+  foreach(i = 1 : 10) %dopar% {
+    thisID = idList[[i]]
+    thisTrialData = trialData[[thisID]]
+    thisTrialData = thisTrialData[thisTrialData$blockNum == 1,]
+    # delete the last trial, since the decision is interuptted
+    thisTrialData = thisTrialData[1 : (nrow(thisTrialData) - 1),]
+    timeWaited = thisTrialData$timeWaited
+    scheduledWait = thisTrialData$scheduledWait
+    trialEarnings = thisTrialData$trialEarnings
+    timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
+    cond = unique(thisTrialData$condition)
+    fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
+    modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
   }
 
   # for(i in 1 : n){
