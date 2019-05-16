@@ -68,7 +68,7 @@ for (sIdx in 1 : n) {
     stdQuitTime[noIdx] = ifelse(totalEarnings[noIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]))
     cvQuitTime[noIdx] = ifelse(totalEarnings[noIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
     muQuitTime[noIdx] = mean(timeWaited[trialEarnings == 0])
-    nQuit = sum(trialEarnings == 0)
+    nQuit[noIdx] = sum(trialEarnings == 0)
       
     # plot trial-by-trial data
     if (plotTrialwiseData) {
@@ -165,7 +165,7 @@ for (sIdx in 1 : n) {
   stdQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]))
   cvQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
   muQuitTime[sIdx] = mean(timeWaited[trialEarnings == 0])
-  nQuit = sum(trialEarnings == 0)
+  nQuit[sIdx] = sum(trialEarnings == 0)
   
   # plot trial-by-trial data
   if (plotTrialwiseData) {

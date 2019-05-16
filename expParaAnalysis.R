@@ -32,11 +32,94 @@ if(dataType == "block"){
 
 # load expPara
 paras = getParas(modelName)
+nPara = length(paras)
 parentDir = ifelse(dataType == "block", "genData/expModelFitting", "genData/expModelFittingSub")
 dirName = sprintf("%s/%s",parentDir, modelName)
 expPara = loadExpPara(paras, dirName)
 useID = getUseID(expPara, paras)
 
+# trait analysis
+personality = read.csv("data/SDGdataset.csv")
+traits = c("Delay.of.Gratification", "Barratt.Impulsiveness",
+           "Intolerance.of.Uncertainty", "Trait.Anxiety..STAIT.")
+traitNames = c("DelayGra", "Impulsive",
+               "Uncertain", "Anxiety")
+nTrait = length(traits)
+traitParaCorr = vector(mode = "list", length = length(paras) * length(traits))
+corrNo = matrix(1:(nPara * nTrait), nrow = nPara, ncol = nTrait)
+for(pIdx in 1 : length(paras)){
+  para = paras[pIdx]
+  paraColor = paraColors[pIdx]
+  for(trIdx in 1 : length(traits)){
+    trait = traits[trIdx]
+    traitName = traitNames[trIdx]
+    # combine personlaity, expPara and condtion. useID only
+    input = data.frame(personality[summaryData$id %in% useID,trait], expPara[expPara$id %in% useID,para],
+                       summaryData$condition[summaryData$id %in% useID])
+    traitParaCorr[[corrNo[pIdx, trIdx]]]= getCorrelation(input)
+  }
+}
+dimNames = list(paras, traitNames)
+rhoTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * nPara), function(i) traitParaCorr[[i]]$rhos[j]),
+                                          nrow = nPara, dimnames = dimNames))
+pTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * nPara), function(i) traitParaCorr[[i]]$ps[j]),
+                                        nrow = nPara, dimnames = dimNames))
+# plot trait analysis
+library("corrplot")
+for(i in 1 : 2){
+  cond = conditions[i]
+  fileName = sprintf("traitPara%s.png", cond)
+  png(fileName)
+  corrplot(rhoTable[[i]], 
+           p.mat = pTable[[i]], 
+           is.corr = T, 
+           method = "color",
+           insig = "label_sig",
+           tl.col = "black", tl.srt = 15, tl.cex = 1.5) 
+  mtext("Parameter", side = 2, line = 1.5, cex = 2)
+  mtext("Trait", side = 3, line = 2, cex = 2, at = 2.5)
+  dev.off()
+}
+
+# plot hist 
+expPara$condition = summaryData$condition[summaryData$id %in% expPara$id]
+for(i in 1 : length(paras)){
+  para = paras[i]
+  paraColor = paraColors[[i]]
+  p = ggplot(expPara[expPara$id %in% useID,], aes_string(para)) + geom_histogram(bins = 6, fill = paraColor) + facet_grid(~condition)+
+    saveTheme + ylab("Count") + xlab(capitalize(para))
+  parentDir = ifelse(dataType == "sess", "figures/expParaAnalysisSub", "figures/expParaAnalysis")
+  dir.create(parentDir)
+  fileName = sprintf("%s/hist_%s.pdf", parentDir, para)
+  ggsave(fileName, width = 6, height = 3)
+}
+
+# parse behavioral data
+load("genData/expDataAnalysis/blockData.RData")
+# I will construct a dataset of interest here
+data = data.frame(tau = expPara$tau, cvQuit = blockData$cvQuitTime[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
+                  muQuit =  blockData$muQuitTime[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
+                  stdQuit =  blockData$stdQuitTime[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
+                  nQuit =  blockData$nQuit[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
+                  cond = expPara$condition)
+data = data[expPara$id %in% useID,]
+ggplot(data, aes(nQuit)) + geom_dotplot(binwidth = 1) + facet_grid(~cond)
+
+
+
+# since stdQuitTime is NA is the participant didn't quit
+# I think we should look at these point right?
+data = data.frame(x = expPara$tau, y = blockData$cvQuitTime[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
+                  cond = expPara$condition)
+data = data[expPara$id %in% useID & !is.na(data$y),]
+p = plotCorrelation(data, "grey", T)
+p + xlab("Tau rank") + ylab("quitTime std rank") + saveTheme
+ggsave("varQuitTime.png", width = 8, height = 4)
+plot(blockData$muQuitTime[blockData$condition == "HP"],  blockData$stdQuitTime[blockData$condition == "HP"])
+
+ggplot(data, aes(log(x), log(y))) + geom_point() + facet_grid(~cond)
+
+# 
 for(pIdx in 1 : length(paras)){
   para = paras[pIdx]
   # plotParaAUC(expPara, para, blockData, useID)
@@ -49,17 +132,7 @@ for(pIdx in 1 : length(paras)){
   ggsave(sprintf("%s/AUC_%s.pdf", saveDir, para), width =8 ,height = 4)
 }
 
-expPara$condition = summaryData$condition[summaryData$id %in% expPara$id]
-for(i in 1 : length(paras)){
-  para = paras[i]
-  paraColor = paraColors[[i]]
-  p = ggplot(expPara[expPara$id %in% useID,], aes_string(para)) + geom_histogram(bins = 6, fill = paraColor) + facet_grid(~condition)+
-    saveTheme + ylab("Count") + xlab(capitalize(para))
-  if(para == "gamma") p = p + scale_x_continuous(breaks = c(0.7, 0.8, 0.9, 1.0))
-  if(para == "QwaitIni") p = p + scale_x_continuous(breaks = c(0, 2, 4, 6, 8, 10))
-  fileName = sprintf("figures/expParaAnalysis/hist_%s.pdf", para)
-  ggsave(fileName, width = 6, height = 3)
-}
+
 
 # 
 nPara = length(paras)
@@ -73,67 +146,10 @@ for(i in 1 : nPara){
   }
 }
 
-# trait analysis
-personality = read.csv("data/SDGdataset.csv")
-plotData = data.frame(expPara, personality)
-plotData$stress = hdrData$stress
-traits = c("Delay.of.Gratification", "Barratt.Impulsiveness",
-           "Intolerance.of.Uncertainty", "Trait.Anxiety..STAIT.")
-traitNames = c("DelayGra", "Impulsive",
-           "Uncertain", "Anxiety")
-plotData = plotData[plotData$id %in% useID,]
-rhoTableHP = matrix(NA, nrow = length(paras), ncol = length(traits))
-rhoTableLP = matrix(NA, nrow = length(paras), ncol = length(traits))
-pTableHP = matrix(NA, nrow = length(paras), ncol = length(traits))
-pTableLP = matrix(NA, nrow = length(paras), ncol = length(traits))
-for(pIdx in 1 : length(paras)){
-  para = paras[pIdx]
-  paraColor = paraColors[pIdx]
-  for(trIdx in 1 : length(traits)){
-    trait = traits[trIdx]
-    traitName = traitNames[trIdx]
-    input = data.frame(personality[summaryData$id %in% useID,trait], expPara[expPara$id %in% useID,para],
-                       summaryData$condition[summaryData$id %in% useID])
-    junk = getCorrelation(input)
-    # xName = sprintf("%sRank", para)
-    # yName = sprintf("%sRank", traitName)
-    # p + xlab(xName) + ylab(yName) + saveTheme
-    # ggsave(sprintf("figures/expParaAnalysis/%s/%s_%s.png", modelName, traitName, para), width =8 ,height = 4)
-    rhoTableHP[pIdx, trIdx] = junk$rhos[1]
-    rhoTableLP[pIdx, trIdx] = junk$rhos[2]
-    pTableHP[pIdx, trIdx] = junk$p[1]
-    pTableLP[pIdx, trIdx] = junk$p[2]   
-  }
-}
-# a lot of ties
-# plot correlations 
-rownames(pTableHP) = paras
-colnames(pTableHP) = traitNames
-rownames(pTableLP) = paras
-colnames(pTableLP) = traitNames
-rownames(rhoTableHP) = paras
-colnames(rhoTableHP) = traitNames
-rownames(rhoTableLP) = paras
-colnames(rhoTableLP) = traitNames
-library("corrplot")
-png('spHP.png')
-corrplot(rhoTableHP, 
-         p.mat = pTableHP, 
-         is.corr = F, 
-         method = "color",
-         insig = "label_sig") 
-mtext("parameter", side = 2, line = 1.5, cex = 1.5)
-mtext("personality", side = 3, line = 2, cex = 1.5, at = 2.5)
-dev.off()
+
 
 # divide into more
-data = data.frame(expPara$tau,
-                  y = blockData$varQuitTime[blockData$blockNum == 1],
-                  expPara$condition)
-data = data[expPara$id %in% useID & !is.na(data$y),]
-p = plotCorrelation(data, "grey", T)
-p + xlab("Tau rank") + ylab("varQuitTime rank") + saveTheme
-ggsave("varQuitTime.png", width = 8, height = 4)
+
 
 # cvQuitTime
 data = data.frame(expPara$tau,

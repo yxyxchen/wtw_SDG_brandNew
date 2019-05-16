@@ -36,3 +36,23 @@ getParaComb = function(paraTable){
 
 
 
+softMax = function(values, tau){
+  probAction1 = 1 / (1 + exp((values[2] -values[1]) * tau))
+  return(probAction1)
+}
+
+getWD = function(pWaits, stepDuration){
+  nStep = length(pWaits)
+  survProbs = cumprod(pWaits) # survProbs[i] is the prob that survive after the ith steps
+  pAlwaysWait = survProbs[nStep]
+  quitProbs = c(1, survProbs[1:(nStep-1)]) - survProbs # quitProbs[i], prob that quit before the ith steps
+  waitDurations = c(1 : nStep * stepDuration, nStep * stepDuration)
+  probWd = c(quitProbs, pAlwaysWait)
+  muWd = sum(waitDurations * probWd) 
+  stdWd = sqrt(sum((waitDurations - muWd)^2 * probWd))
+  outputs = list(waitDurations = waitDurations,
+                 probs = probWd,
+                 mu = muWd,
+                 std = stdWd)
+  return(outputs)
+}
