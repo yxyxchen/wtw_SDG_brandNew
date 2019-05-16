@@ -8,22 +8,32 @@ source("subFxs/helpFxs.R") # getParas
 source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 load("wtwSettings.RData")
 
+# input 
+dataType = "sess"
+modelName = "curiosityTrialSp"
+
 # create output directories
 dir.create("figures/expParaAnalysis")
 saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
 dir.create(saveDir)
 
 # load blockdata data
-load("genData/expDataAnalysis/blockData.RData")
-blockData = blockData[blockData$blockNum == 1,]
-load("genData/expDataAnalysis/sessionData.RData")
-allIDs= unique(blockData$id) 
+if(dataType == "block"){
+  load("genData/expDataAnalysis/blockData.RData")
+  load("genData/expDataAnalysis/kmOnGridBlock.RData")
+  summaryData = blockData[blockData$blockNum == 1, ] # so summaryData only have something relevant
+}else{
+  load("genData/expDataAnalysis/sessionData.RData")
+  load("genData/expDataAnalysis/kmOnGridSess.RData")
+  summaryData = sessionData
+}
 
+# maybe I shoud truncate summaryData to make them the same as balabala 
 
 # load expPara
-modelName = "curiosityTrialSp"
 paras = getParas(modelName)
-dirName = sprintf("genData/expModelFittingSub/%s", modelName)
+parentDir = ifelse(dataType == "block", "genData/expModelFitting", "genData/expModelFittingSub")
+dirName = sprintf("%s/%s",parentDir, modelName)
 expPara = loadExpPara(paras, dirName)
 useID = getUseID(expPara, paras)
 
@@ -39,7 +49,7 @@ for(pIdx in 1 : length(paras)){
   ggsave(sprintf("%s/AUC_%s.pdf", saveDir, para), width =8 ,height = 4)
 }
 
-expPara$condition = blockData$condition
+expPara$condition = summaryData$condition[summaryData$id %in% expPara$id]
 for(i in 1 : length(paras)){
   para = paras[i]
   paraColor = paraColors[[i]]
@@ -82,20 +92,20 @@ for(pIdx in 1 : length(paras)){
   for(trIdx in 1 : length(traits)){
     trait = traits[trIdx]
     traitName = traitNames[trIdx]
-    input = data.frame(personality[,trait], expPara[[para]], blockData$condition)
-    input = input[allIDs %in% useID, ]
-    junk = getCorrelation(input, paraColors[i], T)
+    input = data.frame(personality[summaryData$id %in% useID,trait], expPara[expPara$id %in% useID,para],
+                       summaryData$condition[summaryData$id %in% useID])
+    junk = getCorrelation(input)
     # xName = sprintf("%sRank", para)
     # yName = sprintf("%sRank", traitName)
     # p + xlab(xName) + ylab(yName) + saveTheme
     # ggsave(sprintf("figures/expParaAnalysis/%s/%s_%s.png", modelName, traitName, para), width =8 ,height = 4)
-    junk = getCorrelation(input, paraColors[i], T)
     rhoTableHP[pIdx, trIdx] = junk$rhos[1]
     rhoTableLP[pIdx, trIdx] = junk$rhos[2]
     pTableHP[pIdx, trIdx] = junk$p[1]
     pTableLP[pIdx, trIdx] = junk$p[2]   
   }
 }
+# a lot of ties
 # plot correlations 
 rownames(pTableHP) = paras
 colnames(pTableHP) = traitNames

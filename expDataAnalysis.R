@@ -140,6 +140,7 @@ for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
   tempt = trialData[[thisID]]
   # change trialNum, sellTime, trialS, totalEarnings
+  thisTrialData = trialData[[thisID]]
   nTrials = sapply(1:nBlock, function(i) sum(tempt$blockNum == i))
   thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:2]), time = nTrials);
                                   sellTime = sellTime + rep((1:3-1) * blockSecs, time = nTrials);
@@ -188,11 +189,6 @@ for (sIdx in 1 : n) {
   timeWTW_[[sIdx]] = wtwtsResults$timeWTW
   trialWTW_[[sIdx]] = wtwtsResults$trialWTW
   wtwEarly[sIdx] =   wtwtsResults$trialWTW[1]
-  # wait for input before continuing, if individual plots were requested
-  if (any(plotTrialwiseData, plotKMSC, plotWTW)) {
-    readline(prompt = paste('subject',thisID, "block", bkIdx, '(hit ENTER to continue)'))
-    graphics.off()
-  }
 }
 sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")), cbal = hdrData$cbal,
                        stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,

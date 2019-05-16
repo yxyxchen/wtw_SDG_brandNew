@@ -50,7 +50,7 @@ for(sIdx in 1 : nSub){
   # load para samples
   paraSamples = read.table(sprintf("%s/%s/s%d.txt", parentDir, modelName, id),sep = ",", row.names = NULL)
   # load behavioral inputs
-  thisExpTrialData = expTrialData[[id]]
+  thisExpTrialData = expTrialData[[id]] # here we useID
   cond = unique(thisExpTrialData$condition)
   if(dataType == "block") thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
   scheduledWait = thisExpTrialData$scheduledWait
@@ -94,9 +94,13 @@ for(sIdx in 1 : nSub){
   timeWaitedRep_[[sIdx]] = timeWaitedRep
 }
 
-# compare emipircal and reproduced trialPlot, quit different, try another way?
-trialPlots(trialData[[repNo[1,2]]], "s")
-trialPlots(block2session(expTrialData[[2]]), "s")
+# compare emipircal and reproduced trialPlot, for one participant 
+sIdx = 4
+id = useID[sIdx]
+cond = unique(summaryData$condition[summaryData$id == id])
+label = sprintf("Sub %d, %s", id, cond)
+trialPlots(block2session(expTrialData[[id]]), label)
+trialPlots(trialData[[repNo[1,sIdx]]],label)
 
 # compare emipirical and reproduced AUC
 muAUCRep = apply(AUCRep_, MARGIN = 2, mean)
@@ -104,8 +108,8 @@ stdAUCRep = apply(AUCRep_, MARGIN = 2, sd)
 minAUCRep = muAUCRep - stdAUCRep
 maxAUCRep = muAUCRep + stdAUCRep
 plotData = data.frame(muAUCRep, minAUCRep, maxAUCRep,
-                      AUC = summaryData$AUC[summaryData$id %in% useID],
-                      condition = summaryData$condition[summaryData$id %in% useID])
+                      AUC = summaryData$AUC[summaryData$id %in% useID], 
+                      condition = summaryData$condition[summaryData$id %in% useID]) # since useID is ascending
 ggplot(plotData,
        aes(AUC, muAUCRep)) +  geom_errorbar(aes(ymin = minAUCRep, ymax = maxAUCRep), color = "grey") +
   geom_point() + facet_grid(~condition) + 
@@ -114,6 +118,7 @@ ggplot(plotData,
 fileName = sprintf("figures/expModelRepitation/AUC_AUCRep_%s.pdf", modelName) 
 ggsave(filename = fileName,  width = 6, height = 4)
 
+# 
 
 # survival curve prediction
 for(sIdx in 1 : n){

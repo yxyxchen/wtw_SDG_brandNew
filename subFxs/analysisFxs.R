@@ -207,19 +207,19 @@ plotCorrelation = function(data, dotColor,isRank){
  return(p)
 } 
 
-getCorrelation = function(data, dotColor,isRank){
+getCorrelation = function(data){
   conditions = c("HP", "LP")
   colnames(data) = c("x", "y", "cond")
   
   # calculate correlations
-  # corTests = lapply(1:2, function(i) cor.test(data[data$cond == conditions[i], "x"],
-  #                                             data[data$cond == conditions[i], "y"],
-  #                                             method = cor.method))
+  corTests = lapply(1:2, function(i) cor.test(data[data$cond == conditions[i], "x"],
+                                              data[data$cond == conditions[i], "y"],
+                                              method = "spearman"))
   
-  corTests = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~
+  corTestsPerm = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~
                                                      data[data$cond == conditions[i], "y"])) 
-  rhos = sapply(1:2, function(i) round(corTests[[i]]@statistic@teststatistic, 3))
-  ps = sapply(1:2, function(i) round(pvalue(corTests[[i]]), 3))
+  rhos = sapply(1:2, function(i) as.numeric(corTests[[i]]$estimate))
+  ps = sapply(1:2, function(i) round(pvalue(corTestsPerm [[i]]), 3))
   return(list(rhos = rhos, ps = ps))
 } 
 

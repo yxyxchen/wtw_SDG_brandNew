@@ -82,6 +82,8 @@ loadExpPara = function(paras, dirName){
   nE = length(paras) + 1
   # number of files
   fileNames = list.files(path= dirName, pattern=("*_summary.txt"))
+  library("gtools")
+  fileNames = mixedsort(sort(fileNames))
   n = length(fileNames) 
   sprintf("load %d files", n)
   
