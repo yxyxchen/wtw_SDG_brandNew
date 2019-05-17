@@ -38,7 +38,7 @@ dirName = sprintf("%s/%s",parentDir, modelName)
 expPara = loadExpPara(paras, dirName)
 useID = getUseID(expPara, paras)
 
-# trait analysis
+# trait analysis # put it away
 personality = read.csv("data/SDGdataset.csv")
 traits = c("Delay.of.Gratification", "Barratt.Impulsiveness",
            "Intolerance.of.Uncertainty", "Trait.Anxiety..STAIT.")
@@ -97,15 +97,34 @@ for(i in 1 : length(paras)){
 # parse behavioral data
 load("genData/expDataAnalysis/blockData.RData")
 # I will construct a dataset of interest here
-data = data.frame(tau = expPara$tau, cvQuit = blockData$cvQuitTime[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
+data = data.frame(tau = expPara$tau,
+                  cvQuit = blockData$cvQuitTime[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
                   muQuit =  blockData$muQuitTime[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
                   stdQuit =  blockData$stdQuitTime[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
                   nQuit =  blockData$nQuit[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
+                  stdWd = blockData$stdWd[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
+                  cvWd = blockData$cvWd[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
+                  auc = blockData$AUC[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
                   cond = expPara$condition)
 data = data[expPara$id %in% useID,]
 ggplot(data, aes(nQuit)) + geom_dotplot(binwidth = 1) + facet_grid(~cond)
+ggplot(data, aes(auc, stdWd)) + geom_point() + facet_grid(~cond)
+
+ggplot(data, aes(tau, cvWd)) + geom_point() + facet_grid(~cond)
 
 
+# plot correlation
+data =  data.frame(tau = expPara$tau,
+                   cvWd = blockData$cvWd[(blockData$blockNum == 3) & (blockData$id %in% expPara$id)],
+                   cond = expPara$condition)
+data = data[expPara$id,]
+getCorrelation(data)
+# I think I shoud test them, a while range of famaily ?
+fit = lm(data = data[data$cond == "LP" & (data$tau) < 14 & (data$cvWd < 1)], cvWd ~ tau + I(1 / auc))
+summary(fit)
+
+# is it still true, 
+cor.test(log(data$tau[data$cond == "LP"]), log(data$cvWd[data$cond== "LP"] + 2))
 
 # since stdQuitTime is NA is the participant didn't quit
 # I think we should look at these point right?

@@ -41,6 +41,8 @@ cvQuitTime = numeric(length =n * nBlock)
 muQuitTime = numeric(length =n * nBlock)
 nQuit = numeric(length =n * nBlock)
 nTrial = numeric(length =n * nBlock)
+stdWd = numeric(length =n * nBlock)
+cvWd =  numeric(length =n * nBlock)
 # descriptive statistics for individual subjects and blocks
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
@@ -81,6 +83,9 @@ for (sIdx in 1 : n) {
     kmscResults = kmsc(thisTrialData,tMax,label,plotKMSC,kmGrid)
     AUC[noIdx] = kmscResults[['auc']]
     kmOnGrid_[[noIdx]] = kmscResults$kmOnGrid
+    stdWd[noIdx] = kmscResults$stdWd
+    cvWd[noIdx] = kmscResults$stdWd / kmscResults$auc
+    
     if (plotKMSC) {
       readline(prompt = paste('subject',thisID, "block", bkIdx, '(hit ENTER to continue)'))
       graphics.off()
@@ -93,7 +98,7 @@ for (sIdx in 1 : n) {
     trialWTW_[[noIdx]] = wtwtsResults$trialWTW
     wtwEarly[noIdx] =   wtwtsResults$trialWTW[1]
     # wait for input before continuing, if individual plots were requested
-    if (any(plotTrialwiseData, plotKMSC, plotWTW)) {
+    if (plotWTW) {
       readline(prompt = paste('subject',thisID, "block", bkIdx, '(hit ENTER to continue)'))
       graphics.off()
     }
@@ -106,7 +111,7 @@ blockData = data.frame(id = rep(allIDs, each = nBlock), blockNum = rep( t(1 : nB
                        cbal = rep(hdrData$cbal, each = nBlock), condition = factor(rep(hdrData$condition, each = nBlock), levels = c("HP", "LP")),
                        stress = factor(rep(hdrData$stress, each = nBlock), levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
                        totalEarnings = totalEarnings, nAction = nAction, stdQuitTime = stdQuitTime, cvQuitTime = cvQuitTime,
-                       muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial)
+                       muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial, stdWd = stdWd, cvWd = cvWd)
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
 
 # I think I would like to know the cv values
@@ -133,6 +138,11 @@ cvQuitTime = numeric(length = n)
 muQuitTime = numeric(length = n)
 nQuit = numeric(length = n)
 nTrial = numeric(length = n)
+stdWd = numeric(length =n * nBlock)
+cvWd =  numeric(length =n * nBlock)
+timeAUC_ = vector(mode = "list", length = n)
+timeStdWd_ = vector(mode = "list", length = n)
+winAUC_ = vector(mode = "list", length = n)
 plotTrialwiseData =F
 plotKMSC = F
 plotWTW = F
@@ -182,6 +192,8 @@ for (sIdx in 1 : n) {
     readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
     graphics.off()
   }
+  stdWd[[sIdx]] = kmscResults$stdWd
+  cvWd[[sIdx]] =  kmscResults$stdWd / kmscResults$auc
   
   # WTW time series
   wtwCeiling = tMax
@@ -189,11 +201,20 @@ for (sIdx in 1 : n) {
   timeWTW_[[sIdx]] = wtwtsResults$timeWTW
   trialWTW_[[sIdx]] = wtwtsResults$trialWTW
   wtwEarly[sIdx] =   wtwtsResults$trialWTW[1]
+  
+  # moving auc
+  window = 20
+  by = 10
+  tempt = kmscMoving(thisTrialData, tMax, label, plotKMSC, tGrid, window, by)
+  timeAUC_[[sIdx]] = tempt$timeAUCs
+  winAUC_[[sIdx]] = tempt$winAUCs
+  timeStdWd_[[sIdx]] = tempt$timeStdWds
 }
 sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")), cbal = hdrData$cbal,
                        stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
                      totalEarnings = totalEarnings, nAction = nAction, stdQuitTime = stdQuitTime, cvQuitTime = cvQuitTime,
-                     muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial)
+                     muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial,
+                     stdWd = stdWd, cvWd = cvWd)
 save(sessionData, file = 'genData/expDataAnalysis/sessionData.RData')
 save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridSess.RData')
 
