@@ -48,7 +48,7 @@ trialPlots <- function(thisTrialData,label = " ") {
     xlab('Trial num') + ylab('Trial duration / s') + ggtitle(label) + displayTheme
   # add block lines if we have multiple blocks 
   if(length(unique(thisTrialData$blockNum)) > 1){
-    p = p + geom_vline(xintercept = c(nTrial1, nTrial1 + nTrial1n2),  linetype='dashed',
+    p = p + geom_vline(xintercept = c(nTrial1,nTrial1n2),  linetype='dashed',
                    color = "grey", size = 1)
   }
   print(p)
@@ -186,14 +186,12 @@ plotCorrelation = function(data, dotColor,isRank){
   colnames(data) = c("x", "y", "cond")
   
   # calculate correlations
-  # corTests = lapply(1:2, function(i) cor.test(data[data$cond == conditions[i], "x"],
-  #                                             data[data$cond == conditions[i], "y"],
-  #                                             method = cor.method))
+  corTests = lapply(1:2, function(i) cor.test(data[data$cond == conditions[i], "x"],
+                                              data[data$cond == conditions[i], "y"],
+                                              method = "kendall"))
 
-  corTests = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~
-                                              data[data$cond == conditions[i], "y"])) 
-  rhos = sapply(1:2, function(i) round(corTests[[i]]@statistic@teststatistic, 3))
-  ps = sapply(1:2, function(i) round(pvalue(corTests[[i]]), 3))
+  rhos = sapply(1:2, function(i) round(as.numeric(corTests[[i]]$estimate), 3))
+  ps = sapply(1:2, function(i) round(corTests[[i]]$p.value, 3))
   textColors = ifelse(ps < 0.05, "red", "blue")
   textData = data.frame(label = paste(rhos, "(p =", ps, ")"),
                         cond= c("HP", "LP"), color = textColors)
@@ -210,26 +208,30 @@ plotCorrelation = function(data, dotColor,isRank){
     p0 = ggplot(plotData, aes(x, y)) + geom_point(size = 4, color = dotColor, fill = dotColor)
   }
   p = p0  + geom_text(data = textData,aes(x = -Inf,y = -Inf, label = label),
-              hjust   = -0.2,vjust = -1,color = "blue",size = 5, fontface = 2, color = textColors) +
+              hjust   = -0.2,vjust = -1,color = textColors, size = 5, fontface = 2, color = textColors) +
     facet_grid(~cond)
  return(p)
 } 
 
+
 getCorrelation = function(data){
   conditions = c("HP", "LP")
   colnames(data) = c("x", "y", "cond")
-  
+
   # calculate correlations
+  # since we can't get rho from the later
   corTests = lapply(1:2, function(i) cor.test(data[data$cond == conditions[i], "x"],
                                               data[data$cond == conditions[i], "y"],
-                                              method = "spearman"))
-  
-  corTestsPerm = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~
-                                                     data[data$cond == conditions[i], "y"])) 
+                                              method = "kendall") 
+                    )
+  # supposedly, kendall can deal with data with a lot of ties
+  # corTestsPerm = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~
+  #                                                    data[data$cond == conditions[i], "y"]))
   rhos = sapply(1:2, function(i) as.numeric(corTests[[i]]$estimate))
-  ps = sapply(1:2, function(i) round(pvalue(corTestsPerm [[i]]), 3))
+  ps = sapply(1:2, function(i) round(corTests[[i]]$p.value, 3))
+  # ps = sapply(1:2, function(i) round(pvalue(corTestsPerm [[i]]), 3))
   return(list(rhos = rhos, ps = ps))
-} 
+}
 
 # convert data of multiple blocks into one session
 block2session = function(tempt){

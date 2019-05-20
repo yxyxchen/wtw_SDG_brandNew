@@ -1,8 +1,6 @@
 library('ggplot2')
 # plot theme 
-saveTheme = theme(panel.background = element_rect(fill = "white",colour = "white"),
-                panel.grid.minor = element_blank(),
-                panel.grid.major = element_blank()) + 
+saveTheme = theme(panel.background = element_rect(fill = "white")) + 
   theme(title =element_text(size = 20, face='bold'), 
         plot.title = element_text(hjust = 0.5)) + 
   theme(axis.title=element_text(size= 20), axis.text = element_text(size=20), axis.line= element_line(color="black", size = 1)) +

@@ -35,14 +35,16 @@ modelName = "curiosityTrialSp"
 paras = getParas(modelName)
 parentDir = ifelse(dataType == "block", "genData/expModelFitting", "genData/expModelFittingSub")
 dirName = sprintf("%s/%s",parentDir, modelName)
-expPara = loadExpPara(paras, dirName)
-useID = getUseID(expPara, paras)
+tempt = loadExpPara(paras, dirName)
+useID = getUseID(tempt, paras)
+expPara = merge(x=tempt,y=summaryData, by="id",all.x=TRUE)
+
 
 # simulate nRep times for each participants, with different parameter samples
 repModelFun = getRepModelFun(modelName)
 nComb = 10
 nSub = length(useID)
-trialData = vector(length = nSub * nComb, mode ='list')
+repTrialData = vector(length = nSub * nComb, mode ='list')
 repNo = matrix(1 : (nSub * nComb), nrow = nComb, ncol = nSub)
 set.seed(231)
 for(sIdx in 1 : nSub){
@@ -58,7 +60,7 @@ for(sIdx in 1 : nSub){
   for(cbIdx in 1 : nComb){
     paraSample = as.double(paraSamples[sample(1 : nrow(paraSamples), 1), 1 : length(paras)])
     tempt = repModelFun(paraSample, cond, scheduledWait)
-    trialData[[repNo[cbIdx, sIdx]]] = tempt
+    repTrialData[[repNo[cbIdx, sIdx]]] = tempt
   }
 }
 
@@ -81,13 +83,13 @@ for(sIdx in 1 : nSub){
   timeWaitedRep = matrix(0, nTrial, nComb)
   # calculate outputs for each participant 
   for(cbIdx in 1 : nComb){
-    thisTrialData = trialData[[repNo[cbIdx, sIdx]]]
+    thisRepTrialData = repTrialData[[repNo[cbIdx, sIdx]]]
     # auc 
-    kmscResults = kmsc(thisTrialData, tMax, label ,plotKMSC, kmGrid)
+    kmscResults = kmsc(thisRepTrialData, tMax, label ,plotKMSC, kmGrid)
     AUCRep_[cbIdx, sIdx] = kmscResults[['auc']]
     kmOnGridRep[,cbIdx] = kmscResults$kmOnGrid
     # timeWaited
-    timeWaitedRep[, cbIdx] = thisTrialData$timeWaited
+    timeWaitedRep[, cbIdx] = thisRepTrialData$timeWaited
   }
   # save outputs for each participant 
   kmOnGridRep_[[sIdx]] = kmOnGridRep
@@ -97,10 +99,15 @@ for(sIdx in 1 : nSub){
 # compare emipircal and reproduced trialPlot, for one participant 
 sIdx = 4
 id = useID[sIdx]
+id = 59
+
+
+id = 1
+sIdx = which(useID  == id)
 cond = unique(summaryData$condition[summaryData$id == id])
 label = sprintf("Sub %d, %s", id, cond)
 trialPlots(block2session(expTrialData[[id]]), label)
-trialPlots(trialData[[repNo[1,sIdx]]],label)
+trialPlots(repTrialData[[repNo[1,sIdx]]],label)
 
 # compare emipirical and reproduced AUC
 muAUCRep = apply(AUCRep_, MARGIN = 2, mean)
@@ -142,94 +149,3 @@ for(sIdx in 1 : n){
     #ggsave(fileName, width = 4, height =4)
   }
 }
-
-######### simluation for sequences
-expPara$condition = blockData$condition[blockData$blockNum == 1]
-tempt = summarise(group_by(expPara, condition), phi = mean(phi), tau = mean(tau),
-                  gamma = mean(gamma))
-medianParaHP = as.double(tempt[1,])[-1]
-medianParaLP = as.double(tempt[2,])[-1]
-
-medianParaHP = c(0.05, 15)
-medianParaLP = c(0.05, 30)
-repModelFun = getRepModelFun("heuristicRL")
-set.seed(231)
-nRep = 10
-trialData = vector(length = n * nRep, mode ='list')
-repNo = matrix(1 : (n * nRep), nrow = n, ncol = nRep)
-for(sIdx in 1 : n){
-  id = idList[[sIdx]]
-  cond = unique(blockData$condition[blockData$id == id])
-  if(cond == "HP") para = medianParaHP else para =  medianParaLP
-  thisExpTrialData = expTrialData[[id]]
-  thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
-  scheduledWait = thisExpTrialData$scheduledWait
-  for(rIdx in 1 : nRep){
-   if(cond == "HP"){
-     para = medianParaHP
-   }else{
-     para = medianParaLP
-   }
-    tempt = repModelFun(para, cond, scheduledWait)
-    trialData[[repNo[sIdx, rIdx]]] = tempt
-    # simDistMatrix[,rIdx] = abs(tempt$timeWaited - thisExpTrialData$timeWaited)
-  }
-  # simDist_[[sIdx]] = apply(simDistMatrix, 1, mean)
-  # simDistSd_[[sIdx]] = apply(simDistMatrix, 1, sd)
-}
-
-# calculate AUC and timeWaited
-plotKMSC = F
-# initialize 
-totalEarningsRep_ = matrix(0, n, nRep)
-AUCRep_ = matrix(0, n, nRep)
-timeWaitedRep_ = vector(mode = "list", length = n)
-timeWaitedRepSd_ = vector(mode = "list", length = n)
-kmOnGridRep_ = vector(mode = "list", length = n)
-kmOnGridRepSd_ = vector(mode = "list", length = n)
-for(sIdx in 1 : n){
-  id = idList[[sIdx]]
-  thisExpTrialData = expTrialData[[id]]
-  thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ] 
-  tMax = ifelse( unique(thisExpTrialData$condition) == "HP", tMaxs[1], tMaxs[2])
-  kmGrid = seq(0, tMax, by=0.1) 
-  label = "asda"
-  nTrial = nrow(thisExpTrialData)
-  # initialize
-  timeWaitedMatrix = matrix(0, nTrial, nRep)
-  kmOnGridMatrix = matrix(0, length(kmGrid), nRep)
-  for(rIdx in 1 : nRep){
-    thisTrialData = trialData[[repNo[sIdx, rIdx]]]
-    junk = thisTrialData$timeWaited
-    timeWaitedMatrix[,rIdx] = junk
-    
-    totalEarningsRep_[sIdx, rIdx] =  sum(thisTrialData$trialEarnings)
-    kmscResults = kmsc(thisTrialData,tMax,label,plotKMSC,kmGrid)
-    AUCRep_[sIdx, rIdx] = kmscResults[['auc']]
-    kmOnGridMatrix[,rIdx] = kmscResults$kmOnGrid
-  }
-  timeWaitedRep_[[sIdx]] = apply(timeWaitedMatrix, MARGIN = 1, mean)
-  timeWaitedRepSd_[[sIdx]] = apply(timeWaitedMatrix, MARGIN = 1, sd)
-  kmOnGridRep_[[sIdx]] = apply(kmOnGridMatrix, MARGIN = 1, mean)
-  kmOnGridRepSd_[[sIdx]] = apply(kmOnGridMatrix, MARGIN = 1, sd)
-}
-
-# AUC prediction
-plotData = blockData[blockData$blockNum == 1,]
-plotData$AUCRep = apply(AUCRep_, MARGIN = 1, FUN = mean)
-plotData$AUCRepSd = apply(AUCRep_, MARGIN = 1, FUN = sd)
-plotData$AUCRepMin = plotData$AUCRep - plotData$AUCRepSd 
-plotData$AUCRepMax = plotData$AUCRep + plotData$AUCRepSd 
-ggplot(plotData[plotData$id %in% useID, ],
-       aes(AUC, AUCRep)) +  geom_errorbar(aes(ymin = AUCRepMin, ymax = AUCRepMax), color = "grey")  + geom_point() + facet_grid(~condition) + 
-  geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(0, 40)) + ylim(c(0, 40))
-
-
-which(plotData$AUCRep > 25)
-
-
-
-
-
-
-

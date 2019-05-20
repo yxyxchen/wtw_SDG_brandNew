@@ -3,7 +3,7 @@
 # we save LL_all in both the summary and the all samples data since some times out of memory will change it a lot
 # we use log_like to calculate WAIC and looStat
 # but we don't save log_like
-modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, pars, model){
+modelFitting = function(cond, wIni, wtwEarly, timeWaited, trialEarnings, scheduledWait, fileName, pars, model){
   load("wtwSettings.RData")
   tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
   condIdx = ifelse(cond =="HP", 1, 2)
@@ -23,7 +23,7 @@ modelFitting = function(cond, wIni, timeWaited, trialEarnings, scheduledWait, fi
                     timeWaited = timeWaited,
                     N = length(timeWaited),
                     trialEarnings = trialEarnings,
-                    #ini = ini,
+                    wtwEarly = wtwEarly,
                     Ts = Ts)
   fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
                iter = nIter) 

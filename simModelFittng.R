@@ -5,8 +5,8 @@ source("subFxs/taskFxs.R") # drawSamples
 source("subFxs/repetitionFxs.R") # getRepFunction
 source("subFxs/simulationFxs.R")
 modelName = "curiosityTrialSp" 
-nSeq = 10
-nRep = 1
+nSeq = 1
+nRep = 10
 nTrial = 50
 # initialize simTrialData
 simTrialData = vector(mode = "list", length = 2)
@@ -70,14 +70,16 @@ simModelFitting = function(modelName, paras, nTrial){
   for(cIdx in 1:2){
     simTrialDataHere = simTrialData[[cIdx]]
     cond = conditions[cIdx]
-    foreach(i = 1 : nComb) %dopar% {
-      thisTrialData = simTrialDataHere[[i]]
-      timeWaited = thisTrialData$timeWaited
-      scheduledWait = thisTrialData$scheduledWait
-      trialEarnings = thisTrialData$trialEarnings
-      timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
-      fileName = sprintf("genData/simModelFitting/%s/%dTrial/%s_s%d", modelName, nTrial, cond, i)
-      modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
+    foreach(i = 1 : 1) %dopar% {
+      lapply(1:nRep, function(rIdx){
+        thisTrialData = simTrialDataHere[[simNo[rIdx, 1, i]]]
+        timeWaited = thisTrialData$timeWaited
+        scheduledWait = thisTrialData$scheduledWait
+        trialEarnings = thisTrialData$trialEarnings
+        timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
+        fileName = sprintf("genData/simModelFitting/%s/%dTrial/%s_s%d_r%d", modelName, nTrial, cond, i, rIdx)
+        modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
+      })
     }
   }
 }

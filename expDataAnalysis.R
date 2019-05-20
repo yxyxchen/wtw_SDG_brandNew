@@ -124,6 +124,17 @@ summaryData =  dplyr::summarise(group_by(plotData, time), mu = mean(wtw), std = 
 plotData2 = data.frame(mu = summaryData$mu, std = summaryData$std, time = tGrid)
 ggplot(plotData2, aes(time, mu)) + geom_line(group = 1)
 
+
+# load all data
+allData = loadAllData()
+hdrData = allData$hdrData           
+trialData = allData$trialData       
+allIDs = hdrData$ID                   # column of subject IDs
+n = length(allIDs)                    # n
+cat('Analyzing data for',n,'subjects.\n')
+
+# define nBlock
+nBlock = 3
 # get session data 
 tGrid = seq(0, blockSecs * nBlock, by = 0.1)
 AUC = numeric(length = n)
@@ -138,8 +149,8 @@ cvQuitTime = numeric(length = n)
 muQuitTime = numeric(length = n)
 nQuit = numeric(length = n)
 nTrial = numeric(length = n)
-stdWd = numeric(length =n * nBlock)
-cvWd =  numeric(length =n * nBlock)
+stdWd = numeric(length =n)
+cvWd =  numeric(length =n)
 timeAUC_ = vector(mode = "list", length = n)
 timeStdWd_ = vector(mode = "list", length = n)
 winAUC_ = vector(mode = "list", length = n)
@@ -201,6 +212,10 @@ for (sIdx in 1 : n) {
   timeWTW_[[sIdx]] = wtwtsResults$timeWTW
   trialWTW_[[sIdx]] = wtwtsResults$trialWTW
   wtwEarly[sIdx] =   wtwtsResults$trialWTW[1]
+  if (plotWTW) {
+    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
+    graphics.off()
+  }
   
   # moving auc
   window = 20

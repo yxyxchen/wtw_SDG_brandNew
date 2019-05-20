@@ -27,7 +27,7 @@ expModelFitting = function(modelName, paras){
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
   if(modelName == "curiosityTrialRSp"){
     wIni = (5/6 + 0.93) / 2 * stepDuration
-  }else if(modelName == "curiosityTrialSp"){
+  }else if(any(paras == "gamma")){
     wIni = (QHPApOptim + QLPApOptim) / 2
   }else{
     print("wrong model name!")
@@ -52,7 +52,7 @@ expModelFitting = function(modelName, paras){
   library("foreach")
   registerDoMC(nCore)
   
-  foreach(i = 1 : 10) %dopar% {
+  foreach(i = 1 : n) %dopar% {
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
     thisTrialData = thisTrialData[thisTrialData$blockNum == 1,]
@@ -61,8 +61,11 @@ expModelFitting = function(modelName, paras){
     trialEarnings = thisTrialData$trialEarnings
     timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
     cond = unique(thisTrialData$condition)
+    # for risk model
+    wtwEarly = blockData$wtwEarly[blockData$id == thisID & blockNum == 1]
     fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
-    modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
+    # modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
+    modelFitting(cond, wIni, wtwEarly, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
   }
 
   # for(i in 1 : n){

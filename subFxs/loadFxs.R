@@ -75,8 +75,6 @@ loadAllData = function() {
 } 
 
 
-# l
-
 loadExpPara = function(paras, dirName){
   # number of paras 
   nE = length(paras) + 1
@@ -87,10 +85,6 @@ loadExpPara = function(paras, dirName){
   n = length(fileNames) 
   sprintf("load %d files", n)
   
-  # load blockData   
-  load("genData/expDataAnalysis/blockData.RData")
-  blockData = blockData[blockData$blockNum == 1,]
-  
   # initialize the outout variable 
   expPara = matrix(NA, n, nE * 4)
   idList = vector(length = n)
@@ -99,10 +93,8 @@ loadExpPara = function(paras, dirName){
     fileName = fileNames[[i]]
     address = sprintf("%s/%s", dirName, fileName)
     junk = read.csv(address, header = F)
-    idList[i] = ifelse(is.na(as.numeric(substr(fileName, 2,4))),
-                       ifelse(is.na(as.numeric(substr(fileName, 2,3))),  as.numeric(substr(fileName, 2,2)),
-                              as.numeric(substr(fileName, 2,3))),
-                       as.numeric(substr(fileName, 2,4)))
+    idIndexs = str_locate(fileName, "s[0-9]+")
+    idList[i] = as.double(substr(fileName, idIndexs[1]+1, idIndexs[2]))
     # delete the lp__ in the old version
     if(nrow(junk) > nE){
       junk = junk[1:nE,]
@@ -116,12 +108,7 @@ loadExpPara = function(paras, dirName){
   expPara = data.frame(expPara)
   junk = c(paras, "LL_all")
   colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"))
-  # add id, condition, stress
-  condition = blockData$condition[blockData$id %in% idList]
-  stress = blockData$stress[blockData$id %in% idList]
-  expPara[['id']] = idList  # needed for left_join
-  expPara[["condition"]] = condition
-  expPara[['stress']] = stress
+  expPara$id = idList
   return(expPara)
 }
 
@@ -174,25 +161,3 @@ loadExpParaMedian = function(modelName, paras, id){
 }
 
 
-loadSimPara_ = function(modelName, paras, cond){
-  nE = length(paras) + 2
-  load(sprintf("genData/simulation/%s/simParas.RData", modelName))
-  n = nComb
-  nE = length(paras)
-  expPara = array(NA, dim = c(nComb, nRep, nE*5))
-  for(i in 1 : n){
-    expPara_ = matrix(NA, nRep, nE*5)
-    for(r in 1 : nRep){
-      fileName = sprintf("genData/simModelFitting/%s/%s_s%d_r%d_summary.txt",
-                         modelName, cond, i, r)
-      junk = read.csv(fileName, header = F)
-      expPara_[r, 1:nE] = junk[1:nE,1]
-      expPara_[r, (nE + 1) : (2 * nE)] = junk[1:nE,2]
-      expPara_[r, (2*nE + 1) : (3 * nE)] = junk[1:nE,9]
-      expPara_[r, (3 * nE + 1) : (4 * nE)] = junk[1:nE,10]
-      expPara_[r, (4 * nE + 1) : (5 * nE)] = paraComb[i,1:4]
-    }
-    expPara[i, ,] = expPara_
-  }
-  return(expPara)
-}

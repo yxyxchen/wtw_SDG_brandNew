@@ -1,88 +1,59 @@
-# 
 library("ggplot2")
+library("dplyr")
 library("Hmisc")
-source("subFxs/analysisFxs.R")
-source("subFxs/helpFxs.R")
-source("subFxs/loadFxs.R")
+library("coin")
+source("subFxs/plotThemes.R")
+source("subFxs/loadFxs.R") # load blockData and expPara
+source("subFxs/helpFxs.R") # getParas
+source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 load("wtwSettings.RData")
 
-modelName = "R_learning2"
-dir.create("figures/simDataAnalysis")
-dirName = sprintf("genData/simulation/%s", modelName)
-load(sprintf("%s/trialHPData.RData", dirName))
-load(sprintf("%s/trialLPData.RData", dirName))
-load(sprintf("%s/simParas.RData", dirName))
-source("subFxs/plotThemes.R")
-dir.create("figures/simDataAnalysis")
-dirName = sprintf("figures/simDataAnalysis/%s", modelName)
-dir.create(dirName)
-for(c in 1 : 2){
-  cond = conditions[c]
-  if(cond == "HP") trialData = trialHPData else trialData = trialLPData
-  tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
-  # calculate AUC and timeWaited
-  plotKMSC = F
-  label = ""
-  kmGrid = seq(0, tMax, by=0.1) 
-  # initialize 
-  totalEarnings_ = matrix(0, nComb, nRep)
-  AUC_ = matrix(0, nComb, nRep)
-  for(sIdx in 1 : nComb){
-    for(rIdx in 1 : nRep){
-      thisTrialData = trialData[[simNo[sIdx, rIdx]]]
-      kmscResults = kmsc(thisTrialData,tMax,label,plotKMSC,kmGrid)
-      AUC_[sIdx, rIdx] = kmscResults[['auc']]
-    }
-  }
-  AUC = apply(AUC_, MARGIN = 1, FUN = mean)
-  if(cond == "HP") AUCHP = AUC else AUCLP = AUC
-}
+# input 
+modelName = "curiosityTrialSp"
+nTrail = 50
 
-paras = getParas("R_learning2")
+# create output directories
+dir.create("figures/simParaAnalysis")
+tempt = sprintf("figures/simParaAnalysis/%s", modelName)
+dir.create(tempt)
+saveDir = sprintf("figures/simParaAnalysis/%s/%dTrial", modelName, nTrial)
+dir.create(tempt)
+
+# load real parameters
+load(sprintf("genData/simulation/%s/%dTrialPara.RData", modelName, nTrial))
+
+# load simPara
+paras = getParas(modelName)
 nPara = length(paras)
-for(c in 1 : 2){
-  cond = conditions[c]
-  condColor = conditionColors[c]
-  ylimit = ifelse(cond == "HP", 25, 45)
-  if(cond == "HP") AUC = AUCHP else AUC = AUCLP
-  tempt = data.frame(paraComb, AUC = AUC)
-  for(i in 1 : nPara){
-    para = paras[i]
-    tempt1 = tempt %>% group_by_at(vars(para)) %>% summarise(mu = mean(AUC))
-    tempt2 = tempt %>% group_by_at(vars(para)) %>% summarise(std = sd(AUC))
-    plotData = data.frame(tempt1, std = tempt2$std) 
-    plotData[[para]]= as.factor(plotData[[para]])
-    plotData$ymin = plotData$mu - plotData$std
-    plotData$ymax = plotData$mu + plotData$std
-    ggplot(plotData, aes_string(para, "mu")) +
-      geom_bar(stat = "identity", color = condColor, fill = condColor) +
-      saveTheme + xlab(capitalize(para)) + ylab("AUC / min") + ylim(c(-3, ylimit)) +
-      geom_errorbar(aes(ymin = ymin, ymax = ymax), width = 0.2)
-    fileName = sprintf("figures/simDataAnalysis/%s/AUC_%s_%s.pdf", modelName, cond, para)
-    ggsave(fileName, width = 3, height = 4)
-  }
-}
+dirName = sprintf("genData/simModelFitting/%s/%dTrial", modelName, nTrial)
+tempt = loadExpPara(paras, dirName)
+useID = getUseID(tempt, paras)
+## only keep the estimations 
+tempt = tempt[,1:nPara]
+colnames(paraComb) = paste0(paras, "Real")
+summaryData = cbind(rbind(paraComb, paraComb), condition = rep(c("HP", "LP"),each = nrow(paraComb)))
+simPara = cbind(tempt, summaryData)
 
-# look at actions
-trialData = trialHPData
-paraTable = data.frame(phi1 = c(0.02, 0.05, 0.08), phi2 = c(0.02, 0.05, 0.08),tau = c(5, 10, 15))
-paraComb = getParaComb(paraTable)
-nTimeStep = 40
-for(i in 1 : nComb){
-  thisTrialData = trialData[[i]]
-  actionValueViewer(thisTrialData$vaWaits, thisTrialData$vaRewardRates, thisTrialData)
-  # plotData = data.frame(time = (1 : nTimeStep) * stepDuration, Qwait = thisTrialData$vaWaits[,50])
-  # p=ggplot(plotData, aes(time, Qwait)) + ggtitle(paste(paraComb[i,], collapse = " ")) + geom_point()
-  # print(p)
-  #print(mean(thisTrialData$trialEarnings / (thisTrialData$timeWaited * 2  + 4 )))
-  readline("continue")
-}
+simPara$phiReal = as.factor(simPara$phiReal)
+ggplot(simPara[simPara$condition == "HP", ], aes(gammaReal, gamma)) +
+  geom_boxplot()
+
+simParaLong = data.frame(realValue = unlist(simPara[,paras]),
+                         estValue = unlist(simPara[,paste0(paras, "Real")]),
+                         conditon = rep(conditions, each = nrow(simPara) * nPara / 2),
+                         para = rep(rep(paras, each = nrow(simPara) / 2),2)
+                   )
+ggplot(simParaLong[simParaLong$conditon == "HP", ],
+       aes(realValue, estValue)) + geom_boxplot() + facet_grid(~para)
+  
+# compare real parameter and estimated parameters 
+ggplot(simPara, aes(realPhi, ))
 
 
 ## look at corrletion
 modelName = "full_model"
 paras = getParas(modelName )
-nPara = length(paras)
+
 load(sprintf("genData/simulation/%s/simParas.RData", modelName))
 for(c in 1:2){
   cond = conditions[c]
