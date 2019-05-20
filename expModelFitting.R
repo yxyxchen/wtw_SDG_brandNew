@@ -25,7 +25,7 @@ expModelFitting = function(modelName, paras){
   # determine wIni
   QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9) 
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-  if(modelName == "curiosityTrialRSp"){
+  if(any(paras == "phiR")){
     wIni = (5/6 + 0.93) / 2 * stepDuration
   }else if(any(paras == "gamma")){
     wIni = (QHPApOptim + QLPApOptim) / 2
@@ -62,7 +62,7 @@ expModelFitting = function(modelName, paras){
     timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
     cond = unique(thisTrialData$condition)
     # for risk model
-    wtwEarly = blockData$wtwEarly[blockData$id == thisID & blockNum == 1]
+    wtwEarly = blockData$wtwEarly[blockData$id == thisID & blockData$blockNum == 1]
     fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
     # modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
     modelFitting(cond, wIni, wtwEarly, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)

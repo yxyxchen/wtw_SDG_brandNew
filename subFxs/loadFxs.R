@@ -160,4 +160,57 @@ loadExpParaMedian = function(modelName, paras, id){
   return(expParaMedian)
 }
 
+loadSimPara = function(paras, dirName){
+  # number of paras 
+  nE = length(paras) + 1
+  # number of files
+  fileNames = list.files(path= dirName, pattern=("*_summary.txt"))
+  library("gtools")
+  fileNames = mixedsort(sort(fileNames))
+  n = length(fileNames) 
+  sprintf("load %d files", n)
+  
+  # extract seqIdxs and cbIdxs from filenames
+  seqIdxs = as.double(sapply(1:n, function(i){
+    tempt = regexpr("_r[0-9]*", fileNames[i]) 
+    match.length = attr(tempt, "match.length")
+    start = tempt[[1]] + 2
+    ending = tempt[[1]] + match.length - 1
+    substring(fileNames[i], start, ending)
+  }))
+  nSeq = length(unique(seqIdxs))
+  
+  cbIdxs =  as.double(sapply(1:n, function(i){
+    tempt = regexpr("_s[0-9]*", fileNames[i]) 
+    match.length = attr(tempt, "match.length")
+    start = tempt[[1]] + 2
+    ending = tempt[[1]] + match.length - 1
+    substring(fileNames[i], start, ending)
+  }))
+  nComb = length(unique(cbIdxs))
+  
+  # initialize the outout variable 
+  junk = c(paras, "LL_all")
+  varNames = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"))
+  simParaHP = array(dim = c(nE * 4, nSeq, nComb),
+                    dimnames = list(varNames, 1 : nSeq, 1 : nComb))
+  simParaLP = array(dim = c(nE * 4, nSeq, nComb), dimnames = list(varNames, 1 : nSeq, 1 : nComb))
+  # loop over files
+  for(i in 1 : n){
+    # read the file
+    fileName = fileNames[[i]]
+    address = sprintf("%s/%s", dirName, fileName)
+    junk = read.csv(address, header = F)
+    
+    # determine the condition 
+    if(grepl("HP", fileName)){
+      simParaHP[, seqIdxs[i], cbIdxs[i]] = unlist(junk[,c(1,2,9,10)])
+    }else{
+      simParaLP[, seqIdxs[i], cbIdxs[i]] = unlist(junk[,c(1,2,9,10)])
+    }
+  }
+  simPara = list(HP = simParaHP, LP =simParaLP)
+  # transfer expPara to data.frame
+  return(simPara)
+}
 

@@ -13,7 +13,8 @@ simTrialData = vector(mode = "list", length = 2)
 for(cIdx in 1 : 2){
   cond = conditions[cIdx]
   paraTable = data.frame(phi = c(0.02, 0.05, 0.08), tau = c(5, 10, 15),
-                         gamma = c(0.85, 0.90, 0.95), zeroPoint = ifelse(cond == "HP", c(12, 16, 20), c(25, 30, 35)))
+                         gamma = c(0.85, 0.90, 0.95))
+  if(cond == "HP") paraTable$zeroPoint = c(12, 16, 20) else paraTable$zeroPoint = c(25, 30, 35) 
   scheduledWaitList = replicate(nSeq, replicate(nTrial, drawSample(cond)),  simplify = F)
   simTrialData[[cIdx]] = simulate(modelName, nRep, paraTable, scheduledWaitList, cond)
 }

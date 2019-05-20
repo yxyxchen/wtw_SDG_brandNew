@@ -23,18 +23,18 @@ allIDs = hdrData$ID
 expTrialData = allData$trialData   
 idList = hdrData$ID
 n = length(idList)
-
+load("genData/expDataAnalysis/sessionData.RData")
 ##### get a sense of the model ######
 # simluation for one para and one scheduledWait from simulation or ...
 # error prone.. try 3 and everything changes 
 sIdx = 1
-paras = c( 0.02728469, 2.72696994, 0.91552627, -0.1)
+paras = c(0.12, 2.09, 0.71, 0.90)
 modelName = "risk"
 repModelFun = getRepModelFun(modelName)
 id = idList[[sIdx]]
 cond = hdrData$cond[hdrData$ID == id]
 thisExpTrialData = expTrialData[[id]]
-thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
+# thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
 scheduledWait = thisExpTrialData$scheduledWait
 set.seed(123)
 # cond = "LP"

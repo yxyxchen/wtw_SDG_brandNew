@@ -9,7 +9,7 @@ data {
   vector[N] timeWaited;
   vector[N] trialEarnings;
   int Ts[N]; // terminal time step index 
-  real zeroPoint;
+  real wtwEarly;
 }
 transformed data {
   // constant
@@ -17,6 +17,7 @@ transformed data {
   real iti = 2;
   real tokenValue = 10;
   int totalSteps = sum(Ts) - N;
+  real zeroPoint = wtwEarly;
   }
 parameters {
   real<lower = 0, upper = 0.3> phi;
@@ -37,6 +38,7 @@ transformed parameters{
 
   // initialize caching variables
   real G1;
+  real G;
   // fill values
   for(i in 1 : nTimeSteps){
     Qwait[i] = zeroPoint*0.1 - 0.1*(i - 1) + Qquit;
@@ -56,25 +58,46 @@ transformed parameters{
     // update action values for rewarded trials
     if(trialEarnings[tIdx] > 0){
       for(t in 1 : (T - 1)){
-        real G = 1/utiCurve - exp(-utiCurve *(RT * gamma^(T - t -1) + Viti * gamma^(T - t))) / utiCurve;
+        if(utiCurve == 0){
+          G = RT * gamma^(T - t -1) + Viti * gamma^(T - t);
+        }else{
+          G = 1/utiCurve - exp(-utiCurve *(RT * gamma^(T - t -1) + Viti * gamma^(T - t))) / utiCurve;
+        }
         Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);
       }
     }else{
-      real G =  1/utiCurve - exp(-utiCurve * (RT  + Viti * gamma));
+      if(utiCurve == 0){
+        G = RT  + Viti * gamma;
+      }else{
+        G =  1/utiCurve - exp(-utiCurve * (RT  + Viti * gamma)) / utiCurve;
+      }
       Qquit = Qquit + phi * (G - Qquit);
       if(T > 2){
         for(t in 1 : (T-2)){
-          G =  1/utiCurve - exp(-utiCurve *(RT  * gamma^(T - t -1) + Viti * gamma^(T - t))) / utiCurve;
+          if(utiCurve == 0){
+            G = RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
+          }else{
+            G =  1/utiCurve - exp(-utiCurve *(RT  * gamma^(T - t -1) + Viti * gamma^(T - t))) / utiCurve;
+          }
           Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);          
         }
       }
     }
     // update Qquit by counterfactual thiking
-    G1 =  1/utiCurve - exp(-utiCurve *(RT  * gamma^(T - 2) + Viti * gamma^(T - 1))) / utiCurve;
+    if(utiCurve == 0){
+      G1 = RT  * gamma^(T - 2) + Viti * gamma^(T - 1);
+    }else{
+      G1 =  1/utiCurve - exp(-utiCurve *(RT  * gamma^(T - 2) + Viti * gamma^(T - 1))) / utiCurve;
+    }
     Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
     
     // update Viti
-    Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);
+    if(utiCurve == 0){
+      G1 =  RT  * gamma^(T - 2 + iti / stepDuration) + Viti * gamma^(T - 1 + iti / stepDuration);
+    }else{
+      G1 =  1/utiCurve - exp(-utiCurve *(RT  * gamma^(T - 2 + iti / stepDuration) + Viti * gamma^(T - 1+ iti / stepDuration))) / utiCurve;
+    }
+    Viti = Viti + phi * (G1 - Viti);
     
     // save action values
     Qwaits[,tIdx+1] = Qwait;

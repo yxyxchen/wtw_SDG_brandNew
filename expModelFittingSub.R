@@ -1,10 +1,12 @@
 # this script fits the RL model for each participant
 # using Rstan
+# here I change all my modelFitting function into the risk version
+# while in stan, I have different expMofelfitting and modelFitting scripts for different things 
 expModelFitting = function(modelName, paras){
   # create outfiles
   dir.create("genData")
-  dir.create("genData/expModelFittingSb")
-  dir.create(sprintf("genData/expModelFittingSb/%s", modelName))
+  dir.create("genData/expModelFittingSub")
+  dir.create(sprintf("genData/expModelFittingSub/%s", modelName))
   #  load libraries and set environments
   options(warn=-1, message =-1) # default settings borrowed somewhere
   library('plyr'); library(dplyr); library(ggplot2);library('tidyr');library('rstan') #load libraries
@@ -25,12 +27,12 @@ expModelFitting = function(modelName, paras){
   # determine wIni
   QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9) 
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-  if(modelName == "curiosityTrialRSp"){
+  if(any(paras == "phiR")){
     wIni = (5/6 + 0.93) / 2 * stepDuration
-  }else if(modelName == "curiosityTrialSp"){
+  }else if(any(paras == "gamma")){
     wIni = (QHPApOptim + QLPApOptim) / 2
   }else{
-    print("wrong model name!" )
+    print("wrong model name!")
     break
   }
   
@@ -50,13 +52,14 @@ expModelFitting = function(modelName, paras){
   for(i in 1 : n){
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
-    thisTrialData = thisTrialData[-deleteTrials,]
     timeWaited = thisTrialData$timeWaited
     scheduledWait = thisTrialData$scheduledWait
     trialEarnings = thisTrialData$trialEarnings
     timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
     cond = unique(thisTrialData$condition)
+    # add for the risk version
+    wtwEarly = blockData$wtwEarly[blockData$id == thisID & blockData$blockNum == 1]
     fileName = sprintf("genData/expModelFittingSub/%s/s%d", modelName, thisID)
-    modelFitting(cond, wIni, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
+    modelFitting(cond, wIni, wtwEarly, timeWaited, trialEarnings, scheduledWait, fileName, paras, model)
   }
 }
