@@ -72,13 +72,16 @@ for(pIdx in 1 : length(paras)){
     ggsave(fileName, width = 6, height = 3)
   }
 }
-dimNames = list(paras, traitNames)
+dimNames = list(capitalize(paras), traitNames)
 rhoTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * nPara), function(i) traitParaCorr[[i]]$rhos[j]),
                                           nrow = nPara, dimnames = dimNames))
 pTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * nPara), function(i) traitParaCorr[[i]]$ps[j]),
                                         nrow = nPara, dimnames = dimNames))
 # plot trait analysis
 library("corrplot")
+col2 <- colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D", "#F4A582",
+                           "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
+                           "#4393C3", "#2166AC", "#053061")))
 for(i in 1 : 2){
   cond = conditions[i]
   fileName = sprintf("traitPara%s_%s.png", cond, dataType)
@@ -87,33 +90,32 @@ for(i in 1 : 2){
            p.mat = pTable[[i]], 
            is.corr = T, 
            method = "color",
-           # insig = "label_sig",
-           tl.col = "black", tl.srt = 15, tl.cex = 1.5) 
-  mtext("Parameter", side = 2,  cex = 2)
-  mtext("Trait", side = 3, cex = 2)
+           insig = "label_sig",
+           tl.col = "black", tl.srt = 15, tl.cex = 1.5,
+           col = col2(50)) 
+  # mtext("Parameter", side = 2,  cex = 2)
+  # mtext("Trait", side = 3, cex = 2)
   dev.off()
 }
 
 
 # look at trait linearly
-expPara = expPara[!is.na(expPara$Anxiety),]
-for(pIdx in 1 : nPara){
-  para = paras[pIdx]
-  paraColor = paraColors[pIdx]
-  for(cIdx in 1 : 2){
-    cond = conditions[cIdx]
-    expPara[expPara$condition == cond,c(para, traitNames)] %>%
-      gather(-c(para), key = "trait", value = "value") %>% 
-      ggplot(aes_string(x = "value", y = para)) + geom_point() +
-      facet_grid(~ trait, scales = "free") +
-      theme_linedraw(base_size = 13) + ylab(capitalize(para)) + xlab("Trait value")
-    parentDir = ifelse(dataType == "sess", "figures/expParaAnalysisSub", "figures/expParaAnalysis")
-    fileName = sprintf("%s/%s/lm_%s_%s.png", parentDir, modelName, cond, para, cond)
-    ggsave(fileName, width = 8, height = 3)
-  }
+for(cIdx in 1 : 2){
+  cond = conditions[cIdx]
+  expPara[expPara$condition == cond,c(paras, traitNames)] %>%
+    gather(-c(paras), key = "trait", value = "traitValue") %>%
+    gather(-c("trait", "traitValue"), key = "para", value = "paraValue") %>%
+    mutate(trait = factor(trait, levels = traitNames), para = factor(para, levels = paras, labels = capitalize(paras))) %>%
+    ggplot(aes(x = traitValue, y = paraValue)) + geom_point() +
+    facet_grid(para ~ trait, scales = "free") + theme_linedraw(base_size = 13)+
+    xlab("") + ylab("") + ggtitle(cond) + theme(plot.title = element_text(face = "bold", hjust = 0.5))
+  parentDir = ifelse(dataType == "sess", "figures/expParaAnalysisSub", "figures/expParaAnalysis")
+  fileName = sprintf("%s/%s/lm_%s.png", parentDir, modelName, cond)
+  ggsave(fileName, width = 6, height = 6)
 }
 
-trait = traits[2]
+
+trait = traits[1]
 para = "gamma"
 input = data.frame(x = personality[summaryData$id %in% useID,trait], y = expPara[expPara$id %in% useID,para],
            cond= summaryData$condition[summaryData$id %in% useID])

@@ -73,7 +73,7 @@ kmOnGridRep_ = vector(mode = "list", length = nSub)
 for(sIdx in 1 : nSub){
   # prepare inputs
   id = useID[[sIdx]]
-  cond = summaryData$condition[summaryData$id == id]
+  cond = unique(summaryData$condition[summaryData$id == id])
   tMax = ifelse( cond == "HP", tMaxs[1], tMaxs[2])
   nTrial = summaryData$nTrial[summaryData$id == id]
   kmGrid = seq(0, tMax, by=0.1) 
@@ -101,28 +101,44 @@ sIdx = 4
 id = useID[sIdx]
 id = 59
 
-
 id = 1
 sIdx = which(useID  == id)
 cond = unique(summaryData$condition[summaryData$id == id])
 label = sprintf("Sub %d, %s", id, cond)
-trialPlots(block2session(expTrialData[[id]]), label)
+trialPlots(block2session(expTrialData[[id]]), label) 
 trialPlots(repTrialData[[repNo[1,sIdx]]],label)
+
+# plot collapsed trial plot 
+muTimeWaitedRep = lapply(1 : nSub, function(i) apply(timeWaitedRep_[[i]], 1, mean))
+stdTimeWaitedRep = lapply(1 : nSub, function(i) apply(timeWaitedRep_[[i]], 1, sd))
+
+sIdx = 3
+id = useID[sIdx]
+data.frame(Observation = expTrialData[[id]]$timeWaited,
+                      trialEarnings = factor(expTrialData[[id]]$trialEarnings, levels = c(0,tokenValue), labels = c("Rewarded", "Non-rewarded")),
+                      Prediction = muTimeWaitedRep[[sIdx]],
+                      std = stdTimeWaitedRep[[sIdx]],
+                      trial = 1 : length(muTimeWaitedRep[[sIdx]])) %>% 
+  gather(-c("trialEarnings", "trial", "std"), key = "type", value = "value") %>% 
+  ggplot(aes(trial, value)) + geom_point(aes(color =type, fill = type), size = 1) + geom_line(aes(linetype = type), color = "#636363") + facet_grid(~trialEarnings) + ylab("Waiting duration/s")+
+  xlab("Trial") + scale_linetype_manual(values=c("blank", "solid")) +
+  scale_color_manual(values = c("black", NA)) + scale_fill_manual(values = c("black", NA)) +theme_linedraw(base_size = 22) + theme(legend.title = element_blank())
+ggsave(filename = "s1.png", width = 8, height = 5)
 
 # compare emipirical and reproduced AUC
 muAUCRep = apply(AUCRep_, MARGIN = 2, mean)
 stdAUCRep = apply(AUCRep_, MARGIN = 2, sd)
 minAUCRep = muAUCRep - stdAUCRep
 maxAUCRep = muAUCRep + stdAUCRep
-plotData = data.frame(muAUCRep, minAUCRep, maxAUCRep,
+data.frame(muAUCRep, minAUCRep, maxAUCRep,
                       AUC = summaryData$AUC[summaryData$id %in% useID], 
-                      condition = summaryData$condition[summaryData$id %in% useID]) # since useID is ascending
-ggplot(plotData,
-       aes(AUC, muAUCRep)) +  geom_errorbar(aes(ymin = minAUCRep, ymax = maxAUCRep), color = "grey") +
+                      condition = summaryData$condition[summaryData$id %in% useID]) %>%
+  ggplot(aes(AUC, muAUCRep)) +  geom_errorbar(aes(ymin = minAUCRep, ymax = maxAUCRep), color = "grey") +
   geom_point() + facet_grid(~condition) + 
   geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(-2, 45)) + ylim(c(-2, 45)) +
-  ylab("Predicted / s") + xlab("Observed / s") + ggtitle("Predicted vs Observed AUC")
-fileName = sprintf("figures/expModelRepitation/AUC_AUCRep_%s.pdf", modelName) 
+  ylab("Predicted / s") + xlab("Observed / s") + ggtitle("AUC") +
+  theme_linedraw(base_size = 22) + theme(plot.title = element_text(face = "bold", hjust = 0.5))
+fileName = sprintf("figures/expModelRepitation/AUC_AUCRep_%s.pdf", modelName)
 ggsave(filename = fileName,  width = 6, height = 4)
 
 # 

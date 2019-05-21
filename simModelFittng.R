@@ -7,17 +7,27 @@ source("subFxs/simulationFxs.R")
 modelName = "curiosityTrialSp" 
 nSeq = 1
 nRep = 10
-nTrial = 50
+nTrial = 100
 # initialize simTrialData
 simTrialData = vector(mode = "list", length = 2)
+paraTable =  vector(mode = "list", length = 2)
 for(cIdx in 1 : 2){
   cond = conditions[cIdx]
-  paraTable = data.frame(phi = c(0.02, 0.05, 0.08), tau = c(5, 10, 15),
+  thisParaTable = data.frame(phi = c(0.02, 0.05, 0.08), tau = c(5, 10, 15),
                          gamma = c(0.85, 0.90, 0.95))
-  if(cond == "HP") paraTable$zeroPoint = c(12, 16, 20) else paraTable$zeroPoint = c(25, 30, 35) 
+  if(cond == "HP") thisParaTable$zeroPoint = c(12, 16, 20) else thisParaTable$zeroPoint = c(25, 30, 35) 
   scheduledWaitList = replicate(nSeq, replicate(nTrial, drawSample(cond)),  simplify = F)
-  simTrialData[[cIdx]] = simulate(modelName, nRep, paraTable, scheduledWaitList, cond)
+  simTrialData[[cIdx]] = simulate(modelName, nRep, thisParaTable, scheduledWaitList, cond)
+  paraTable[[cIdx]] = thisParaTable
 }
+
+# save para
+nComb = length(getParaComb(thisParaTable)) / length(thisParaTable)
+nSeq = length(scheduledWaitList)
+simNo = array(t(seq(1 : (nComb * nSeq * nRep))), dim = c(nRep, nSeq, nComb)) 
+save("paraTable", "nComb", "nRep", "simNo", file = sprintf("genData/simulation/%s/%dTrialPara.RData", modelName,
+                                                          length(scheduledWaitList[[1]])))
+# save simTrialData
 dirName = sprintf("genData/simulation/%s", modelName)
 dir.create(dirName)
 save( simTrialData, file = sprintf("%s/%dTrial.RData", dirName, nTrial))

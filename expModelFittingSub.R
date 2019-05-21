@@ -49,7 +49,7 @@ expModelFitting = function(modelName, paras){
   n = length(idList)
   
   # loop over suvject
-  for(i in 1 : n){
+  for(i in 3 : n){
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
     timeWaited = thisTrialData$timeWaited

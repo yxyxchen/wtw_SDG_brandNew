@@ -11,11 +11,7 @@ simulate = function(modelName, nRep, paraTable, scheduledWaitList, cond){
   paraComb = getParaComb(paraTable)
   nComb = length(paraComb) / length(paraTable)
   nSeq = length(scheduledWaitList)
-  
-  # determine simNo
   simNo = array(t(seq(1 : (nComb * nSeq * nRep))), dim = c(nRep, nSeq, nComb)) 
-  save("paraComb", "nComb", "nRep", "simNo", file = sprintf("genData/simulation/%s/%dTrialPara.RData", modelName,
-                                                            length(scheduledWaitList[[1]])))
   
   # initialize outputs
   trialData = vector(length = nComb * nSeq * nRep, mode ='list')

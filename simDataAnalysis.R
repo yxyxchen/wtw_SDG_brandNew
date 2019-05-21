@@ -21,7 +21,6 @@ dir.create(tempt)
 
 # load real parameters
 load(sprintf("genData/simulation/%s/%dTrialPara.RData", modelName, nTrial))
-colnames(paraComb) = paste0(colnames(paraComb), "real")
 # load simPara
 paras = getParas(modelName)
 nPara = length(paras)
@@ -30,6 +29,8 @@ simPara = loadSimPara(paras, dirName)
 
 for(cIdx in 1 : 2){
   cond = conditions[cIdx]
+  paraComb = getParaComb(paraTable[[cIdx]])
+  colnames(paraComb) = paste0(colnames(paraComb), "real")
   thisSimPara = simPara[[cond]][1:nPara, , ]
   thisSimParaAve = cbind(t(apply(thisSimPara, MARGIN = c(1,3), mean)), paraComb)
   for(pIdx in 1 : nPara){
