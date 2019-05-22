@@ -28,8 +28,8 @@ load("genData/expDataAnalysis/sessionData.RData")
 # simluation for one para and one scheduledWait from simulation or ...
 # error prone.. try 3 and everything changes 
 sIdx = 1
-paras = c(0.12, 2.09, 0.71, 0.90)
-modelName = "risk"
+paras =  c(0.03, 3.4, 0.95, 35)
+modelName = "curiosityTrialSp"
 repModelFun = getRepModelFun(modelName)
 id = idList[[sIdx]]
 cond = hdrData$cond[hdrData$ID == id]
@@ -65,18 +65,17 @@ pWaits = rep(0.5, nStep)
 wdResults = getWD(pWaits, stepDuration)
 
 # assume my model quit at every one stepDuration. Otherwise, it will be larger
-# like in exp
-
-paras = c(0.03, 3.4, 0.95, 35)
+paras = c(0.03, 3.5, 0.95, 35)
 modelName = "curiosityTrialSp"
 repModelFun = getRepModelFun(modelName)
 cond = "LP"
 tMax = tMaxs[2]
-lenSeq = 1000
+lenSeq = 100
 set.seed(123)
 scheduledWait = unlist(lapply(1:lenSeq, function(x) drawSample(cond)))
 tempt = repModelFun(paras, cond, scheduledWait)
 trialPlots(tempt, cond)
+
 # when tau is positive inf
 muWD = (which(tempt$Qwaits[,lenSeq] < tempt$Qquits[lenSeq])[1] - 1) * stepDuration
 varWD = 0
