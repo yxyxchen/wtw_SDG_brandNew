@@ -32,7 +32,7 @@ data.frame(Wait = as.vector(tempt$Qwaits[,trials]),
            timeStep = rep(1 : nTimeStep, length(trials))) %>% 
   gather(-c("trial", "timeStep"), key = "action", value = "value") %>%
 ggplot(aes(timeStep, value)) + geom_line(aes(color = action)) + facet_grid(trial~.) +
-  scale_color_manual(values = c("blue", "red"))
+  scale_color_manual(values = c("blue", "red")) 
 
 # how do I calculate the optimal values
 
@@ -61,12 +61,22 @@ zeroPoints = c(15, 30)
 Qquit = wIni * 0.9
 Viti = wIni * 0.9
 Qwait_ = lapply(1:2, function(i){nTimeStep = tMaxs[i] / stepDuration
-                zeroPoints[i]*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit})
-data.frame(Wait = Qwait_[[2]], Quit = rep(Qquit, tMaxs[2]), time = 1 :  tMaxs[2]) %>%
+                zeroPoints[i]*0.05 - 0.05*(0 : (nTimeStep - 1)) + Qquit})
+data.frame(Wait = Qwait_[[1]], Quit = rep(Qquit, tMaxs[1]), time = 1 :  tMaxs[1]) %>%
   gather(-c("time"), key = "action", value = "value") %>%
-  ggplot(aes(time, value, color = action)) + geom_line(size = 3) +
-  scale_color_manual(values = c("#238443", "#cb181d"))
-
+  ggplot(aes(time, value, color = factor(action, labels = c("Quit / Prep", "Wait")))) + geom_line(size = 3) +
+  scale_color_manual(values = c("grey", "black")) +
+  theme(axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.background = element_rect(fill = NA),
+        axis.title=element_text(size= 30, face = "bold"),
+        legend.position=c(0.7,0.8),
+        legend.title=element_blank(),
+        legend.key = element_rect(fill = NA),
+        legend.key.size = unit(1, "cm"),
+        legend.text = element_text(size = 25, face = "bold")
+        )  + ylab("Value") + xlab("Time") 
+ggsave("prior.png", width = 5, height = 3)
 # plot a softmax function
 x = seq(-3, 3, by = 0.1)
 tau = 2
