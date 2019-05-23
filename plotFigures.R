@@ -48,3 +48,62 @@ y[! (xCon %in% c(1, 3:5))] = NA
 ggplot(data.frame(x = x, y = y), aes(x, y)) + geom_point(size = 3) + saveTheme + xlab("") + ylab("") +
   theme(axis.text = element_blank(), axis.ticks = element_blank())
 ggsave(filename = "discount.png", width =6, height = 2)
+
+
+# plot one ini
+# so it is a upper
+# here we use 0.9 as the discount rate for one stepDuration
+QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9) 
+QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
+wIni = (QHPApOptim + QLPApOptim)/ 2
+
+zeroPoints = c(15, 30)
+Qquit = wIni * 0.9
+Viti = wIni * 0.9
+Qwait_ = lapply(1:2, function(i){nTimeStep = tMaxs[i] / stepDuration
+                zeroPoints[i]*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit})
+data.frame(Wait = Qwait_[[2]], Quit = rep(Qquit, tMaxs[2]), time = 1 :  tMaxs[2]) %>%
+  gather(-c("time"), key = "action", value = "value") %>%
+  ggplot(aes(time, value, color = action)) + geom_line(size = 3) +
+  scale_color_manual(values = c("#238443", "#cb181d"))
+
+# plot a softmax function
+x = seq(-3, 3, by = 0.1)
+tau = 2
+y = 1 / (1 + exp(-tau * x))
+library("latex2exp")
+data.frame(x = x, y = y) %>% ggplot(aes(x, y)) + geom_line(size = 3, color = "#373737" )+
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        panel.background = element_rect(fill = "white"),
+        axis.title=element_text(size= 25),
+        panel.margin = unit(c(0, 0, 0, 0), "cm")) + ylab(TeX(' '))+ xlab(TeX(''))
+ggsave("soft-max.png", height = 2.5, width = 3.5) 
+
+# plot update target 
+R = 10
+gamma = 0.87
+x = seq(0, 10, by = 0.1)
+y = gamma^rev(x)* 1
+data.frame(x = x, y = y) %>% ggplot(aes(x, y)) + geom_line(size = 2.5) + 
+  theme(axis.text = element_text(size = 30, face = "bold"),
+        axis.ticks = element_blank(),
+        axis.line = element_line(color="#373737", size = 2),
+        panel.background = element_rect(fill = "white"),
+        axis.title=element_text(size= 30))  + ylab("") + xlab("") +
+  scale_x_continuous(labels = c(" ", "T"), breaks = c(0,10),
+                     limits = c(-0.5, 10.5)) +
+  scale_y_continuous(labels = c("0", "1"), limits = c(0, 1), breaks = c(0,1))
+ggsave("discount.png", height = 3, width = 3.5)
+
+# discount2
+data.frame(x = x, y = y) %>% ggplot(aes(x, y)) + geom_line(size = 3.5) + 
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        panel.background = element_rect(fill = "white"),
+        axis.title=element_text(size= 30))  + ylab("") + xlab("") 
+ggsave("discount2.png", height = 3, width = 3.5)
+
+
