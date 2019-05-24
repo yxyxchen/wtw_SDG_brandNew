@@ -48,6 +48,7 @@ for(cIdx in 1 : 2){
     input %>% group_by(truth) %>%
       dplyr::summarise(muEst = mean(est),stdEst = sd(est),minEst = mean(est) - sd(est),maxEst = mean(est) + sd(est)) %>%
       ggplot(aes(truth, muEst)) + geom_bar(stat = "identity", fill= paraColor) +
+      scale_x_continuous(breaks = truths) + 
       theme_linedraw(base_size = 13) + xlab(capitalize(para)) + ylab("Estimation") + 
       geom_point(aes(truth, truth), shape = 17, size = 5, fill = "black")
     fileName = sprintf("figures/simParaRecovery/%s/%dTrial/%s_%s.png", modelName, nTrial, cond, para)

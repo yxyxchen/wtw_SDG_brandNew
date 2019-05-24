@@ -11,12 +11,18 @@ load("wtwSettings.RData")
 
 # input 
 dataType = "sess"
-modelName = "curiosityTrialSp"
+modelName = "noCounter"
 
 # create output directories
-dir.create("figures/expParaAnalysis")
-saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
-dir.create(saveDir)
+if(dataType == "sess"){
+  dir.create("figures/expParaAnalysisSub")
+  saveDir = sprintf("figures/expParaAnalysisSub/%s", modelName)
+  dir.create(saveDir)
+}else{
+  dir.create("figures/expParaAnalysis")
+  saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
+  dir.create(saveDir)
+}
 
 # load blockdata data
 if(dataType == "block"){
@@ -82,15 +88,16 @@ library("corrplot")
 col2 <- colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D", "#F4A582",
                            "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
                            "#4393C3", "#2166AC", "#053061")))
+parentDir = ifelse(dataType == "sess", "figures/expParaAnalysisSub", "figures/expParaAnalysis")
 for(i in 1 : 2){
   cond = conditions[i]
-  fileName = sprintf("traitPara%s_%s.png", cond, dataType)
+  fileName = sprintf("%s/%s/traitPara%s_%s.png", parentDir, modelName, cond, dataType)
   png(fileName)
   corrplot(rhoTable[[i]], 
            p.mat = pTable[[i]], 
            is.corr = T, 
            method = "color",
-           insig = "label_sig",
+           #insig = "label_sig",
            tl.col = "black", tl.srt = 15, tl.cex = 1.5,
            col = col2(50)) 
   # mtext("Parameter", side = 2,  cex = 2)
@@ -137,7 +144,7 @@ for(i in 1 : length(paras)){
     saveTheme + ylab("Count") + xlab(capitalize(para))
   parentDir = ifelse(dataType == "sess", "figures/expParaAnalysisSub", "figures/expParaAnalysis")
   dir.create(parentDir)
-  fileName = sprintf("%s/hist_%s.pdf", parentDir, para)
+  fileName = sprintf("%s/%s/hist_%s.pdf", parentDir, modelName, para)
   ggsave(fileName, width = 6, height = 3)
 }
 
