@@ -45,7 +45,7 @@ trialPlots <- function(thisTrialData,label = " ") {
   geom_line(data = plotData[plotData$condition != 'quitSchedule',],
             aes(trialNum, trialDuration, color = condition)) +
     scale_color_manual(values = c('blue', 'red', 'black')) + 
-    xlab('Trial num') + ylab('Trial duration / s') + ggtitle(label) + displayTheme
+    xlab('Trial') + ylab('Waiting duration / s') + ggtitle(label) + displayTheme
   # add block lines if we have multiple blocks 
   if(length(unique(thisTrialData$blockNum)) > 1){
     p = p + geom_vline(xintercept = c(nTrial1,nTrial1n2),  linetype='dashed',

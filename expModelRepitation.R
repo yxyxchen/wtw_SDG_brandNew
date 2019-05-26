@@ -105,14 +105,20 @@ id = 1
 sIdx = which(useID  == id)
 cond = unique(summaryData$condition[summaryData$id == id])
 label = sprintf("Sub %d, %s", id, cond)
-trialPlots(block2session(expTrialData[[id]]), label) 
-trialPlots(repTrialData[[repNo[1,sIdx]]],label)
-
+junk = block2session(expTrialData[[id]])
+trialPlots(junk, "Observed Data") 
+ggsave(sprintf("figures/expModelRepitation/%s/actual_data.png", modelName),
+       width = 5, height = 4)
+tempt = repTrialData[[repNo[1,sIdx]]]
+tempt$blockNum = junk$blockNum
+trialPlots(tempt,"Model-predicted Data")
+ggsave(sprintf("figures/expModelRepitation/%s/sim_data.png", modelName),
+       width = 5, height = 4)
 # plot collapsed trial plot 
 muTimeWaitedRep = lapply(1 : nSub, function(i) apply(timeWaitedRep_[[i]], 1, mean))
 stdTimeWaitedRep = lapply(1 : nSub, function(i) apply(timeWaitedRep_[[i]], 1, sd))
 
-sIdx = 3
+sIdx = 1
 id = useID[sIdx]
 data.frame(Observation = expTrialData[[id]]$timeWaited,
                       trialEarnings = factor(expTrialData[[id]]$trialEarnings, levels = c(0,tokenValue), labels = c("Rewarded", "Non-rewarded")),
