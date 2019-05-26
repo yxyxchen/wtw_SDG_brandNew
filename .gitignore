@@ -1,4 +1,10 @@
-.Rhistory
+*.txt
+*.csv
+*.png
+*.jpge
+*.pdf
+*.jpg
+*.Rhistory
 genData/
 figures/
-**/.Rhistory
+*.DS_Store

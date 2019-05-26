@@ -28,7 +28,7 @@ transformed parameters{
   // especially for this version use 0.9, original 1
   real Qquit = wIni * 0.9;
   real Viti = wIni * 0.9;
-  vector[nTimeSteps] Qwait = rep_vector(wIni, nTimeSteps);
+  vector[nTimeSteps] Qwait = rep_vector(QwaitIni, nTimeSteps);
     // initialize variables to record action values 
   matrix[nTimeSteps, N] Qwaits = rep_matrix(0, nTimeSteps, N);
   vector[N] Qquits = rep_vector(0, N);

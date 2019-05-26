@@ -13,7 +13,7 @@ data {
 }
 transformed data {
   // constant
-  real stepDuration = 0.5;
+  real stepDuration = 1;
   real iti = 2;
   real tokenValue = 10;
   int totalSteps = sum(nTimePoints);

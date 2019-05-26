@@ -84,7 +84,7 @@ model {
   phi ~ uniform(0, 0.3);
   tau ~ uniform(2, 22);
   gamma ~ uniform(0.7, 1);
-  zeroPoint ~ uniform(10, tMax);
+  zeroPoint ~ uniform(0, tMax);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){

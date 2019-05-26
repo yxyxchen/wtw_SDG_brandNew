@@ -11,7 +11,7 @@ load("wtwSettings.RData")
 
 # input 
 dataType = "sess"
-modelName = "noCounter"
+modelName = "curiosityTrialSp"
 
 # create output directories
 if(dataType == "sess"){
@@ -46,7 +46,7 @@ tempt = loadExpPara(paras, dirName)
 useID = getUseID(tempt, paras)
 expPara = merge(x=tempt[,c(paras, "id")],y=summaryData, by="id",all.x=TRUE)
 
-
+tempt$id[!tempt$id %in% useID]
 # load and merge trait data
 personality = read.csv("data/SDGdataset.csv")
 personality$id = personality$SubjectID
@@ -74,6 +74,7 @@ for(pIdx in 1 : length(paras)){
     # plot
     p = plotCorrelation(input, paraColor, T) 
     p + ylab(capitalize(para)) + xlab(traitName) + saveTheme
+    parentDir = ifelse(dataType == "block", "figures/expModelFitting", "figures/expModelFittingSub")
     fileName = sprintf("%s/%s/%s_%s.png", parentDir, modelName, para, traitName)
     ggsave(fileName, width = 6, height = 3)
   }
@@ -148,3 +149,12 @@ for(i in 1 : length(paras)){
   ggsave(fileName, width = 6, height = 3)
 }
 
+# conduct analysis for personality
+library("cluster")
+library("factoextra")
+library("magrittr")
+my_data  = as.matrix(expPara[expPara$id %in% useID, paras]) %>% na.omit() %>% scale
+
+my_data  = as.matrix(personality[,traits]) %>% na.omit() %>% scale
+library("factoextra")
+fviz_nbclust(my_data, kmeans, method = "gap_stat")

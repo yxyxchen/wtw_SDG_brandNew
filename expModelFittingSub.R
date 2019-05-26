@@ -12,7 +12,6 @@ expModelFitting = function(modelName, paras){
   library('plyr'); library(dplyr); library(ggplot2);library('tidyr');library('rstan') #load libraries
   Sys.setenv(USE_CXX14=1) # making rstan working on this device 
   rstan_options(auto_write = TRUE) # default settings borrowed somewhere
-  options(mc.cores = parallel::detectCores())# enable multi-core precessors 
   library("loo")
   # source scripts
   source('subFxs/modelFittingFxs.R') # for fitting single case 
@@ -48,8 +47,13 @@ expModelFitting = function(modelName, paras){
   idList = unique(blockData$id[blockData$stress == "no stress"])
   n = length(idList)
   
-  # loop over suvject
-  for(i in 3 : n){
+  # loop over participants 
+  library("doMC")
+  library("foreach")
+  nCore = parallel::detectCores() -1 # needed in local computeres
+  registerDoMC(nCore)
+  
+  foreach(i = 1 : n) %dopar% {
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
     timeWaited = thisTrialData$timeWaited

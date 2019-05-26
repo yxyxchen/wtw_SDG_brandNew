@@ -1,17 +1,15 @@
-# this script fits the RL model for each participant
-# using Rstan
+# differences from the cluster version can be found by searching # needed in local computers
 expModelFitting = function(modelName, paras){
   # create outfiles
-  dir.create("genData")
-  dir.create("genData/expModelFitting")
-  dir.create(sprintf("genData/expModelFitting/%s", modelName))
+  dir.create("genData") # needed in local computeres
+  dir.create("genData/expModelFitting") # needed in local computeres
+  dir.create(sprintf("genData/expModelFitting/%s", modelName)) # needed in local computeres
  #  load libraries and set environments
   options(warn=-1, message =-1) # run without this for one participant to chec everything
   library('plyr'); library(dplyr); library(ggplot2);library('tidyr');library('rstan') #load libraries
   Sys.setenv(USE_CXX14=1) # needed in local computeres
   rstan_options(auto_write = TRUE) # default settings borrowed somewhere
-  # options(mc.cores = parallel::detectCores()) # not encouranged, better to specify
-  # cores for each function
+
   library("loo")
   source('subFxs/modelFittingFxs.R') # for fitting single case 
   source('subFxs/loadFxs.R') # for load data
@@ -47,9 +45,9 @@ expModelFitting = function(modelName, paras){
   idList = unique(blockData$id)
 
   # loop over participants 
-  nCore = parallel::detectCores() -1 # only for the local computer
   library("doMC")
   library("foreach")
+  nCore = parallel::detectCores() -1 # needed in local computeres
   registerDoMC(nCore)
   
   foreach(i = 1 : n) %dopar% {
