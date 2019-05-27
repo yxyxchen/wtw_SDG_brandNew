@@ -16,18 +16,24 @@ transformed data {
   real iti = 2;
   real tokenValue = 10;
   int totalSteps = sum(Ts) - N;
+  real zeroPoint;
+  if(tMax == 20){
+    zeroPoint = 17.46597;
+  }else{
+    zeroPoint = 19.08061;
+  }
   }
 parameters {
   real<lower = 0, upper = 0.3> phi;
   real<lower = 2, upper = 22> tau;
   real<lower = 0.7, upper = 1> gamma;
-  real<lower = 0, upper = tMax> zeroPoint; 
+  //real<lower = 0, upper = tMax> zeroPoint; 
 }
 transformed parameters{
   // initialize action values 
   // especially for this version use 0.9, original 1
-  real Qquit = wIni;
-  real Viti = wIni;
+  real Qquit = wIni * 0.9;
+  real Viti = wIni * 0.9;
   vector[nTimeSteps] Qwait;
     // initialize variables to record action values 
   matrix[nTimeSteps, N] Qwaits = rep_matrix(0, nTimeSteps, N);
@@ -84,7 +90,7 @@ model {
   phi ~ uniform(0, 0.3);
   tau ~ uniform(2, 22);
   gamma ~ uniform(0.7, 1);
-  zeroPoint ~ uniform(0, tMax);
+  //zeroPoint ~ uniform(0, tMax);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){

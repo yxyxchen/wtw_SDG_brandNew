@@ -16,14 +16,13 @@ transformed data {
   real iti = 2;
   real tokenValue = 10;
   int totalSteps = sum(Ts) - N;
+  real tau = 2.947119;
   }
 parameters {
   real<lower = 0, upper = 0.3> phi;
-  real<lower = 2, upper = 22> tau;
+  //real<lower = 2, upper = 22> tau;
   real<lower = 0.7, upper = 1> gamma;
-  real<lower = 0, upper = tMax> zeroPoint1; 
-  real<lower = 0, upper = tMax> zeroPoint2; 
-  real<lower = 0, upper = tMax> zeroPoint3; 
+  real<lower = 0, upper = tMax> zeroPoint; 
 }
 transformed parameters{
   // initialize action values 
@@ -84,9 +83,9 @@ transformed parameters{
 }
 model {
   phi ~ uniform(0, 0.3);
-  tau ~ uniform(2, 22);
+ //tau ~ uniform(2, 22);
   gamma ~ uniform(0.7, 1);
-  zeroPoint ~ uniform(10, tMax);
+  zeroPoint ~ uniform(0, tMax);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){

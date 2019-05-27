@@ -89,10 +89,9 @@ optimRewardRates = list()
 optimRewardRates$HP = max(HP)
 optimRewardRates$LP = max(LP)
 
-paraColors = list("phi" = "#e41a1c", "tau" = "#377eb8", "gamma" = "#4daf4a", "sigma" = "#fe9929")
 save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", "tGrid", 
      "tokenValue", "stepDuration", "trialTicks", "pareto", "rewardDelayCDF", 
      "rewardDelayPDF", "meanRewardDelay", "rewardRate", "optimRewardRates", 
-     "optimWaitTimes", "loseValue", "paraColors", file = "wtwSettings.RData")
+     "optimWaitTimes", "loseValue",  file = "wtwSettings.RData")
 
 

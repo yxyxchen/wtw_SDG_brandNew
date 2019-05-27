@@ -41,7 +41,7 @@ cvQuitTime = numeric(length =n * nBlock)
 muQuitTime = numeric(length =n * nBlock)
 nQuit = numeric(length =n * nBlock)
 nTrial = numeric(length =n * nBlock)
-stdWd = numeric(length =n * nBlock)
+stdWd = numeric(length =n * nBlock) # standard deviation from the survival curve for the whole block
 cvWd =  numeric(length =n * nBlock)
 # descriptive statistics for individual subjects and blocks
 for (sIdx in 1 : n) {
@@ -114,27 +114,8 @@ blockData = data.frame(id = rep(allIDs, each = nBlock), blockNum = rep( t(1 : nB
                        muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial, stdWd = stdWd, cvWd = cvWd)
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
 
-# I think I would like to know the cv values
-hist(varQuitTime[blockData$blockNum == 1 & blockData$condition == "HP"])
-
-idListHP =  as.numeric(row.names(hdrData)[hdrData$condition == "LP"])
-plotData = data.frame(wtw = unlist(lapply(1:60, function(i) timeWTW_[[idListHP[i]*3-2]])), id = rep(idListHP, each = length(tGrid)),
-                      time = rep(1: length(tGrid), 60))
-summaryData =  dplyr::summarise(group_by(plotData, time), mu = mean(wtw), std = sd(wtw))
-plotData2 = data.frame(mu = summaryData$mu, std = summaryData$std, time = tGrid)
-ggplot(plotData2, aes(time, mu)) + geom_line(group = 1)
 
 
-# load all data
-allData = loadAllData()
-hdrData = allData$hdrData           
-trialData = allData$trialData       
-allIDs = hdrData$ID                   # column of subject IDs
-n = length(allIDs)                    # n
-cat('Analyzing data for',n,'subjects.\n')
-
-# define nBlock
-nBlock = 3
 # get session data 
 tGrid = seq(0, blockSecs * nBlock, by = 0.1)
 AUC = numeric(length = n)
@@ -151,9 +132,6 @@ nQuit = numeric(length = n)
 nTrial = numeric(length = n)
 stdWd = numeric(length =n)
 cvWd =  numeric(length =n)
-timeAUC_ = vector(mode = "list", length = n)
-timeStdWd_ = vector(mode = "list", length = n)
-winAUC_ = vector(mode = "list", length = n)
 plotTrialwiseData =F
 plotKMSC = F
 plotWTW = F
@@ -217,13 +195,13 @@ for (sIdx in 1 : n) {
     graphics.off()
   }
   
-  # moving auc
-  window = 20
-  by = 10
-  tempt = kmscMoving(thisTrialData, tMax, label, plotKMSC, tGrid, window, by)
-  timeAUC_[[sIdx]] = tempt$timeAUCs
-  winAUC_[[sIdx]] = tempt$winAUCs
-  timeStdWd_[[sIdx]] = tempt$timeStdWds
+  # # moving auc
+  # window = 20
+  # by = 10
+  # tempt = kmscMoving(thisTrialData, tMax, label, plotKMSC, tGrid, window, by)
+  # timeAUC_[[sIdx]] = tempt$timeAUCs
+  # winAUC_[[sIdx]] = tempt$winAUCs
+  # timeStdWd_[[sIdx]] = tempt$timeStdWds
 }
 sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")), cbal = hdrData$cbal,
                        stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
@@ -234,71 +212,50 @@ save(sessionData, file = 'genData/expDataAnalysis/sessionData.RData')
 save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridSess.RData')
 
 
-## correlation between AUC and triats 
-summaryData = read.csv("data/SDGdataset.csv", header = T)
-summaryData$AUCblock1 = blockData$AUC[blockData$blockNum == 1]
-summaryData$condition = ifelse(summaryData$Task..1...unif..2...gp. == 1, "HP", "LP")
-predictors = c("Barratt.Impulsiveness",
-               "Intolerance.of.Uncertainty",
-               "Trait.Anxiety..STAIT.", 
-               "Delay.of.Gratification",
-               "BDI")
-predictorNames = c("Impulsiveness", 
-                   "Intolerence of uncertainty",
-                   "Trait anxiety",
-                   "Delay of gratification",
-                   "Depression")
-nPredictor = length(predictors)
-for(i in 1 : nPredictor){
-    predictor = predictors[i]
-    predictorName = predictorNames[i]
-    # calculate correlations
-    corHP = cor.test(summaryData[summaryData$condition == "HP", predictor], summaryData[summaryData$condition == "HP",]$AUCblock1, method = "spearman")
-    corLP = cor.test(summaryData[summaryData$condition == "LP", predictor], summaryData[summaryData$condition == "LP",]$AUCblock1, method = "spearman")
-    rhoHP = round(corHP$estimate, 3)
-    rhoLP= round(corLP$estimate, 3)
-    pHP = round(corHP$p.value, 3)
-    pLP = round(corLP$p.value, 3)
-    textData = data.frame(label = c(paste(round(rhoHP,2), "(p=", pHP, ")"), paste(round(rhoLP,2), "(p=", pLP, ")")),
-                          condition = c("HP", "LP"))
-    ggplot(summaryData, aes_string(predictor, "AUCblock1")) + geom_point() + facet_grid(~condition) + saveTheme + ylim(c(0, 40)) +
-      xlab(predictorName) + ylab("AUC / min") + geom_text(data = textData,aes(x = -Inf,y = -Inf, label = label),
-                                                          hjust   = -0.2, vjust   = -0.7,color = "blue",size = 4, fontface = 2) 
-    fileName = sprintf("figures/expDataAnalysis/%s_AUC.pdf", predictorName)
-    ggsave(fileName, width = 6, height = 3)
+# correlation between AUC and triats 
+# determine summaryData
+dataType = "sess"
+if(dataType == "block"){
+  load("genData/expDataAnalysis/blockData.RData")
+  load("genData/expDataAnalysis/kmOnGridBlock.RData")
+  summaryData = blockData[blockData$blockNum == 1, ] # so summaryData only have something relevant
+}else{
+  load("genData/expDataAnalysis/sessionData.RData")
+  load("genData/expDataAnalysis/kmOnGridSess.RData")
+  summaryData = sessionData
 }
 
-for(i in 1 : nPredictor){
-  predictor = predictors[i]
-  predictorName = predictorNames[i]
-  # calculate correlations
-  cor = cor.test(summaryData[, predictor], summaryData$AUCblock1, method = "spearman")
-  rho = round(cor$estimate, 3)
-  p = round(cor$p.value, 3)
-  label = paste(round(rho,2), "(p=", p, ")")
-  ggplot(summaryData, aes_string(predictor, "AUCblock1")) + geom_point() + saveTheme + ylim(c(0, 40)) +
-    xlab(predictorName) + ylab("AUC / min") + annotate("text", label = label, y = 0,
-                                                       x = (max(summaryData[,predictor], na.rm = T) + min(summaryData[,predictor], na.rm = T)) / 2,
-                                                       color = "blue",size = 6, fontface = 2) 
-  fileName = sprintf("figures/expDataAnalysis/sm_%s_AUC_sm.pdf", predictorName)
-  ggsave(fileName, width = 4, height = 6)
+# load personality data
+library("Hmisc")
+personality = read.csv("data/SDGdataset.csv")
+personality$id = personality$SubjectID
+traits = c("Delay.of.Gratification", "Barratt.Impulsiveness","Intolerance.of.Uncertainty", "Trait.Anxiety..STAIT.")
+traitNames = c("DG", "IMP", "UC", "AX")
+nTrait = length(traits)
+traitAUCCorr = list()
+# plot separately for two conditions
+for(i in 1 : nTrait){
+  trait = traits[i];
+  traitName = traitNames[i]
+  input = data.frame(personality[,trait], summaryData$AUC,
+                     summaryData$condition)
+  traitAUCCorr[[i]]= getCorrelation(input)
+  p = plotCorrelation(input, isRank = T) 
+  p + xlab(paste(capitalize(traitName), "(rank)")) + ylab("AUC (rank)") + myTheme
+  fileName = sprintf("%s/AUC_%s_%s.png", "figures/expDataAnalysis", traitName, dataType)
+  ggsave(fileName, width = 6, height = 3)
 }
+rhoTable = lapply(1:2, function(j) sapply(1: (nTrait), function(i) traitAUCCorr[[i]]$rhos[j]))
+pTable = lapply(1:2, function(j) sapply(1: (nTrait), function(i) traitAUCCorr[[i]]$ps[j]))
 
+# plot AUC in two conditions
+library("ggpubr")
+load("wtwSettings.RData")
+optims = as.numeric(optimWaitTimes)
+summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, AUC)) + geom_boxplot() +
+  geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
+  scale_fill_manual(values = conditionColors) + 
+  xlab("") + ylab("AUC (keypress)") + myTheme
+dir.create("figures/expDataAnalysis")
+ggsave(sprintf("figures/expDataAnalysis/AUC_%s.png", dataType), width = 4, height = 4.5)
 
-# analysis the effect of sequence
-cutMins = 0.5
-earlyScheduleMean = vector(length = n)
-for (sIdx in 1 : n) {
-  thisID = allIDs[sIdx]
-  bkIdx =1
-  # select data 
-  thisTrialData = trialData[[thisID]]
-  thisBlockIdx = (thisTrialData$blockNum == bkIdx)
-  thisTrialData = thisTrialData[thisBlockIdx,]
-  earlyScheduleMean[sIdx] = mean(thisTrialData$scheduledWait[1:5])
-}
-blockData = blockData[blockData$blockNum == 1,]
-blockData$earlyScheduleMean = earlyScheduleMean
-ggplot(blockData, aes(earlyScheduleMean, AUC)) + geom_point() + facet_grid(~condition)
-cor.test(blockData$AUC[blockData$condition == "LP" & blockData$AUC < 20],
-         blockData$earlyScheduleMean[blockData$condition == "LP" & blockData$AUC < 20], method = "spearman")

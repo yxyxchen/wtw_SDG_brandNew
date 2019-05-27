@@ -181,7 +181,7 @@ trial2sec = function(dataTrial, endTimeTrial, tGrid){
 }
 # correlation plot
 # the first col of plotData is x, the second col is y, the third col is the group
-plotCorrelation = function(data, dotColor,isRank){
+plotCorrelation = function(data, dotColor = "black",isRank){
   conditions = c("HP", "LP")
   colnames(data) = c("x", "y", "cond")
   
@@ -199,13 +199,12 @@ plotCorrelation = function(data, dotColor,isRank){
   if(isRank){
     plotData = data %>% group_by(cond) %>% mutate(xRank = rank(x), yRank = rank(y))
   }
-
   
   # plot
   if(isRank){
-    p0 = ggplot(plotData, aes(xRank, yRank)) + geom_point(size = 4, color = dotColor, fill = dotColor)
+    p0 = ggplot(plotData, aes(xRank, yRank)) + geom_point(size = 2, color = dotColor, fill = dotColor)
   }else{
-    p0 = ggplot(plotData, aes(x, y)) + geom_point(size = 4, color = dotColor, fill = dotColor)
+    p0 = ggplot(plotData, aes(x, y)) + geom_point(size = 2, color = dotColor, fill = dotColor)
   }
   p = p0  + geom_text(data = textData,aes(x = -Inf,y = -Inf, label = label),
               hjust   = -0.2,vjust = -1,color = textColors, size = 5, fontface = 2, color = textColors) +
