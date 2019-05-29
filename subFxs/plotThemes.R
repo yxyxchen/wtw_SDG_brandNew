@@ -21,7 +21,7 @@ displayTheme = theme(panel.background = element_rect(fill = "white",colour = "wh
 
 myTheme = theme_linedraw() +
   theme(legend.title = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), text=element_text(face = "bold", size = 15),
+        panel.grid.minor = element_blank(), text=element_text(face = "bold", size = 18),
         panel.border = element_rect(size = 1.5))
 
 symnum.args <- list(cutpoints = c(0,0.001, 0.01, 0.05, 1),

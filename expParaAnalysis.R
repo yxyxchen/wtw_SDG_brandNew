@@ -11,7 +11,7 @@ load("wtwSettings.RData")
 
 # input 
 dataType = "sess"
-modelName = "curiosityTrialSp"
+modelName = "PR"
 
 # create output directories
 if(dataType == "sess"){

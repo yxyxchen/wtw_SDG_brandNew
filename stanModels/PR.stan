@@ -19,9 +19,10 @@ transformed data {
   }
 parameters {
   real<lower = 0, upper = 0.3> phi;
+  real<lower = 0, upper = 0.3> phiP; 
   real<lower = 2, upper = 22> tau;
   real<lower = 0.7, upper = 1> gamma;
-  real<lower = 0, upper = tMax> zeroPoint; 
+  real<lower = 0, upper = nTimeSteps> zeroPoint; 
 }
 transformed parameters{
   // initialize action values 
@@ -53,26 +54,36 @@ transformed parameters{
     real RT = trialEarnings[tIdx];
     
     // update action values for rewarded trials
-    if(trialEarnings[tIdx] > 0){
+    if(RT > 0){
       for(t in 1 : (T - 1)){
         real G = RT * gamma^(T - t -1) + Viti * gamma^(T - t);
         Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);
       }
     }else{
       real G =  RT  + Viti * gamma;
-      Qquit = Qquit + phi * (G - Qquit);
+      Qquit = Qquit + phiP * (G - Qquit) * (G > Qquit) + phiP *  (G - Qquit) * (G <= Qquit) ;
       if(T > 2){
         for(t in 1 : (T-2)){
           G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
-          Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);          
+          Qwait[t] = Qwait[t] + phiP * (G - Qwait[t]);    
         }
       }
     }
     // update Qquit by counterfactual thiking
     G1 =  RT  * gamma^(T - 2) + Viti * gamma^(T - 1);
-    Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+    if(RT > 0){
+      Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+    }else{
+      Qquit = Qquit + phiP * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+    }
+    
     // update Viti
-    Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);
+    if(RT > 0){
+       Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);
+    }else{
+       Viti = Viti + phiP * (G1 * gamma^(iti / stepDuration) - Viti);
+    }
+   
     
     // save action values
     Qwaits[,tIdx+1] = Qwait;
@@ -82,9 +93,10 @@ transformed parameters{
 }
 model {
   phi ~ uniform(0, 0.3);
+  phiP ~ uniform(0, 0.3);
   tau ~ uniform(2, 22);
   gamma ~ uniform(0.7, 1);
-  zeroPoint ~ uniform(0, tMax);
+  zeroPoint ~ uniform(0, nTimeSteps);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){

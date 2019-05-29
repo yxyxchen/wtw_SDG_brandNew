@@ -31,7 +31,7 @@ expTrialData = allData$trialData
 allIDs = hdrData$ID 
 
 # load expPara
-modelName = "noCounter"
+modelName = "para4"
 paras = getParas(modelName)
 parentDir = ifelse(dataType == "block", "genData/expModelFitting", "genData/expModelFittingSub")
 dirName = sprintf("%s/%s",parentDir, modelName)
@@ -97,10 +97,6 @@ for(sIdx in 1 : nSub){
 }
 
 # compare emipircal and reproduced trialPlot, for one participant 
-sIdx = 4
-id = useID[sIdx]
-id = 59
-
 id = 1
 sIdx = which(useID  == id)
 cond = unique(summaryData$condition[summaryData$id == id])
@@ -109,8 +105,15 @@ junk = block2session(expTrialData[[id]])
 trialPlots(junk, "Observed Data") 
 ggsave(sprintf("figures/expModelRepitation/%s/actual_data.png", modelName),
        width = 5, height = 4)
+
 tempt = repTrialData[[repNo[1,sIdx]]]
+tempt$timeWaited =  matrix(unlist(lapply(1:nComb, function(i) repTrialData[[repNo[i,sIdx]]]$timeWaited)), ncol = nComb) %>%
+  apply(MARGIN  = 1, FUN = mean) 
+tempt = within(tempt, sapply(1 : length(timeWaited),
+                                           function(i) ifelse(timeWaited[i] >= scheduledWait[i], tokenValue, 0)))
 tempt$blockNum = junk$blockNum
+
+tempt = repTrialData[[repNo[1,sIdx]]]
 trialPlots(tempt,"Model-predicted Data")
 ggsave(sprintf("figures/expModelRepitation/%s/sim_data.png", modelName),
        width = 5, height = 4)

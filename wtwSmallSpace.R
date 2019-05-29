@@ -2,10 +2,10 @@
 # to be as close as to the normal analysis (like integrate the prob density)
 # we assume rewards happen at the middle of the gap(therefore, the meanRewardDelay would be unbiased)
 # yet in wtwSettingsEnd.R, to unfiy different algorithms, we assume rewards happen at the end of the gap
-# however, results for LP still change with the stepDuration
-# we do all the calculation by stepDuration = 0.5, and the optimWaitTime, you know is not that...
+# however, results for LP still change with the uration
+# we do all the calculation by uration = 0.5, and the optimWaitTime, you know is not that...
 
-# we use this script to get stepDuration
+# we use this script to get uration
 # we don't use the reward rate here, it is close to the normal analysis, but not that good.
 ######## condition varibles #########
 conditions = c("HP", "LP")
@@ -21,7 +21,7 @@ tGrid = seq(0, blockSecs, 0.1)
 ######### reward variable ########
 tokenValue = 10 #value of the token
 loseValue = 0
-stepDuration = 0.5
+stepDuration = 0.1
 ########## supporting vairbales ########
 # time ticks within a trial for timeEarnings or wtw analysis
 trialTicks = list(
@@ -98,8 +98,21 @@ for(quitGap in 2 : (tMaxs[2] / stepDuration - 2)){
 }
 
 
-save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", "tGrid", 
-     "tokenValue", "stepDuration", "trialTicks", "pareto", "rewardDelayCDF", 
-     "rewardDelayPDF", "meanRewardDelay", "rewardRate", "optimRewardRates", 
-     "optimWaitTimes", "loseValue",  file = "wtwSettings.RData")
+# do some plotting
+data.frame(pdf = c(rewardDelayPDF[[1]], rewardDelayPDF[[2]]),
+           time = c(trialGapValues[[1]], trialGapValues[[2]]),
+           cond = rep(c("HP", "LP"), time = tMaxs / stepDuration)) %>%
+  ggplot(aes(time, pdf, color = cond)) +
+  geom_point(size = 3) + facet_wrap(~cond, ncol = 1) + scale_color_manual(values = conditionColors) + myTheme + 
+  ylab("Probability density") + xlab("Time (s)") + ylim(c(-0.05, 0.35)) 
+ggsave("figures/plotFigures/density.png", width = 4, height = 4)
 
+policy = data.frame(cond = c("HP", "LP"), rewardRate = c(20, 2.2))
+data.frame(rewardRate = c(rewardRate[[1]], rewardRate[[2]]),
+           time = c(trialGapValues[[1]], trialGapValues[[2]]),
+           cond = rep(c("HP", "LP"), time = tMaxs / stepDuration)) %>%
+  ggplot(aes(time, rewardRate, color = cond)) +
+  geom_point(size = 3) + facet_wrap(~cond, ncol = 1) + scale_color_manual(values = conditionColors) + myTheme + 
+  ylab(expression(bold("Reward rate (cent s"^"-1"*")"))) + xlab("Waiting policy (s)")  +
+  geom_vline(data = policy, aes(xintercept = rewardRate), color = "#969696", linetype = "dashed", size = 1.5)
+ggsave("figures/plotFigures/reward_rate.png", width = 4, height = 4)

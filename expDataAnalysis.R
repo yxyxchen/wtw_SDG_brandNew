@@ -150,7 +150,7 @@ for (sIdx in 1 : n) {
   # generate arguments for later analysis 
   label = sprintf('Subject %s, Cond %s',thisID, unique(thisTrialData$condition))
   tMax = ifelse(unique(thisTrialData$condition) == conditions[1], tMaxs[1], tMaxs[2])
-  kmGrid = seq(0, tMax, by=0.1) # grid on which to average survival curves.
+  kmGrid = seq(0, tMax, by= 0.1) # grid on which to average survival curves.
   
   # calcualte totalEarnings
   totalEarnings[sIdx] =  sum(thisTrialData$trialEarnings)
@@ -237,8 +237,9 @@ traitAUCCorr = list()
 for(i in 1 : nTrait){
   trait = traits[i];
   traitName = traitNames[i]
-  input = data.frame(personality[,trait], summaryData$AUC,
-                     summaryData$condition)
+  input = data.frame(personality[summaryData$stress =="no stress",trait],
+                     summaryData$AUC[summaryData$stress == "no stress"],
+                     summaryData$condition[summaryData$stress == "no stress"])
   traitAUCCorr[[i]]= getCorrelation(input)
   p = plotCorrelation(input, isRank = T) 
   p + xlab(paste(capitalize(traitName), "(rank)")) + ylab("AUC (rank)") + myTheme
@@ -251,11 +252,54 @@ pTable = lapply(1:2, function(j) sapply(1: (nTrait), function(i) traitAUCCorr[[i
 # plot AUC in two conditions
 library("ggpubr")
 load("wtwSettings.RData")
-optims = as.numeric(optimWaitTimes)
 summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, AUC)) + geom_boxplot() +
   geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
   scale_fill_manual(values = conditionColors) + 
-  xlab("") + ylab("AUC (keypress)") + myTheme
+  xlab("") + ylab("AUC (s)") + myTheme +
+  stat_compare_means(comparisons = list(c("HP", "LP")),
+                     aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
+                     bracket.size = 1, size = 6) + ylim(c(0, 47))
 dir.create("figures/expDataAnalysis")
-ggsave(sprintf("figures/expDataAnalysis/AUC_%s.png", dataType), width = 4, height = 4.5)
+ggsave(sprintf("figures/expDataAnalysis/AUC_%s.png", dataType), width = 4, height = 3.5)
+
+# plot wtw 
+select = (sessionData$stress == "no stress")
+plotData = data.frame(wtw = unlist(timeWTW_[select]), time = rep(tGrid, sum(select)),
+           condition = rep(summaryData$condition[select], each = length(tGrid))) %>% group_by(condition, time) %>%
+  summarise(mean = mean(wtw), se = sd(wtw) / sqrt(30), min = mean - se, max = mean + se) 
+
+policy = data.frame(condition = c("HP", "LP"), wt = c(20, 2.2))
+plotData %>% ggplot(aes(time, mean, color = condition)) +
+  geom_ribbon(aes(ymin=min, ymax=max, fill = condition, colour=NA),alpha = 0.3) +
+  geom_line(size = 1) + facet_wrap(~condition, scales = "free") +
+  scale_color_manual(values = conditionColors) + scale_fill_manual(values = conditionColors) +
+  ylim(c(3, 26)) + xlab("Cumulative task time (min)") +
+  scale_x_continuous(breaks = seq(0, max(tGrid), by = 60*7),
+                     labels = paste(seq(0, 21, by = 7))) + 
+  ylab("Willingness to wait (s)") +
+  geom_hline(data = policy, aes(yintercept = wt), linetype = "dotted", color = "#969696", size = 1.5) +
+  myTheme + ylim(c(0, 25))
+ggsave("figures/expDataAnalysis/wtw_timecourse.png", width = 6, height = 3)
+
+# plot survival curve
+select = (summaryData$stress == "no stress")
+condition =  rep(summaryData$condition[select])
+step = 0.1
+len= sapply(1 : 60, function(i) ifelse(condition[i] == "HP", tMaxs[1] / step + 1, tMaxs[2] / step + 1))
+ideal = data.frame(kmsc = c(rep(1, tMaxs[1] / step + 1),
+                            c(rep(1, 2.2 / step + 1), rep(0, tMaxs[2] / step -  2.2 / step))),
+                   time = c(seq(0, tMaxs[1], by = step), seq(0, tMaxs[2], by = step)),
+                   condition = rep(c("HP", "LP"), time = (tMaxs / step) + 1))
+
+data.frame(kmsc = unlist(kmOnGrid_[select]),
+                      time = unlist(lapply(1 : 60, function(i) (1 : len[i]) * step)),
+                      condition = rep(condition, time = len)) %>% group_by(condition, time) %>%
+  summarise(mean = mean(kmsc), se = sd(kmsc) / sqrt(30), min = mean - se, max = mean + se) %>% 
+  ggplot(aes(time, mean, color = condition)) + 
+  geom_ribbon(aes(ymin=min, ymax=max, fill = condition, colour=NA),alpha = 0.3)+
+  geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) + 
+  xlab("Elapsed time (s)") + ylab("Survival rate") + scale_color_manual(values = conditionColors)
+# +
+#   geom_line(data = ideal, aes(time, kmsc, color = condition), linetype = "dotted", size = 1)
+ggsave("figures/expDataAnalysis/kmsc_timecourse.png", width = 5, height = 4) 
 
