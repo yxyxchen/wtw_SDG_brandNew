@@ -188,10 +188,12 @@ plotCorrelation = function(data, dotColor = "black",isRank){
   # calculate correlations
   corTests = lapply(1:2, function(i) cor.test(data[data$cond == conditions[i], "x"],
                                               data[data$cond == conditions[i], "y"],
-                                              method = "kendall"))
-
+                                              method = "spearman"))
+  # corTestsPerm = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~ data[data$cond == conditions[i], "y"]))
   rhos = sapply(1:2, function(i) round(as.numeric(corTests[[i]]$estimate), 3))
   ps = sapply(1:2, function(i) round(corTests[[i]]$p.value, 3))
+  # ps = sapply(1:2, function(i) round(as.numeric(pvalue(corTestsPerm[[i]])), 3))
+  
   textColors = ifelse(ps < 0.05, "red", "blue")
   textData = data.frame(label = paste(rhos, "(p =", ps, ")"),
                         cond= c("HP", "LP"), color = textColors)
@@ -202,12 +204,12 @@ plotCorrelation = function(data, dotColor = "black",isRank){
   
   # plot
   if(isRank){
-    p0 = ggplot(plotData, aes(xRank, yRank)) + geom_point(size = 2, color = dotColor, fill = dotColor)
+    p0 = ggplot(plotData, aes(xRank, yRank)) + geom_point(size = 3, color = dotColor, fill = dotColor)
   }else{
-    p0 = ggplot(plotData, aes(x, y)) + geom_point(size = 2, color = dotColor, fill = dotColor)
+    p0 = ggplot(plotData, aes(x, y)) + geom_point(size = 3, color = dotColor, fill = dotColor)
   }
   p = p0  + geom_text(data = textData,aes(x = -Inf,y = -Inf, label = label),
-              hjust   = -0.2,vjust = -1,color = textColors, size = 5, fontface = 2, color = textColors) +
+              hjust   = -0.2,vjust = -1,color = textColors, size = 5, fontface = 2, color = "#252525") +
     facet_grid(~cond)
  return(p)
 } 
@@ -309,4 +311,14 @@ fitSurv = function(waitDuration, quitIdx){
   stdWd = sqrt(sum((tail(kmT, -1) - auc)^2 * diff((1 - kmFmy))))
   # return 
   return(list(kmT=kmT, kmF=kmF, auc=auc, stdWd = stdWd))
+}
+
+deMean = function(input){
+  output = input - mean(input)
+  return(output)
+}
+
+stand = function(input){
+  output = (input - mean(input)) / sd(input)
+  return(output)
 }

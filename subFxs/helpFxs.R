@@ -1,10 +1,11 @@
 library("stringr")
 getParas = function(modelName){
   if(modelName %in% c("para4", "curiosityTrialSp")) paras = c("phi", "tau", "gamma", "zeroPoint")
-  else if(modelName == "PR") paras = c("phi", "phiP", "tau", "gamma", "zeroPoint")
+  else if(modelName  %in% c("PR", "PR_5")) paras = c("phi", "phiP", "tau", "gamma", "zeroPoint")
   else if(modelName == "PR_cost") paras = c("phi", "phiP", "tau", "gamma", "zeroPoint", "cost")
   else if(modelName == "fullModel") paras = c("phi", "tau", "gamma", "QwaitIni")
   else if(modelName == "risk") paras = c("phi", "tau", "gamma", "utiCurve")
+  else if(modelName == "baseline") paras = c("waitRate")
   else return("wrong model name")
   return(paras)
 }
@@ -13,8 +14,13 @@ getUseID = function(expPara, paras){
   idList = expPara$id
   RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(paras)]
   EffeCols = which(str_detect(colnames(expPara), "Effe"))[1 : length(paras)]
-  useID = idList[apply(expPara[,RhatCols] < 1.1, MARGIN = 1, sum) == length(paras) & 
-                   apply(expPara[,EffeCols] >100, MARGIN = 1, sum) == length(paras)]
+  if(length(RhatCols) == 1){
+    useID = idList[expPara[,RhatCols] < 1.1 & 
+                     expPara[,EffeCols] >100]
+  }else{
+    useID = idList[apply(expPara[,RhatCols] < 1.1, MARGIN = 1, sum) == length(paras) & 
+                     apply(expPara[,EffeCols] >100, MARGIN = 1, sum) == length(paras)]
+  }
   return(useID)
 }
   

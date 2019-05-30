@@ -18,7 +18,7 @@ modelFitting = function(thisTrialData, fileName, paras, model){
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
   if(any(paras == "phiR")){
     wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
-  }else if(any(paras == "gamma")){
+  }else if(any(paras == "gamma" || modelName == "baseline")){
     wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
   }else{
     print("wrong model name!")
@@ -50,7 +50,7 @@ modelFitting = function(thisTrialData, fileName, paras, model){
   # save sampling sequences
   tempt = extractedPara %>%
     adply(2, function(x) x) %>%  # change arrays into 2-d dataframe 
-    select(-chains) 
+    dplyr::select(-chains) 
   write.table(matrix(unlist(tempt), ncol = length(paras) + 1), file = sprintf("%s.txt", fileName), sep = ",",
               col.names = F, row.names=FALSE) 
   # calculate and save WAIC

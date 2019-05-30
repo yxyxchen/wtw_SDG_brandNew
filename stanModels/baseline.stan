@@ -1,23 +1,22 @@
 data {
   // depending on the condition
-  real wInis[2];
   real wIni;
   int tMax;
-  int nTimeStep; // since round returns real here, so nTimeStep != tMax / stepDuration
+  int nTimeSteps; // nTimeSteps = tMax / stepDuration
   
   // depending on each subject
   int N; // number of trials
   vector[N] timeWaited;
   vector[N] trialEarnings;
-  int nTimePoints[N]; // list of available time points 
+  int Ts[N]; // terminal time step index 
 }
 transformed data {
   // constant
   real stepDuration = 1;
   real iti = 2;
   real tokenValue = 10;
-  int totalSteps = sum(nTimePoints);
-  }
+  int totalSteps = sum(Ts) - N;
+}
 parameters {
   real<lower = 0, upper = 1> waitRate;
 }
@@ -26,8 +25,8 @@ model {
   // calculate the likelihood 
   for(tIdx in 1 : N){
     int action;
-    for(i in 1 : nTimePoints[tIdx]){
-    if(trialEarnings[tIdx] == 0 && i == nTimePoints[tIdx]){
+    for(i in 1 :(Ts[tIdx] - 1)){
+    if(trialEarnings[tIdx] == 0 && i == (Ts[tIdx] - 1)){
       action = 0; // quit
     }else{
       action = 1; // wait
@@ -44,8 +43,8 @@ generated quantities {
   // loop over trials
   for(tIdx in 1 : N){
     int action;
-    for(i in 1 : nTimePoints[tIdx]){
-      if(trialEarnings[tIdx] == 0 && i == nTimePoints[tIdx]){
+    for(i in 1 : (Ts[tIdx] - 1)){
+      if(trialEarnings[tIdx] == 0 && i == (Ts[tIdx] - 1)){
         action = 0; // quit
       }else{
         action = 1; // wait

@@ -125,6 +125,8 @@ wtwEarly = numeric(length = n)
 timeWTW_ = vector(mode = "list", length = n)
 trialWTW_ = vector(mode = "list", length = n)
 kmOnGrid_ = vector(mode = "list", length = n)
+winAUC_ = vector(mode = "list", length = n)
+timeAUC_ = vector(mode = "list", length = n)
 stdQuitTime = numeric(length = n)
 cvQuitTime = numeric(length = n)
 muQuitTime = numeric(length = n)
@@ -132,6 +134,7 @@ nQuit = numeric(length = n)
 nTrial = numeric(length = n)
 stdWd = numeric(length =n)
 cvWd =  numeric(length =n)
+AUCEarly = numeric(length =n)
 plotTrialwiseData =F
 plotKMSC = F
 plotWTW = F
@@ -195,19 +198,19 @@ for (sIdx in 1 : n) {
     graphics.off()
   }
   
-  # # moving auc
-  # window = 20
+  # moving auc
+  # window = 10
   # by = 10
   # tempt = kmscMoving(thisTrialData, tMax, label, plotKMSC, tGrid, window, by)
   # timeAUC_[[sIdx]] = tempt$timeAUCs
   # winAUC_[[sIdx]] = tempt$winAUCs
-  # timeStdWd_[[sIdx]] = tempt$timeStdWds
+  AUCEarly[sIdx] =  kmsc(truncateTrials(thisTrialData, 1, 10), tMax, label, plotKMSC, kmGrid)$auc
 }
 sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")), cbal = hdrData$cbal,
                        stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
                      totalEarnings = totalEarnings, nAction = nAction, stdQuitTime = stdQuitTime, cvQuitTime = cvQuitTime,
                      muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial,
-                     stdWd = stdWd, cvWd = cvWd)
+                     stdWd = stdWd, cvWd = cvWd, AUCEarly = AUCEarly)
 save(sessionData, file = 'genData/expDataAnalysis/sessionData.RData')
 save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridSess.RData')
 

@@ -31,7 +31,7 @@ expTrialData = allData$trialData
 allIDs = hdrData$ID 
 
 # load expPara
-modelName = "para4"
+modelName = "PR"
 paras = getParas(modelName)
 parentDir = ifelse(dataType == "block", "genData/expModelFitting", "genData/expModelFittingSub")
 dirName = sprintf("%s/%s",parentDir, modelName)
@@ -97,42 +97,26 @@ for(sIdx in 1 : nSub){
 }
 
 # compare emipircal and reproduced trialPlot, for one participant 
-id = 1
+id = 7
 sIdx = which(useID  == id)
 cond = unique(summaryData$condition[summaryData$id == id])
 label = sprintf("Sub %d, %s", id, cond)
 junk = block2session(expTrialData[[id]])
 trialPlots(junk, "Observed Data") 
-ggsave(sprintf("figures/expModelRepitation/%s/actual_data.png", modelName),
+ggsave(sprintf("figures/expModelRepitation/%s/actual_data_%d.png", modelName, id),
        width = 5, height = 4)
 
 tempt = repTrialData[[repNo[1,sIdx]]]
 tempt$timeWaited =  matrix(unlist(lapply(1:nComb, function(i) repTrialData[[repNo[i,sIdx]]]$timeWaited)), ncol = nComb) %>%
   apply(MARGIN  = 1, FUN = mean) 
-tempt = within(tempt, sapply(1 : length(timeWaited),
-                                           function(i) ifelse(timeWaited[i] >= scheduledWait[i], tokenValue, 0)))
+tempt = within(tempt, sapply(1 : length(timeWaited), function(i) ifelse(timeWaited[i] >= scheduledWait[i], tokenValue, 0)))
 tempt$blockNum = junk$blockNum
 
-tempt = repTrialData[[repNo[1,sIdx]]]
+# tempt = repTrialData[[repNo[1,sIdx]]]
 trialPlots(tempt,"Model-predicted Data")
-ggsave(sprintf("figures/expModelRepitation/%s/sim_data.png", modelName),
+ggsave(sprintf("figures/expModelRepitation/%s/sim_data__%d.png", modelName, id),
        width = 5, height = 4)
-# plot collapsed trial plot 
-muTimeWaitedRep = lapply(1 : nSub, function(i) apply(timeWaitedRep_[[i]], 1, mean))
-stdTimeWaitedRep = lapply(1 : nSub, function(i) apply(timeWaitedRep_[[i]], 1, sd))
 
-sIdx = 1
-id = useID[sIdx]
-data.frame(Observation = expTrialData[[id]]$timeWaited,
-                      trialEarnings = factor(expTrialData[[id]]$trialEarnings, levels = c(0,tokenValue), labels = c("Rewarded", "Non-rewarded")),
-                      Prediction = muTimeWaitedRep[[sIdx]],
-                      std = stdTimeWaitedRep[[sIdx]],
-                      trial = 1 : length(muTimeWaitedRep[[sIdx]])) %>% 
-  gather(-c("trialEarnings", "trial", "std"), key = "type", value = "value") %>% 
-  ggplot(aes(trial, value)) + geom_point(aes(color =type, fill = type), size = 1) + geom_line(aes(linetype = type), color = "#636363") + facet_grid(~trialEarnings) + ylab("Waiting duration/s")+
-  xlab("Trial") + scale_linetype_manual(values=c("blank", "solid")) +
-  scale_color_manual(values = c("black", NA)) + scale_fill_manual(values = c("black", NA)) +theme_linedraw(base_size = 22) + theme(legend.title = element_blank())
-ggsave(filename = "s1.png", width = 8, height = 5)
 
 # compare emipirical and reproduced AUC
 muAUCRep = apply(AUCRep_, MARGIN = 2, mean)
@@ -147,10 +131,9 @@ data.frame(muAUCRep, minAUCRep, maxAUCRep,
   geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(-2, 45)) + ylim(c(-2, 45)) +
   ylab("Predicted / s") + xlab("Observed / s") + ggtitle("AUC") +
   theme_linedraw(base_size = 22) + theme(plot.title = element_text(face = "bold", hjust = 0.5))
-fileName = sprintf("figures/expModelRepitation/AUC_AUCRep_%s.pdf", modelName)
+fileName = sprintf("figures/expModelRepitation/%s/AUC_AUCRep.png", modelName)
 ggsave(filename = fileName,  width = 6, height = 4)
 
-# 
 
 # survival curve prediction
 for(sIdx in 1 : n){

@@ -23,14 +23,14 @@ expModelFitting = function(modelName, paras){
   rstan_options(auto_write = TRUE) 
   
   # compile the stan model 
-  dir.create(sprintf("genData/expModelFitting/%s", modelName))
+  dir.create(sprintf("genData/expModelFittingSub/%s", modelName))
   model = stan_model(file = sprintf("stanModels/%s.stan", modelName))
   
   # load expData
   allData = loadAllData()
   hdrData = allData$hdrData           
   trialData = allData$trialData       
-  idList = hdrData$ID[hdrData$stress = "no stress"]                 
+  idList = hdrData$ID[hdrData$stress == "no stress"]                 
   n = length(idList)                    
   
   # determine paras

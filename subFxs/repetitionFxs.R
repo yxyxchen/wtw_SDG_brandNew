@@ -2,7 +2,7 @@
 getRepModelFun = function(modelName){
   if(modelName == "para4"){
     repModelFun = para4
-  }else if(modelName == "PR"){
+  }else if(modelName %in% c("PR", "PR_5")){
     repModelFun = PR
   }else if(modelName == "curiosityTrialSp"){
     repModelFun = curiosityTrialSp
@@ -114,7 +114,6 @@ PR = function(paras, cond, scheduledWait){
 
 ################ monte ######################
 curiosityTrialSp = function(paras, cond, scheduledWait){
-  stepDuration = 1
   # parse para
   phi = paras[1]
   tau = paras[2]

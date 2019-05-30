@@ -74,7 +74,7 @@ for(pIdx in 1 : length(paras)){
     # plot
     p = plotCorrelation(input, paraColor, T) 
     p + ylab(capitalize(para)) + xlab(traitName) + saveTheme
-    parentDir = ifelse(dataType == "block", "figures/expModelFitting", "figures/expModelFittingSub")
+    parentDir = ifelse(dataType == "block", "figures/expParaAnalysis", "figures/expParaAnalysisSub/")
     fileName = sprintf("%s/%s/%s_%s.png", parentDir, modelName, para, traitName)
     ggsave(fileName, width = 6, height = 3)
   }
@@ -84,6 +84,7 @@ rhoTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * nPara), function(i
                                           nrow = nPara, dimnames = dimNames))
 pTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * nPara), function(i) traitParaCorr[[i]]$ps[j]),
                                         nrow = nPara, dimnames = dimNames))
+
 # plot trait analysis
 library("corrplot")
 col2 <- colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D", "#F4A582",
@@ -149,12 +150,4 @@ for(i in 1 : length(paras)){
   ggsave(fileName, width = 6, height = 3)
 }
 
-# conduct analysis for personality
-library("cluster")
-library("factoextra")
-library("magrittr")
-my_data  = as.matrix(expPara[expPara$id %in% useID, paras]) %>% na.omit() %>% scale
 
-my_data  = as.matrix(personality[,traits]) %>% na.omit() %>% scale
-library("factoextra")
-fviz_nbclust(my_data, kmeans, method = "gap_stat")

@@ -10,12 +10,13 @@ trialData = allData$trialData
 allIDs = hdrData$ID                   # column of subject IDs
 n = length(allIDs) 
 
-likRatioTest("para4", "PR", 1, "HP")
-likRatioTest("PR", "PR_cost", 1, "HP")
-likRatioTest("para4", "PR", 1, "LP")
-likRatioTest("PR", "PR_cost", 1, "LP")
+# likRatioTest("para4", "PR", 1, "HP")
+# likRatioTest("PR", "PR_cost", 1, "HP")
+# likRatioTest("para4", "PR", 1, "LP")
+# likRatioTest("PR", "PR_cost", 1, "LP")
 likRatioTest("para4", "PR", 1, "all")
-likRatioTest("PR", "PR_cost", 1, "all")
+likRatioTest("fullModel", "PR", 1, "all")
+likRatioTest("baseline", "PR", 4, "all")
 
 likRatioTest = function(modelName1, modelName2, df, group = "all"){
   paras1 = getParas(modelName1)
@@ -37,15 +38,11 @@ likRatioTest = function(modelName1, modelName2, df, group = "all"){
   p = pchisq(delta, df * length(useID), lower.tail=FALSE)
   return(p)
 }
-# load model names
-modelNames = c("curiosityTrialSp", "curiosityTrialRSp")
-nModel = length(modelNames)
-
 
 # define a function for convinence
 # select useID
 idList = hdrData$ID
-modelNames = c("para4", "PR", "PR_cost")
+modelNames = c("PR", "baseline", "para4", "fullModel")
 nModel = length(modelNames)
 useID_ = vector(mode = "list", length = nModel)
 useID = idList
@@ -76,7 +73,8 @@ output = data.frame(logEvidence_,
 f= "genData/expModelFittingSub/logEvidenceList.csv"
 write.table(file = f, output, sep = ",", col.names = F, row.names = F)
 
-waic_ = -2 * logEvidence_
+waic_ = -2 * logEvidence_ %>% 
+
 png('diffBICHP.png', width = 400, height = 250,
     units = "px")
 hist((waic_[output$condition == "HP",1] - waic_[output$condition == "HP",2]),

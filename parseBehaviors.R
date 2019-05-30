@@ -11,12 +11,18 @@ load("wtwSettings.RData")
 
 # input 
 dataType = "sess"
-modelName = "curiosityTrialSp"
+modelName = "PR"
 
 # create output directories
-dir.create("figures/expParaAnalysis")
-saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
-dir.create(saveDir)
+if(dataType == "sess"){
+  dir.create("figures/expParaAnalysisSub")
+  saveDir = sprintf("figures/expParaAnalysisSub/%s", modelName)
+  dir.create(saveDir)
+}else{
+  dir.create("figures/expParaAnalysis")
+  saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
+  dir.create(saveDir)
+}
 
 # load blockdata data
 if(dataType == "block"){
@@ -26,10 +32,7 @@ if(dataType == "block"){
 }else{
   load("genData/expDataAnalysis/sessionData.RData")
   load("genData/expDataAnalysis/kmOnGridSess.RData")
-  load("genData/expDataAnalysis/blockData.RData")
-  summaryData = data.frame(cbind(sessionData, blockData[blockData$blockNum == 3 & blockData$id %in% expPara$id,
-                                                 c("cvWd", "stdWd", "AUC", "cvQuitTime")]))
-  colnames(summaryData) = c(names(sessionData),c("cvWd3", "stdWd3", "AUC3", "cvQuitTime3"))
+  summaryData = sessionData
 }
 
 # load expPara
@@ -39,44 +42,149 @@ parentDir = ifelse(dataType == "block", "genData/expModelFitting", "genData/expM
 dirName = sprintf("%s/%s",parentDir, modelName)
 tempt = loadExpPara(paras, dirName)
 useID = getUseID(tempt, paras)
-# load summaryData
 expPara = merge(x=tempt[,c(paras, "id")],y=summaryData, by="id",all.x=TRUE)
 
+# plot them separately is ugly
+traitParaCorr = vector(mode = "list", length = nPara)
+for(pIdx in 1 : length(paras)){
+  para = paras[pIdx]
+  # plotParaAUC(expPara, para, blockData, useID)
+  input = data.frame(x = expPara[[para]], y = expPara$AUC,
+                     cond = expPara$condition)
+  input = input[expPara$id %in% useID,]
+  traitParaCorr[[pIdx]] = getCorrelation(input)
+}
+rhoTable = sapply(1:2, function(j) sapply(1: nPara, function(i) traitParaCorr[[i]]$rhos[j]))
+rownames(rhoTable) = paraNames
+colnames(rhoTable) = c("AUC_HP", "AUC_LP")
+pTable = sapply(1:2, function(j) sapply(1: nPara, function(i) traitParaCorr[[i]]$ps[j]))
 
-# link noise to tau 
-para = "tau"
-ggplot(expPara, aes(tau, cvQuitTime)) + geom_point() +
-  facet_grid(~ condition, scales = "free") 
+library("corrplot")
+col2 <- colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D", "#F4A582",
+                               "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
+                               "#4393C3", "#2166AC", "#053061")))
+
+parentDir = ifelse(dataType == "sess", "figures/expParaAnalysisSub", "figures/expParaAnalysis")
+
+fileName = sprintf("%s/%s/AUCPara_%s.png", parentDir, modelName, dataType)
+png(fileName)
+corrplot(t(rhoTable), 
+         p.mat = t(pTable), 
+         is.corr = T, 
+         method = "color",
+         insig = "p-value",
+         tl.col = "black", tl.srt = 0, tl.cex = 1.5,
+         col = col2(50)) 
+dev.off()
+
+
+# plotParaAUC(expPara, para, blockData, useID)
+input = data.frame(expPara[paras], AUC = expPara$AUC,
+                   cond = expPara$condition, id = expPara$id) %>% filter(id %in% useID)
+junk = input %>% group_by(cond) %>% summarise(muAUC = mean(AUC), stdAUC = sd(AUC))
+input = input %>% mutate(AUC = AUC - junk$muAUC[1] * (cond == "HP") - junk$muAUC[2] * (cond == "LP"))
+inputHP = input[input$cond == "HP",] %>% mutate(phi = deMean(phi), phiP = deMean(phiP), tau = deMean(tau), gamma = deMean(gamma), zeroPoint = deMean(zeroPoint)) 
+inputLP = input[input$cond == "LP",] %>% mutate(phi = deMean(phi), phiP = deMean(phiP), tau = deMean(tau), gamma = deMean(gamma), zeroPoint = deMean(zeroPoint))
+plotData = rbind(inputHP, inputLP)
+
+names = c(paras, "AUC")
+rankData =  lapply(1 : length(names), function(i) rank(plotData[,names[i]]))
+plotData[,names] = rankData
+
+ps = vector(length = nPara)
+rhos = vector(length = nPara)
+textColors = vector(length = nPara)
+for(i in 1 : nPara){
+  tempt = cor.test(plotData[,paras[i]], plotData$AUC, method = "kendall")
+  textColors[i] = ifelse(tempt$p.value < 0.05, "black", "grey")
+  rhos[i] = round(tempt$estimate, 2)
+  if(tempt$p.value < 0.001){
+    ps[i] = "p < 0.001"
+  }else{
+    ps[i] = sprintf("p = %.3f", round(tempt$p.value, 3)) 
+  }
+}
+textData = data.frame(label = paste0(rhos, "(", ps, ")"), textColors, para=factor(paras, levels = paras, labels = c("LR", "LP", "tau", "gamma", "P")))
+plotData %>% gather(-c("cond", "id", "AUC"), key = "para", value = value) %>%
+  mutate(para = factor(para, levels = paras, labels = c("LR", "LP", "tau", "gamma", "P"))) %>%
+  ggplot(aes(value, AUC, color = para)) + geom_point(size = 3) +
+    facet_wrap(~para, nrow = 1, labeller = label_parsed) +
+  scale_color_manual(values = unlist(paraColors[1 : length(paras)])) + myTheme + ylab("Para rank") +
+  ylab("AUC rank") + xlab("Parameter rank") + scale_x_continuous(breaks = c(0, 60), limits = c(0, 60)) + 
+  scale_y_continuous(breaks = c(0, 60), limits = c(0, 60)) + theme(legend.position = "None") + geom_text(data = textData,aes(x = -Inf,y = -Inf, label = label),
+            hjust = -0.2 ,vjust = -12,color = "#252525", size = 5, fontface = 2) 
+ggsave(sprintf("%s/%s/single_AUC_stand.png", "figures/expParaAnalysisSub", modelName), width = 10 ,height = 3) 
+
+
+# plot for HP
+for(c in 1:2){
+  thisCond = conditions[c]
+  input = data.frame(expPara[paras], AUC = expPara$AUC,
+                     cond = expPara$condition, id = expPara$id) %>% filter(id %in% useID & cond == thisCond)
+  names = c(paras, "AUC")
+  rankData =  lapply(1 : length(names), function(i) rank(input[,names[i]]))
+  plotData = input
+  plotData[,names] = rankData
+  
+  ps = vector(length = nPara)
+  rhos = vector(length = nPara)
+  textColors = vector(length = nPara)
+  for(i in 1 : nPara){
+    tempt = cor.test(input[,paras[i]], input$AUC, method = "kendall")
+    textColors[i] = ifelse(tempt$p.value < 0.05, "black", "grey")
+    rhos[i] = round(tempt$estimate, 2)
+    if(tempt$p.value < 0.001){
+      ps[i] = "p < 0.001"
+    }else{
+      ps[i] = sprintf("p = %.3f", round(tempt$p.value, 3)) 
+    }
+  }
+  textData = data.frame(label = paste0(rhos, "(", ps, ")"), textColors, para=factor(paras, levels = paras, labels = c("LR", "LP", "tau", "gamma", "P")))
+  plotData %>% gather(-c("cond", "id", "AUC"), key = "para", value = value) %>%
+    mutate(para = factor(para, levels = paras, labels = c("LR", "LP", "tau", "gamma", "P"))) %>%
+    ggplot(aes(value, AUC, color = para)) + geom_point(size = 3) +
+    facet_wrap(~para, nrow = 1, labeller = label_parsed) +
+    scale_color_manual(values = unlist(paraColors[1 : length(paras)])) + myTheme + ylab("Para rank") +
+    ylab("AUC rank") + xlab("Parameter rank") + scale_x_continuous(breaks = c(0, 30), limits = c(0, 30)) + 
+    scale_y_continuous(breaks = c(0, 30), limits = c(-5, 35)) + theme(legend.position = "None") + geom_text(data = textData,aes(x = -Inf,y = -Inf, label = label),
+                                                                                                            hjust = -0.2 ,vjust = -12,color = "#252525", size = 5, fontface = 2) 
+  ggsave(sprintf("%s/%s/single_AUC_%s.png", "figures/expParaAnalysisSub", modelName, thisCond), width = 10 ,height = 3) 
+}
+
+# add blockData
+load("genData/expDataAnalysis/blockData.RData")
+expPara$stdQuitTime3 = blockData$stdQuitTime[blockData$blockNum == 3 &
+                                               blockData$stress == "no stress"]
+expPara$stdWd3 = blockData$stdWd[blockData$blockNum == 3 &
+                                   blockData$stress == "no stress"]
+expPara$AUCEarly = sessionData$AUCEarly[sessionData$id %in% expPara$id]
+# wtwEarly to prior
+expPara %>% filter(id %in% useID) %>%ggplot(aes(zeroPoint, AUCEarly)) +
+  geom_point() + facet_wrap(~condition, scales = "free")  + myTheme
+  
+
+input = data.frame(expPara$zeroPoint, expPara$AUCEarly, expPara$condition)
+input = input[expPara$id %in% useID, ]
+plotCorrelation(input, dotColor = "grey", F)
 
 para = "tau"
 ggplot(expPara, aes(tau, stdQuitTime)) + geom_point() +
   facet_grid(~ condition, scales = "free") 
 
-para = "zeroPoint"
-ggplot(expPara, aes(zeroPoint, stdWd)) + geom_point() +
+para = "tau"
+ggplot(expPara, aes(tau, stdQuitTime3)) + geom_point() +
   facet_grid(~ condition, scales = "free") 
 
-para = "tau"
-ggplot(expPara, aes(tau, cvWd3)) + geom_point() +
-  facet_grid(~ condition, scales = "free") 
-
-para = "tau"
-ggplot(expPara, aes(gamma, stdWd)) + geom_point() +
-  facet_grid(~ condition, scales = "free") 
-
-para = "tau"
-ggplot(expPara, aes(tau, cvWd)) + geom_point() +
-  facet_grid(~ condition, scales = "free") 
 
 library("ppcor")
 tempt = expPara[expPara$condition == "HP"&
-                expPara$id %in% useID,]
-pcor.test(tempt$zeroPoint, tempt$stdWd, tempt$AUC,
+                  expPara$id %in% useID,] 
+pcor.test(tempt$tau, tempt$stdWd, tempt$AUC,
           method = "kendall")
 
 tempt = expPara[expPara$condition == "LP"&
-                  expPara$id %in% useID,]
-pcor.test(tempt$gamma, tempt$stdWd, tempt$AUC,
+                  expPara$id %in% useID,] 
+pcor.test(tempt$tau, tempt$stdWd, tempt$AUC,
           method = "kendall")
 
 data = expPara[,c("tau", "stdQuitTime", "condition")]
@@ -146,17 +254,6 @@ ggplot(data, aes(log(x), log(y))) + geom_point() + facet_grid(~cond)
 
 
 # correlation between AUC
-for(pIdx in 1 : length(paras)){
-  para = paras[pIdx]
-  # plotParaAUC(expPara, para, blockData, useID)
-  input = data.frame(x = expPara[[para]], y = blockData$AUC, cond = blockData$condition)
-  input = input[expPara$id %in% useID,]
-  p = plotCorrelation(input, paraColors[i], 1)
-  xName = sprintf("%sRank", para)
-  yName = "AUC-Rank"
-  p + xlab(xName) + ylab(yName) + saveTheme
-  ggsave(sprintf("%s/AUC_%s.pdf", saveDir, para), width =8 ,height = 4)
-}
 
 
 

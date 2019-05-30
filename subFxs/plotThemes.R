@@ -27,4 +27,4 @@ myTheme = theme_linedraw() +
 symnum.args <- list(cutpoints = c(0,0.001, 0.01, 0.05, 1),
                     symbols = c("***", "**", "*", "ns"))
 
-paraColors = list("phi" = "#e41a1c", "tau" = "#377eb8", "gamma" = "#4daf4a", "sigma" = "#fe9929", "cost" = "#ffd92f")
+paraColors = list("#e41a1c", "#377eb8", "#4daf4a", "#fe9929", "#ffd92f")
