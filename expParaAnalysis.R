@@ -57,13 +57,18 @@ traitNames = c("DelayGra", "Impulsive",
 nTrait = length(traits)
 expPara = merge(x= expPara,y=personality[,c(traits, "id")], by="id",all.x=TRUE)
 names(expPara)[which(names(expPara) %in% traits)] = traitNames
+expPara$deltaPhi = expPara$phiP - expPara$phi
 
 # calculate trait-para correlations
-traitParaCorr = vector(mode = "list", length = length(paras) * length(traits))
-corrNo = matrix(1:(nPara * nTrait), nrow = nPara, ncol = nTrait)
-for(pIdx in 1 : length(paras)){
-  para = paras[pIdx]
-  paraColor = paraColors[pIdx]
+traitParaCorr = vector(mode = "list", length = (length(paras) + 1) * length(traits))
+corrNo = matrix(1:((nPara + 1) * nTrait), nrow = nPara + 1, ncol = nTrait)
+for(pIdx in 1 : (length(paras) + 1)){
+  if(pIdx <= length(paras)){
+    para = paras[pIdx]
+  }else{
+    para = "deltaPhi"
+  }
+  
   for(trIdx in 1 : length(traits)){
     trait = traits[trIdx]
     traitName = traitNames[trIdx]
@@ -72,18 +77,20 @@ for(pIdx in 1 : length(paras)){
                        summaryData$condition[summaryData$id %in% useID])
     traitParaCorr[[corrNo[pIdx, trIdx]]]= getCorrelation(input)
     # plot
-    p = plotCorrelation(input, paraColor, T) 
-    p + ylab(capitalize(para)) + xlab(traitName) + saveTheme
-    parentDir = ifelse(dataType == "block", "figures/expParaAnalysis", "figures/expParaAnalysisSub/")
-    fileName = sprintf("%s/%s/%s_%s.png", parentDir, modelName, para, traitName)
-    ggsave(fileName, width = 6, height = 3)
+    # p = plotCorrelation(input, paraColor, T) 
+    # p + ylab(capitalize(para)) + xlab(traitName) + saveTheme
+    # parentDir = ifelse(dataType == "block", "figures/expParaAnalysis", "figures/expParaAnalysisSub/")
+    # fileName = sprintf("%s/%s/%s_%s.png", parentDir, modelName, para, traitName)
+    # ggsave(fileName, width = 6, height = 3)
   }
 }
-dimNames = list(capitalize(paras), traitNames)
-rhoTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * nPara), function(i) traitParaCorr[[i]]$rhos[j]),
-                                          nrow = nPara, dimnames = dimNames))
-pTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * nPara), function(i) traitParaCorr[[i]]$ps[j]),
-                                        nrow = nPara, dimnames = dimNames))
+paraNames = c("LR", "LP", "Tau", "Gamma", "P", "deltaL")
+dimNames = list(paraNames, c("DG", "IM", "IU", "AX"))
+rhoTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * (nPara+1)), function(i) traitParaCorr[[i]]$rhos[j]),
+                                          nrow = nPara+1, dimnames = dimNames))
+pTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * (nPara+1)), function(i) traitParaCorr[[i]]$ps[j]),
+                                        nrow = nPara+1, dimnames = dimNames))
+
 
 # plot trait analysis
 library("corrplot")
@@ -138,12 +145,13 @@ sumInput = group_by(input, cond, xGroup) %>% dplyr::summarise(meanY = mean(y))
 ggplot(sumInput, aes(xGroup, meanY)) + geom_point() +facet_grid(~cond) + xlab("Impulsive")+ylab("Gamma")
 
 # plot hist 
+paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
 expPara$condition = summaryData$condition[summaryData$id %in% expPara$id]
 for(i in 1 : length(paras)){
   para = paras[i]
   paraColor = paraColors[[i]]
-  p = ggplot(expPara[expPara$id %in% useID,], aes_string(para)) + geom_histogram(bins = 6, fill = paraColor) + facet_grid(~condition)+
-    saveTheme + ylab("Count") + xlab(capitalize(para))
+  p = ggplot(expPara[expPara$id %in% useID,], aes_string(para)) + geom_histogram(bins = 6, fill = paraColor) +
+    facet_grid(~condition) + myTheme + ylab("Count") + xlab(paraNames[i])
   parentDir = ifelse(dataType == "sess", "figures/expParaAnalysisSub", "figures/expParaAnalysis")
   dir.create(parentDir)
   fileName = sprintf("%s/%s/hist_%s.pdf", parentDir, modelName, para)

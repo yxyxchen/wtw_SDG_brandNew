@@ -31,7 +31,9 @@ expTrialData = allData$trialData
 allIDs = hdrData$ID 
 
 # load expPara
-modelName = "PR"
+modelName = "baseline"
+dirName = sprintf("figures/expModelRepitation//%s", modelName)
+dir.create(dirName)
 paras = getParas(modelName)
 parentDir = ifelse(dataType == "block", "genData/expModelFitting", "genData/expModelFittingSub")
 dirName = sprintf("%s/%s",parentDir, modelName)
@@ -97,7 +99,7 @@ for(sIdx in 1 : nSub){
 }
 
 # compare emipircal and reproduced trialPlot, for one participant 
-id = 7
+id = 1
 sIdx = which(useID  == id)
 cond = unique(summaryData$condition[summaryData$id == id])
 label = sprintf("Sub %d, %s", id, cond)
@@ -127,10 +129,10 @@ data.frame(muAUCRep, minAUCRep, maxAUCRep,
                       AUC = summaryData$AUC[summaryData$id %in% useID], 
                       condition = summaryData$condition[summaryData$id %in% useID]) %>%
   ggplot(aes(AUC, muAUCRep)) +  geom_errorbar(aes(ymin = minAUCRep, ymax = maxAUCRep), color = "grey") +
-  geom_point() + facet_grid(~condition) + 
+  geom_point(size = 2) + facet_grid(~condition) + 
   geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(-2, 45)) + ylim(c(-2, 45)) +
-  ylab("Predicted / s") + xlab("Observed / s") + ggtitle("AUC") +
-  theme_linedraw(base_size = 22) + theme(plot.title = element_text(face = "bold", hjust = 0.5))
+  ylab("Predicted (s)") + xlab("Observed (s)") + ggtitle("AUC") +
+  myThemeBig + theme(plot.title = element_text(face = "bold", hjust = 0.5))
 fileName = sprintf("figures/expModelRepitation/%s/AUC_AUCRep.png", modelName)
 ggsave(filename = fileName,  width = 6, height = 4)
 

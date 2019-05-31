@@ -45,7 +45,7 @@ trialPlots <- function(thisTrialData,label = " ") {
   geom_line(data = plotData[plotData$condition != 'quitSchedule',],
             aes(trialNum, trialDuration, color = condition)) +
     scale_color_manual(values = c('blue', 'red', 'black')) + 
-    xlab('Trial') + ylab('Waiting duration / s') + ggtitle(label) + displayTheme
+    xlab('Trial') + ylab('Waiting duration (s)') + ggtitle(label) + myTheme
   # add block lines if we have multiple blocks 
   if(length(unique(thisTrialData$blockNum)) > 1){
     p = p + geom_vline(xintercept = c(nTrial1,nTrial1n2),  linetype='dashed',
@@ -225,6 +225,28 @@ getCorrelation = function(data){
                                               data[data$cond == conditions[i], "y"],
                                               method = "kendall") 
                     )
+  # supposedly, kendall can deal with data with a lot of ties
+  # corTestsPerm = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~
+  #                                                    data[data$cond == conditions[i], "y"]))
+  rhos = sapply(1:2, function(i) as.numeric(corTests[[i]]$estimate))
+  ps = sapply(1:2, function(i) round(corTests[[i]]$p.value, 3))
+  # ps = sapply(1:2, function(i) round(pvalue(corTestsPerm [[i]]), 3))
+  return(list(rhos = rhos, ps = ps))
+}
+
+getPartCorrelation = function(data){
+  library("ppcor")
+
+  conditions = c("HP", "LP")
+  colnames(data) = c("x", "y", "z", "cond")
+  
+  # calculate correlations
+  # since we can't get rho from the later
+  corTests = lapply(1:2, function(i) pcor.test(data[data$cond == conditions[i], "x"],
+                                              data[data$cond == conditions[i], "y"],
+                                              data[data$cond == conditions[i], "z"],
+                                              method = "kendall") 
+  )
   # supposedly, kendall can deal with data with a lot of ties
   # corTestsPerm = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~
   #                                                    data[data$cond == conditions[i], "y"]))

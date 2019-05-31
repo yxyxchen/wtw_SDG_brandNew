@@ -258,12 +258,33 @@ load("wtwSettings.RData")
 summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, AUC)) + geom_boxplot() +
   geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
   scale_fill_manual(values = conditionColors) + 
-  xlab("") + ylab("AUC (s)") + myTheme +
+  xlab("") + ylab("WTW Average (s)") + myTheme +
   stat_compare_means(comparisons = list(c("HP", "LP")),
                      aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
                      bracket.size = 1, size = 6) + ylim(c(0, 47))
 dir.create("figures/expDataAnalysis")
 ggsave(sprintf("figures/expDataAnalysis/AUC_%s.png", dataType), width = 4, height = 3.5)
+
+# plot stdWd in two conditions
+library("ggpubr")
+load("wtwSettings.RData")
+summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, stdWd)) + geom_boxplot() +
+  geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
+  scale_fill_manual(values = conditionColors) + 
+  xlab("") + ylab(expression(bold(paste("WTW S.D.","(", "s"^2, ")")))) + myTheme +
+  stat_compare_means(comparisons = list(c("HP", "LP")),
+                     aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
+                     bracket.size = 1, size = 6) + ylim(c(0, 24))
+dir.create("figures/expDataAnalysis")
+ggsave(sprintf("figures/expDataAnalysis/stdWD_%s.png", dataType), width = 4, height = 3.5)
+
+# plot correlations 
+summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(AUC, stdWd, color = condition)) + geom_point() +
+  facet_grid(~condition, scales = "free") + xlab("WTW Average (s)") +
+  ylab(expression(bold(paste("WTW S.D.","(", "s"^2, ")")))) +  scale_color_manual(values = conditionColors) +
+  myTheme
+dir.create("figures/expDataAnalysis")
+ggsave(sprintf("figures/expDataAnalysis/stdWD_AUC_%s.png", dataType), width = 6, height = 3.5)
 
 # plot wtw 
 select = (sessionData$stress == "no stress")

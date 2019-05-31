@@ -6,6 +6,8 @@ getRepModelFun = function(modelName){
     repModelFun = PR
   }else if(modelName == "curiosityTrialSp"){
     repModelFun = curiosityTrialSp
+  }else if(modelName == "baseline"){
+    repModelFun = baseLine
   }else{
     return("wrong model name!")
   }
@@ -375,4 +377,53 @@ para4 = function(paras, cond, scheduledWait){
     "Vitis" = Vitis
   )
   return(outputs)
+}
+
+baseline = function(paras, cond, scheduledWait){
+  waitRate = paras[1]
+  
+  # determine number of trials and nTimeSteps 
+  nTrial = length(scheduledWait)
+  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  nTimeStep = tMax / stepDuration
+  
+  # initialize outputs 
+  trialEarnings = rep(0, nTrial)
+  timeWaited = rep(0, nTrial)
+  sellTime = rep(0, nTrial)
+  
+  # initialize elapsed time
+  elapsedTime = 0
+  
+  
+  # loop over trials
+  for(tIdx in 1 : nTrial) {
+    # determine 
+    thisScheduledWait = scheduledWait[tIdx]
+    # loop for each timestep t and determine At
+    t = 1
+    while(t <= nTimeStep){
+      # determine At
+      action = ifelse(runif(1) < waitRate, 'wait', 'quit')
+      # observe St+1 and Rt+1
+      rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
+      getReward = (action == 'wait' && rewardOccur);
+      nextReward = ifelse(getReward, tokenValue, 0) 
+      
+      # dertime whether St+1 is the terminal state
+      # if the trial terminates, track terminal timestep index T, trialEarnings, timeWaited, sellTime and elapsedTime
+      # otherwise, continue
+      nextStateTerminal = (getReward || action == "quit")
+      if(nextStateTerminal){
+        T = t+1
+        trialEarnings[tIdx] = ifelse(nextReward == tokenValue, tokenValue, 0);
+        timeWaited[tIdx] = ifelse(getReward, thisScheduledWait, t * stepDuration)
+        sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+        elapsedTime = elapsedTime + timeWaited[tIdx] + iti
+        break
+      }else{
+        t = t + 1
+      }
+    }# end of the action selection section
+  }
 }

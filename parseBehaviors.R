@@ -43,7 +43,9 @@ dirName = sprintf("%s/%s",parentDir, modelName)
 tempt = loadExpPara(paras, dirName)
 useID = getUseID(tempt, paras)
 expPara = merge(x=tempt[,c(paras, "id")],y=summaryData, by="id",all.x=TRUE)
-
+expPara$AUC1 = blockData$AUC[blockData$id %in% expPara$id & blockData$blockNum == 1]
+expPara$AUC2 = blockData$AUC[blockData$id %in% expPara$id & blockData$blockNum == 2]
+expPara$AUC1_2  = (expPara$AUC1 + expPara$AUC2) / 2
 # plot them separately is ugly
 traitParaCorr = vector(mode = "list", length = nPara)
 for(pIdx in 1 : length(paras)){
@@ -55,7 +57,7 @@ for(pIdx in 1 : length(paras)){
   traitParaCorr[[pIdx]] = getCorrelation(input)
 }
 rhoTable = sapply(1:2, function(j) sapply(1: nPara, function(i) traitParaCorr[[i]]$rhos[j]))
-rownames(rhoTable) = paraNames
+rownames(rhoTable) = c("LR", "LP", "Tau", "Gamma", "P")
 colnames(rhoTable) = c("AUC_HP", "AUC_LP")
 pTable = sapply(1:2, function(j) sapply(1: nPara, function(i) traitParaCorr[[i]]$ps[j]))
 
@@ -81,7 +83,7 @@ dev.off()
 # plotParaAUC(expPara, para, blockData, useID)
 input = data.frame(expPara[paras], AUC = expPara$AUC,
                    cond = expPara$condition, id = expPara$id) %>% filter(id %in% useID)
-junk = input %>% group_by(cond) %>% summarise(muAUC = mean(AUC), stdAUC = sd(AUC))
+junk = input %>% group_by(cond) %>% dplyr::summarise(muAUC = mean(AUC), stdAUC = sd(AUC))
 input = input %>% mutate(AUC = AUC - junk$muAUC[1] * (cond == "HP") - junk$muAUC[2] * (cond == "LP"))
 inputHP = input[input$cond == "HP",] %>% mutate(phi = deMean(phi), phiP = deMean(phiP), tau = deMean(tau), gamma = deMean(gamma), zeroPoint = deMean(zeroPoint)) 
 inputLP = input[input$cond == "LP",] %>% mutate(phi = deMean(phi), phiP = deMean(phiP), tau = deMean(tau), gamma = deMean(gamma), zeroPoint = deMean(zeroPoint))
@@ -113,7 +115,7 @@ plotData %>% gather(-c("cond", "id", "AUC"), key = "para", value = value) %>%
   ylab("AUC rank") + xlab("Parameter rank") + scale_x_continuous(breaks = c(0, 60), limits = c(0, 60)) + 
   scale_y_continuous(breaks = c(0, 60), limits = c(0, 60)) + theme(legend.position = "None") + geom_text(data = textData,aes(x = -Inf,y = -Inf, label = label),
             hjust = -0.2 ,vjust = -12,color = "#252525", size = 5, fontface = 2) 
-ggsave(sprintf("%s/%s/single_AUC_stand.png", "figures/expParaAnalysisSub", modelName), width = 10 ,height = 3) 
+ggsave(sprintf("%s/%s/single_AUC.png", "figures/expParaAnalysisSub", modelName), width = 10 ,height = 3) 
 
 
 # plot for HP
@@ -150,6 +152,7 @@ for(c in 1:2){
                                                                                                             hjust = -0.2 ,vjust = -12,color = "#252525", size = 5, fontface = 2) 
   ggsave(sprintf("%s/%s/single_AUC_%s.png", "figures/expParaAnalysisSub", modelName, thisCond), width = 10 ,height = 3) 
 }
+
 
 # add blockData
 load("genData/expDataAnalysis/blockData.RData")

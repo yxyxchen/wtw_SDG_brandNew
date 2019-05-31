@@ -73,7 +73,8 @@ output = data.frame(logEvidence_,
 f= "genData/expModelFittingSub/logEvidenceList.csv"
 write.table(file = f, output, sep = ",", col.names = F, row.names = F)
 
-waic_ = -2 * logEvidence_ %>% 
+meanWAIC = (-2 * logEvidence_) %>% apply(MARGIN  = 2, FUN = mean)
+meanWAIC[2:4] - meanWAIC[1] 
 
 png('diffBICHP.png', width = 400, height = 250,
     units = "px")
