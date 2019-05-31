@@ -80,7 +80,7 @@ for (sIdx in 1 : n) {
     }
     
     # survival analysis
-    kmscResults = kmsc(thisTrialData,tMax,label,plotKMSC,kmGrid)
+    kmscResults = kmsc(thisTrialData,min(tMaxs),label,plotKMSC,kmGrid)
     AUC[noIdx] = kmscResults[['auc']]
     kmOnGrid_[[noIdx]] = kmscResults$kmOnGrid
     stdWd[noIdx] = kmscResults$stdWd
@@ -92,7 +92,7 @@ for (sIdx in 1 : n) {
     }
 
     # WTW time series
-    wtwCeiling = tMax
+    wtwCeiling = min(tMaxs)
     wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
     timeWTW_[[noIdx]] = wtwtsResults$timeWTW
     trialWTW_[[noIdx]] = wtwtsResults$trialWTW
@@ -177,7 +177,7 @@ for (sIdx in 1 : n) {
   }
   
   # survival analysis
-  kmscResults = kmsc(thisTrialData, tMax, label, plotKMSC, kmGrid)
+  kmscResults = kmsc(thisTrialData, min(tMaxs), label, plotKMSC, kmGrid)
   AUC[sIdx] = kmscResults[['auc']]
   kmOnGrid_[[sIdx]] = kmscResults$kmOnGrid
   if (plotKMSC) {
@@ -188,7 +188,7 @@ for (sIdx in 1 : n) {
   cvWd[[sIdx]] =  kmscResults$stdWd / kmscResults$auc
   
   # WTW time series
-  wtwCeiling = tMax
+  wtwCeiling = min(tMaxs)
   wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
   timeWTW_[[sIdx]] = wtwtsResults$timeWTW
   trialWTW_[[sIdx]] = wtwtsResults$trialWTW
@@ -204,7 +204,7 @@ for (sIdx in 1 : n) {
   # tempt = kmscMoving(thisTrialData, tMax, label, plotKMSC, tGrid, window, by)
   # timeAUC_[[sIdx]] = tempt$timeAUCs
   # winAUC_[[sIdx]] = tempt$winAUCs
-  AUCEarly[sIdx] =  kmsc(truncateTrials(thisTrialData, 1, 10), tMax, label, plotKMSC, kmGrid)$auc
+  AUCEarly[sIdx] =  kmsc(truncateTrials(thisTrialData, 1, 10), min(tMaxs), label, plotKMSC, kmGrid)$auc
 }
 sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")), cbal = hdrData$cbal,
                        stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
@@ -261,13 +261,14 @@ summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, AUC)) +
   xlab("") + ylab("WTW Average (s)") + myTheme +
   stat_compare_means(comparisons = list(c("HP", "LP")),
                      aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
-                     bracket.size = 1, size = 6) + ylim(c(0, 47))
+                     bracket.size = 1, size = 6) + ylim(c(0, 23))
 dir.create("figures/expDataAnalysis")
 ggsave(sprintf("figures/expDataAnalysis/AUC_%s.png", dataType), width = 4, height = 3.5)
 
 # plot stdWd in two conditions
 library("ggpubr")
 load("wtwSettings.RData")
+
 summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, stdWd)) + geom_boxplot() +
   geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
   scale_fill_manual(values = conditionColors) + 
@@ -290,7 +291,7 @@ ggsave(sprintf("figures/expDataAnalysis/stdWD_AUC_%s.png", dataType), width = 6,
 select = (sessionData$stress == "no stress")
 plotData = data.frame(wtw = unlist(timeWTW_[select]), time = rep(tGrid, sum(select)),
            condition = rep(summaryData$condition[select], each = length(tGrid))) %>% group_by(condition, time) %>%
-  summarise(mean = mean(wtw), se = sd(wtw) / sqrt(30), min = mean - se, max = mean + se) 
+  summarise(mean = mean(wtw), se = sd(wtw) / sqrt(length(wtw)), min = mean - se, max = mean + se) 
 
 policy = data.frame(condition = c("HP", "LP"), wt = c(20, 2.2))
 plotData %>% ggplot(aes(time, mean, color = condition)) +
@@ -318,7 +319,7 @@ ideal = data.frame(kmsc = c(rep(1, tMaxs[1] / step + 1),
 data.frame(kmsc = unlist(kmOnGrid_[select]),
                       time = unlist(lapply(1 : 60, function(i) (1 : len[i]) * step)),
                       condition = rep(condition, time = len)) %>% group_by(condition, time) %>%
-  summarise(mean = mean(kmsc), se = sd(kmsc) / sqrt(30), min = mean - se, max = mean + se) %>% 
+  summarise(mean = mean(kmsc), se = sd(kmsc) / sqrt(length(kmsc)), min = mean - se, max = mean + se) %>% 
   ggplot(aes(time, mean, color = condition)) + 
   geom_ribbon(aes(ymin=min, ymax=max, fill = condition, colour=NA),alpha = 0.3)+
   geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) + 
