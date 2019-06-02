@@ -263,7 +263,7 @@ summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, AUC)) +
                      aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
                      bracket.size = 1, size = 6) + ylim(c(0, 23))
 dir.create("figures/expDataAnalysis")
-ggsave(sprintf("figures/expDataAnalysis/AUC_%s.png", dataType), width = 4, height = 3.5)
+ggsave(sprintf("figures/expDataAnalysis/AUC_%s.png", dataType), width = 4, height = 3)
 
 # plot stdWd in two conditions
 library("ggpubr")
@@ -297,13 +297,12 @@ policy = data.frame(condition = c("HP", "LP"), wt = c(20, 2.2))
 plotData %>% ggplot(aes(time, mean, color = condition)) +
   geom_ribbon(aes(ymin=min, ymax=max, fill = condition, colour=NA),alpha = 0.3) +
   geom_line(size = 1) + facet_wrap(~condition, scales = "free") +
-  scale_color_manual(values = conditionColors) + scale_fill_manual(values = conditionColors) +
-  ylim(c(3, 26)) + xlab("Cumulative task time (min)") +
+  scale_color_manual(values = conditionColors) + scale_fill_manual(values = conditionColors) + xlab("Cumulative task time (min)") +
   scale_x_continuous(breaks = seq(0, max(tGrid), by = 60*7),
                      labels = paste(seq(0, 21, by = 7))) + 
   ylab("Willingness to wait (s)") +
-  geom_hline(data = policy, aes(yintercept = wt), linetype = "dotted", color = "#969696", size = 1.5) +
-  myTheme + ylim(c(0, 25))
+  geom_hline(data = policy, aes(yintercept = wt, color = condition), linetype = "dotted", size = 1.5) +
+  myTheme + ylim(c(0, 22))
 ggsave("figures/expDataAnalysis/wtw_timecourse.png", width = 6, height = 3)
 
 # plot survival curve

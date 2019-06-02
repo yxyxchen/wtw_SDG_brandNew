@@ -21,7 +21,7 @@ tGrid = seq(0, blockSecs, 0.1)
 ######### reward variable ########
 tokenValue = 10 #value of the token
 loseValue = 0
-stepDuration = 0.1
+stepDuration = 0.01
 ########## supporting vairbales ########
 # time ticks within a trial for timeEarnings or wtw analysis
 trialTicks = list(
@@ -99,26 +99,21 @@ for(quitGap in 2 : (tMaxs[2] / stepDuration - 2)){
 
 
 # do some plotting
-spline_1 <- as.data.frame(spline(trialTicks[[2]],c(0, rewardDelayCDF[[1]], rep(1, diff(tMaxs) / stepDuration))))
-spline_2 <- as.data.frame(spline(trialTicks[[2]],
-                         c(0, rewardDelayCDF[[2]])))
-data.frame(cdf = c(spline_1$y, spline_2$y), time = c(spline_2$x, spline_2$x),
-           cond = rep(c("HP", "LP"), each = nrow(spline_1))) %>% 
-  ggplot(aes(time, cdf, color = cond)) + geom_line()
-
-
-+ geom_point() +
-  stat_smooth(aes(x = hour, y = impressions), method = "lm",
-            formula = y ~ poly(x, 21), se = FALSE) + scale_color_manual(values = conditionColors) + myTheme + 
-  ylab("Probability density") + xlab("Time (s)") + ylim(c(-0.05, 0.35)) 
-ggsave("figures/plotFigures/density.png", width = 4, height = 4)
+data.frame(cdf = c(0, rewardDelayCDF$HP, rep(1, diff(tMaxs) / stepDuration),0,
+                   rewardDelayCDF$LP), time = c(trialTicks$LP, trialTicks$LP),
+           cond = rep(c("HP", "LP"), each = length(trialTicks$LP))) %>% 
+  ggplot(aes(time, cdf, color = cond)) + geom_line(size = 4) +
+  scale_color_manual(values = conditionColors) + myTheme + 
+  ylab("Cumulative reward probability") + xlab("Elapsed time (s)") 
+ggsave("figures/plotFigures/density.png", width = 6, height = 4.5)
 
 policy = data.frame(cond = c("HP", "LP"), rewardRate = c(20, 2.2))
-data.frame(rewardRate = c(rewardRate[[1]], rewardRate[[2]]),
-           time = c(trialGapValues[[1]], trialGapValues[[2]]),
-           cond = rep(c("HP", "LP"), time = tMaxs / stepDuration)) %>%
+data.frame(rewardRate = c(0, rewardRate[[1]], 0, rewardRate[[2]]),
+           time = c(trialTicks[[1]], trialTicks[[2]]),
+           cond = rep(c("HP", "LP"), time = (tMaxs / stepDuration) + 1)) %>%
   ggplot(aes(time, rewardRate, color = cond)) +
-  geom_point(size = 3) + facet_wrap(~cond, ncol = 1) + scale_color_manual(values = conditionColors) + myTheme + 
+  geom_line(size = 4) + scale_color_manual(values = conditionColors) + myTheme + 
   ylab(expression(bold("Reward rate (cent s"^"-1"*")"))) + xlab("Waiting policy (s)")  +
-  geom_vline(data = policy, aes(xintercept = rewardRate), color = "#969696", linetype = "dashed", size = 1.5)
-ggsave("figures/plotFigures/reward_rate.png", width = 4, height = 4)
+  geom_vline(data = policy, aes(xintercept = rewardRate, color = cond),
+             linetype = "dashed", size = 1.5)
+ggsave("figures/plotFigures/reward_rate.png", width = 6, height = 4.5)
