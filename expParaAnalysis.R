@@ -147,15 +147,16 @@ ggplot(sumInput, aes(xGroup, meanY)) + geom_point() +facet_grid(~cond) + xlab("I
 # plot hist 
 paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
 expPara$condition = summaryData$condition[summaryData$id %in% expPara$id]
-for(i in 1 : length(paras)){
-  para = paras[i]
-  paraColor = paraColors[[i]]
-  p = ggplot(expPara[expPara$id %in% useID,], aes_string(para)) + geom_histogram(bins = 6, fill = paraColor) +
-    facet_grid(~condition) + myTheme + ylab("Count") + xlab(paraNames[i])
-  parentDir = ifelse(dataType == "sess", "figures/expParaAnalysisSub", "figures/expParaAnalysis")
-  dir.create(parentDir)
-  fileName = sprintf("%s/%s/hist_%s.pdf", parentDir, modelName, para)
-  ggsave(fileName, width = 6, height = 3)
-}
+expPara %>% filter(id %in% useID) %>% select(c(paras, "condition")) %>%
+  gather(-c("condition"), key = "para", value = "value") %>%
+  mutate(para = factor(para, levels = paras, labels = paraNames ))%>%
+  ggplot(aes(value)) + geom_histogram(bins = 8) +
+  facet_grid(condition ~ para, scales = "free", labeller = label_parsed) + 
+  myTheme + xlab(" ") + ylab(" ")
+
+fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysisSub", modelName)
+ggsave(fileName, width = 8, height = 4)
+
+
 
 

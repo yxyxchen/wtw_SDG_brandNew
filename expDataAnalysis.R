@@ -258,7 +258,7 @@ load("wtwSettings.RData")
 summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, AUC)) + geom_boxplot() +
   geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
   scale_fill_manual(values = conditionColors) + 
-  xlab("") + ylab("WTW Average (s)") + myTheme +
+  xlab("") + ylab("Average WTW(s)") + myTheme +
   stat_compare_means(comparisons = list(c("HP", "LP")),
                      aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
                      bracket.size = 1, size = 6) + ylim(c(0, 23))

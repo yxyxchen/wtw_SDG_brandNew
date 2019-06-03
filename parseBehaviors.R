@@ -109,12 +109,12 @@ for(i in 1 : nPara){
 textData = data.frame(label = paste0(rhos, "(", ps, ")"), textColors, para=factor(paras, levels = paras, labels = c("LR", "LP", "tau", "gamma", "P")))
 plotData %>% gather(-c("cond", "id", "AUC"), key = "para", value = value) %>%
   mutate(para = factor(para, levels = paras, labels = c("LR", "LP", "tau", "gamma", "P"))) %>%
-  ggplot(aes(value, AUC, color = para)) + geom_point(size = 3) +
-    facet_wrap(~para, nrow = 1, labeller = label_parsed) +
-  scale_color_manual(values = unlist(paraColors[1 : length(paras)])) + myTheme + ylab("Para rank") +
-  ylab("WTW average") + xlab("Parameter") + scale_x_continuous(breaks = c(0, 60), limits = c(0, 60)) + 
+  ggplot(aes(value, AUC)) + geom_point(size = 2.5, color = "#969696") +
+    facet_wrap(~para, nrow = 1, labeller = label_parsed) + myTheme +
+  ylab("Average WTW") + xlab("Parameter") + scale_x_continuous(breaks = c(0, 60), limits = c(0, 60)) + 
   scale_y_continuous(breaks = c(0, 60), limits = c(0, 60)) + theme(legend.position = "None") + geom_text(data = textData,aes(x = -Inf,y = -Inf, label = label),
-            hjust = -0.2 ,vjust = -12,color = "#252525", size = 5, fontface = 2) + geom_smooth(method = lm, se = F)
+            hjust = -0.2 ,vjust = -12,color = "#252525", size = 5, fontface = 2) +
+  geom_smooth(method = lm, se = F, color = "black")
 ggsave(sprintf("%s/%s/single_AUC.png", "figures/expParaAnalysisSub", modelName), width = 10 ,height = 3) 
 
 
