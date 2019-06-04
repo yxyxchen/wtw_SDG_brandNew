@@ -177,7 +177,7 @@ loadSimPara = function(paras, dirName){
     start = tempt[[1]] + 2
     ending = tempt[[1]] + match.length - 1
     substring(fileNames[i], start, ending)
-  }))
+  })) + 1
   nSeq = length(unique(seqIdxs))
   
   cbIdxs =  as.double(sapply(1:n, function(i){

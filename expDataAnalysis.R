@@ -322,7 +322,7 @@ data.frame(kmsc = unlist(kmOnGrid_[select]),
   ggplot(aes(time, mean, color = condition)) + 
   geom_ribbon(aes(ymin=min, ymax=max, fill = condition, colour=NA),alpha = 0.3)+
   geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) + 
-  xlab("Elapsed time (s)") + ylab("Survival rate") + scale_color_manual(values = conditionColors)
+  xlab("Elapsed time (s)") + ylab("Survival rate") + scale_color_manual(value = conditionColors)
 # +
 #   geom_line(data = ideal, aes(time, kmsc, color = condition), linetype = "dotted", size = 1)
 ggsave("figures/expDataAnalysis/kmsc_timecourse.png", width = 5, height = 4) 

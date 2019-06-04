@@ -31,7 +31,7 @@ expTrialData = allData$trialData
 allIDs = hdrData$ID 
 
 # load expPara
-modelName = "baseline"
+modelName = "PR"
 dirName = sprintf("figures/expModelRepitation//%s", modelName)
 dir.create(dirName)
 paras = getParas(modelName)
@@ -87,7 +87,7 @@ for(sIdx in 1 : nSub){
   for(cbIdx in 1 : nComb){
     thisRepTrialData = repTrialData[[repNo[cbIdx, sIdx]]]
     # auc 
-    kmscResults = kmsc(thisRepTrialData, tMax, label ,plotKMSC, kmGrid)
+    kmscResults = kmsc(thisRepTrialData, min(tMaxs), label ,plotKMSC, kmGrid)
     AUCRep_[cbIdx, sIdx] = kmscResults[['auc']]
     kmOnGridRep[,cbIdx] = kmscResults$kmOnGrid
     # timeWaited
@@ -99,7 +99,7 @@ for(sIdx in 1 : nSub){
 }
 
 # compare emipircal and reproduced trialPlot, for one participant 
-id = 1
+id = 7
 sIdx = which(useID  == id)
 cond = unique(summaryData$condition[summaryData$id == id])
 label = sprintf("Sub %d, %s", id, cond)
@@ -115,7 +115,7 @@ tempt = within(tempt, sapply(1 : length(timeWaited), function(i) ifelse(timeWait
 tempt$blockNum = junk$blockNum
 
 # tempt = repTrialData[[repNo[1,sIdx]]]
-trialPlots(tempt,"Model-predicted Data")
+trialPlots(tempt,"Model-generated Data")
 ggsave(sprintf("figures/expModelRepitation/%s/sim_data__%d.png", modelName, id),
        width = 5, height = 4)
 
@@ -130,8 +130,8 @@ data.frame(muAUCRep, minAUCRep, maxAUCRep,
                       condition = summaryData$condition[summaryData$id %in% useID]) %>%
   ggplot(aes(AUC, muAUCRep)) +  geom_errorbar(aes(ymin = minAUCRep, ymax = maxAUCRep), color = "grey") +
   geom_point(size = 2) + facet_grid(~condition) + 
-  geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(-2, 45)) + ylim(c(-2, 45)) +
-  ylab("Predicted (s)") + xlab("Observed (s)") + ggtitle("AUC") +
+  geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(-2, 22)) + ylim(c(-2, 22)) +
+  ylab("Model-generated (s)") + xlab("Observed (s)") + ggtitle("Average WTW") +
   myThemeBig + theme(plot.title = element_text(face = "bold", hjust = 0.5))
 fileName = sprintf("figures/expModelRepitation/%s/AUC_AUCRep.png", modelName)
 ggsave(filename = fileName,  width = 6, height = 4)
