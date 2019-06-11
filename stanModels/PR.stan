@@ -9,14 +9,13 @@ data {
   vector[N] timeWaited;
   vector[N] trialEarnings;
   int Ts[N]; // terminal time step index 
+  real stepDuration;
+  real iti;
+  real tokenValue;
 }
 transformed data {
-  // constant
-  real stepDuration = 1;
-  real iti = 2;
-  real tokenValue = 10;
   int totalSteps = sum(Ts) - N;
-  }
+}
 parameters {
   real<lower = 0, upper = 0.3> phi;
   real<lower = 0, upper = 0.3> phiP; 

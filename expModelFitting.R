@@ -49,6 +49,7 @@ expModelFitting = function(modelName, paras){
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
     thisTrialData = thisTrialData[thisTrialData$blockNum == 1,]
+    fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
     modelFitting(thisTrialData, fileName, paras, model)
   }
 }
