@@ -260,10 +260,10 @@ getPartCorrelation = function(data){
 block2session = function(tempt){
   nBlock = length(unique(tempt$blockNum))
   nTrials = sapply(1:nBlock, function(i) sum(tempt$blockNum == i))
-  thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:2]), time = nTrials);
-  sellTime = sellTime + rep((1:3-1) * blockSecs, time = nTrials);
-  trialStartTime = trialStartTime + rep((1:3-1) * blockSecs, time = nTrials);
-  totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:2]]),
+  thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:(nBlock - 1)]), time = nTrials);
+  sellTime = sellTime + rep((1:(nBlock - 1)) * blockSecs, time = nTrials);
+  trialStartTime = trialStartTime + rep((1:(nBlock - 1)) * blockSecs, time = nTrials);
+  totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:(nBlock - 1)]]),
                                        time = nTrials)
   })
   return(thisTrialData)
@@ -343,4 +343,17 @@ deMean = function(input){
 stand = function(input){
   output = (input - mean(input)) / sd(input)
   return(output)
+}
+
+movAve = function(x, windowSize){
+  if(windowSize %% 2 == 0){
+    print("windowSize should be an even number")
+  }
+  halfWin = (windowSize - 1) / 2
+  y = sapply(1 : length(x), function(i){
+    startIdx = max(1, i - halfWin)
+    endIdx = min(length(x), i + halfWin)
+    mean(x[startIdx:endIdx])
+  })
+  return(y)
 }

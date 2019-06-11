@@ -28,7 +28,6 @@ plotKMSC = F
 plotWTW = F
 
 # initialize outputs, organised by block
-tGrid = seq(0, blockSecs, by = 0.1)
 AUC = numeric(length =n * nBlock)
 totalEarnings =  numeric(length =n * nBlock)
 nAction = numeric(length =n * nBlock)
@@ -36,6 +35,8 @@ wtwEarly = numeric(length =n * nBlock)
 timeWTW_ = vector(mode = "list", length = n * nBlock)
 trialWTW_ = vector(mode = "list", length = n * nBlock)
 kmOnGrid_ = vector(mode = "list", length = n * nBlock)
+trialReRate_ = vector(mode = "list", length = n * nBlock)
+trialEndTime_ = vector(mode = "list", length = n * nBlock)
 stdQuitTime = numeric(length =n * nBlock)
 cvQuitTime = numeric(length =n * nBlock)
 muQuitTime = numeric(length =n * nBlock)
@@ -56,7 +57,6 @@ for (sIdx in 1 : n) {
     label = sprintf('Subject %s, Cond %s, %s',thisID, unique(thisTrialData$condition), hdrData$stress[sIdx])
     noIdx = (sIdx - 1) * nBlock + bkIdx # 
     tMax = ifelse(unique(thisTrialData$condition) == conditions[1], tMaxs[1], tMaxs[2])
-    kmGrid = seq(0, tMax, by=0.1) # grid on which to average survival curves.
     
     # calcualte totalEarnings
     totalEarnings[noIdx] =  sum(thisTrialData$trialEarnings)
@@ -102,6 +102,10 @@ for (sIdx in 1 : n) {
       readline(prompt = paste('subject',thisID, "block", bkIdx, '(hit ENTER to continue)'))
       graphics.off()
     }
+    
+    # calculate rewardRates
+    trialReRate_[[noIdx]] = trialEarnings / (timeWaited + iti)
+    trialEndTime_[[noIdx]] = thisTrialData$sellTime
   } # loop over blocks
 }
 
@@ -117,7 +121,7 @@ save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
 
 
 # get session data 
-tGrid = seq(0, blockSecs * nBlock, by = 0.1)
+tGrid = seq(0, blockSecs * nBlock, by = 1)
 AUC = numeric(length = n)
 totalEarnings =  numeric(length = n)
 nAction = numeric(length = n)
@@ -127,6 +131,8 @@ trialWTW_ = vector(mode = "list", length = n)
 kmOnGrid_ = vector(mode = "list", length = n)
 winAUC_ = vector(mode = "list", length = n)
 timeAUC_ = vector(mode = "list", length = n)
+trialReRate_ = vector(mode = "list", length = n)
+trialEndTime_ = vector(mode = "list", length = n)
 stdQuitTime = numeric(length = n)
 cvQuitTime = numeric(length = n)
 muQuitTime = numeric(length = n)
@@ -205,6 +211,10 @@ for (sIdx in 1 : n) {
   # timeAUC_[[sIdx]] = tempt$timeAUCs
   # winAUC_[[sIdx]] = tempt$winAUCs
   AUCEarly[sIdx] =  kmsc(truncateTrials(thisTrialData, 1, 10), min(tMaxs), label, plotKMSC, kmGrid)$auc
+  
+  # calculate rewardRates
+  trialReRate_[[sIdx]] = trialEarnings / (timeWaited + iti)
+  trialEndTime_[[sIdx]] = thisTrialData$sellTime
 }
 sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")), cbal = hdrData$cbal,
                        stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
@@ -323,7 +333,22 @@ data.frame(kmsc = unlist(kmOnGrid_[select]),
   geom_ribbon(aes(ymin=min, ymax=max, fill = condition, colour=NA),alpha = 0.3)+
   geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) + 
   xlab("Elapsed time (s)") + ylab("Survival rate") + scale_color_manual(value = conditionColors)
-# +
-#   geom_line(data = ideal, aes(time, kmsc, color = condition), linetype = "dotted", size = 1)
 ggsave("figures/expDataAnalysis/kmsc_timecourse.png", width = 5, height = 4) 
+
+# learning rate
+trialReRareMove_ = lapply(1 : n, function(i){
+  movAve(trialReRate_[[i]], 11)
+})
+timeReRate_ = lapply(1 :  n,
+                     function(i) trial2sec(trialReRareMove_[[i]], trialEndTime_[[i]], tGrid))
+select = (summaryData$stress == "no stress")
+data.frame(value = unlist(timeReRate_[select]), time = rep(tGrid, sum(select)* nBlock),
+           condition = factor(rep(blockData$condition[select], each = length(tGrid)),  levels = conditions)) %>%
+  group_by(condition, time) %>%
+  summarise(mean = mean(value), se = sd(value) / sqrt(length(value)), min = mean - se, max = mean + se) %>% 
+  ggplot(aes(time, mean, color = condition, fill = condition)) + 
+  geom_ribbon(aes(ymin=min, ymax=max), colour=NA, alpha = 0.3)+
+  geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) +
+  xlab("Elapsed time (s)") + ylab(expression(bold(paste("Reward rate","(", "s"^2, ")")))) +
+  scale_color_manual(values = conditionColors)
 

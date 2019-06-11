@@ -17,6 +17,7 @@ blockMins = 7 # block duration in mins
 blockSecs = blockMins * 60 # block duration in secs
 iti = 2 # iti duration in secs
 tGrid = seq(0, blockSecs, 0.1)
+kmGrid = seq(0, min(tMaxs), 0.1)
 
 ######### reward variable ########
 tokenValue = 10 #value of the token
@@ -101,5 +102,5 @@ for(quitGap in 2 : (tMaxs[2] / stepDuration - 2)){
 save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", "tGrid", 
      "tokenValue", "stepDuration", "trialTicks", "pareto", "rewardDelayCDF", 
      "rewardDelayPDF", "meanRewardDelay", "rewardRate", "optimRewardRates", 
-     "optimWaitTimes", "loseValue",  file = "wtwSettings.RData")
+     "optimWaitTimes", "loseValue", "kmGrid", file = "wtwSettings.RData")
 
