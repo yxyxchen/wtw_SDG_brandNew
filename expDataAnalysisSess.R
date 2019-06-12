@@ -1,0 +1,261 @@
+# in this dataset, only trials within the 7 mins will be kept. Therefore, we don't need to delete any data
+# determine whether to truncate data
+isTrun = T
+# load libraries
+source('subFxs/loadFxs.R') # for loading data 
+source('subFxs/analysisFxs.R') # for analysis 
+source("subFxs/plotThemes.R")
+library("ggplot2")
+library('dplyr')
+dir.create("genData")
+dir.create("genData/expDataAnalysis")
+
+# load setting parameters 
+load("wtwSettings.RData")
+load("wtwSettings.RData")
+if(isTrun){
+  tGrid = seq(0, 420, by = 1) # here I use a truncated tGrid, according to max(sellTime) 
+}
+
+# load all data
+allData = loadAllData()
+hdrData = allData$hdrData           
+trialData = allData$trialData       
+allIDs = hdrData$ID                   # column of subject IDs
+n = length(allIDs)                    # n
+cat('Analyzing data for',n,'subjects.\n')
+
+# control which individual-level plots to generate
+plotTrialwiseData =F
+plotKMSC = F
+plotWTW = F
+
+# get session data 
+tGrid = seq(0, blockSecs * nBlock, by = 1)
+AUC = numeric(length = n)
+totalEarnings =  numeric(length = n)
+nAction = numeric(length = n)
+wtwEarly = numeric(length = n)
+timeWTW_ = vector(mode = "list", length = n)
+trialWTW_ = vector(mode = "list", length = n)
+kmOnGrid_ = vector(mode = "list", length = n)
+winAUC_ = vector(mode = "list", length = n)
+timeAUC_ = vector(mode = "list", length = n)
+trialReRate_ = vector(mode = "list", length = n)
+trialEndTime_ = vector(mode = "list", length = n)
+stdQuitTime = numeric(length = n)
+cvQuitTime = numeric(length = n)
+muQuitTime = numeric(length = n)
+nQuit = numeric(length = n)
+nTrial = numeric(length = n)
+stdWd = numeric(length =n)
+cvWd =  numeric(length =n)
+AUCEarly = numeric(length =n)
+for (sIdx in 1 : n) {
+  thisID = allIDs[sIdx]
+  tempt = trialData[[thisID]]
+  # change trialNum, sellTime, trialS, totalEarnings
+  thisTrialData = trialData[[thisID]]
+  nTrials = sapply(1:nBlock, function(i) sum(tempt$blockNum == i))
+  thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:2]), time = nTrials);
+  sellTime = sellTime + rep((1:3-1) * blockSecs, time = nTrials);
+  trialStartTime = trialStartTime + rep((1:3-1) * blockSecs, time = nTrials);
+  totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:2]]),
+                                       time = nTrials)
+  })
+  # generate arguments for later analysis 
+  label = sprintf('Subject %s, Cond %s',thisID, unique(thisTrialData$condition))
+  tMax = ifelse(unique(thisTrialData$condition) == conditions[1], tMaxs[1], tMaxs[2])
+  kmGrid = seq(0, tMax, by= 0.1) # grid on which to average survival curves.
+  
+  # calcualte totalEarnings
+  totalEarnings[sIdx] =  sum(thisTrialData$trialEarnings)
+  timeWaited = thisTrialData$timeWaited
+  trialEarnings = thisTrialData$trialEarnings
+  scheduledWait = thisTrialData$scheduledWait
+  timeWaited[trialEarnings > loseValue] = scheduledWait[trialEarnings > loseValue]
+  nAction[sIdx] = sum(round(ifelse(trialEarnings > loseValue, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1)))
+  nTrial[sIdx] = length(timeWaited)
+  # calculate varQuitTime
+  stdQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]))
+  cvQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
+  muQuitTime[sIdx] = mean(timeWaited[trialEarnings == 0])
+  nQuit[sIdx] = sum(trialEarnings == 0)
+  
+  # plot trial-by-trial data
+  if (plotTrialwiseData) {
+    trialPlots(thisTrialData,label)
+    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
+    graphics.off()
+  }
+  
+  # survival analysis
+  kmscResults = kmsc(thisTrialData, min(tMaxs), label, plotKMSC, kmGrid)
+  AUC[sIdx] = kmscResults[['auc']]
+  kmOnGrid_[[sIdx]] = kmscResults$kmOnGrid
+  if (plotKMSC) {
+    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
+    graphics.off()
+  }
+  stdWd[[sIdx]] = kmscResults$stdWd
+  cvWd[[sIdx]] =  kmscResults$stdWd / kmscResults$auc
+  
+  # WTW time series
+  wtwCeiling = min(tMaxs)
+  wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
+  timeWTW_[[sIdx]] = wtwtsResults$timeWTW
+  trialWTW_[[sIdx]] = wtwtsResults$trialWTW
+  wtwEarly[sIdx] =   wtwtsResults$trialWTW[1]
+  if (plotWTW) {
+    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
+    graphics.off()
+  }
+  
+  # moving auc
+  # window = 10
+  # by = 10
+  # tempt = kmscMoving(thisTrialData, tMax, label, plotKMSC, tGrid, window, by)
+  # timeAUC_[[sIdx]] = tempt$timeAUCs
+  # winAUC_[[sIdx]] = tempt$winAUCs
+  AUCEarly[sIdx] =  kmsc(truncateTrials(thisTrialData, 1, 10), min(tMaxs), label, plotKMSC, kmGrid)$auc
+  
+  # calculate rewardRates
+  trialReRate_[[sIdx]] = trialEarnings / (timeWaited + iti)
+  trialEndTime_[[sIdx]] = thisTrialData$sellTime
+}
+sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")), cbal = hdrData$cbal,
+                         stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
+                         totalEarnings = totalEarnings, nAction = nAction, stdQuitTime = stdQuitTime, cvQuitTime = cvQuitTime,
+                         muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial,
+                         stdWd = stdWd, cvWd = cvWd, AUCEarly = AUCEarly)
+save(sessionData, file = 'genData/expDataAnalysis/sessionData.RData')
+save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridSess.RData')
+
+
+# correlation between AUC and triats 
+# determine summaryData
+dataType = "sess"
+if(dataType == "block"){
+  load("genData/expDataAnalysis/blockData.RData")
+  load("genData/expDataAnalysis/kmOnGridBlock.RData")
+  summaryData = blockData[blockData$blockNum == 1, ] # so summaryData only have something relevant
+}else{
+  load("genData/expDataAnalysis/sessionData.RData")
+  load("genData/expDataAnalysis/kmOnGridSess.RData")
+  summaryData = sessionData
+}
+
+# load personality data
+library("Hmisc")
+personality = read.csv("data/SDGdataset.csv")
+personality$id = personality$SubjectID
+traits = c("Delay.of.Gratification", "Barratt.Impulsiveness","Intolerance.of.Uncertainty", "Trait.Anxiety..STAIT.")
+traitNames = c("DG", "IMP", "UC", "AX")
+nTrait = length(traits)
+traitAUCCorr = list()
+# plot separately for two conditions
+for(i in 1 : nTrait){
+  trait = traits[i];
+  traitName = traitNames[i]
+  input = data.frame(personality[summaryData$stress =="no stress",trait],
+                     summaryData$AUC[summaryData$stress == "no stress"],
+                     summaryData$condition[summaryData$stress == "no stress"])
+  traitAUCCorr[[i]]= getCorrelation(input)
+  p = plotCorrelation(input, isRank = T) 
+  p + xlab(paste(capitalize(traitName), "(rank)")) + ylab("AUC (rank)") + myTheme
+  fileName = sprintf("%s/AUC_%s_%s.png", "figures/expDataAnalysis", traitName, dataType)
+  ggsave(fileName, width = 6, height = 3)
+}
+rhoTable = lapply(1:2, function(j) sapply(1: (nTrait), function(i) traitAUCCorr[[i]]$rhos[j]))
+pTable = lapply(1:2, function(j) sapply(1: (nTrait), function(i) traitAUCCorr[[i]]$ps[j]))
+
+# plot AUC in two conditions
+library("ggpubr")
+load("wtwSettings.RData")
+summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, AUC)) + geom_boxplot() +
+  geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
+  scale_fill_manual(values = conditionColors) + 
+  xlab("") + ylab("Average WTW(s)") + myTheme +
+  stat_compare_means(comparisons = list(c("HP", "LP")),
+                     aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
+                     bracket.size = 1, size = 6) + ylim(c(0, 23))
+dir.create("figures/expDataAnalysis")
+ggsave(sprintf("figures/expDataAnalysis/AUC_%s.png", dataType), width = 4, height = 3)
+
+# plot stdWd in two conditions
+library("ggpubr")
+load("wtwSettings.RData")
+
+summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, stdWd)) + geom_boxplot() +
+  geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
+  scale_fill_manual(values = conditionColors) + 
+  xlab("") + ylab(expression(bold(paste("WTW S.D.","(", "s"^2, ")")))) + myTheme +
+  stat_compare_means(comparisons = list(c("HP", "LP")),
+                     aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
+                     bracket.size = 1, size = 6) + ylim(c(0, 24))
+dir.create("figures/expDataAnalysis")
+ggsave(sprintf("figures/expDataAnalysis/stdWD_%s.png", dataType), width = 4, height = 3.5)
+
+# plot correlations 
+summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(AUC, stdWd, color = condition)) + geom_point() +
+  facet_grid(~condition, scales = "free") + xlab("WTW Average (s)") +
+  ylab(expression(bold(paste("WTW S.D.","(", "s"^2, ")")))) +  scale_color_manual(values = conditionColors) +
+  myTheme
+dir.create("figures/expDataAnalysis")
+ggsave(sprintf("figures/expDataAnalysis/stdWD_AUC_%s.png", dataType), width = 6, height = 3.5)
+
+# plot wtw 
+select = (sessionData$stress == "no stress")
+plotData = data.frame(wtw = unlist(timeWTW_[select]), time = rep(tGrid, sum(select)),
+                      condition = rep(summaryData$condition[select], each = length(tGrid))) %>% group_by(condition, time) %>%
+  summarise(mean = mean(wtw), se = sd(wtw) / sqrt(length(wtw)), min = mean - se, max = mean + se) 
+
+policy = data.frame(condition = c("HP", "LP"), wt = c(20, 2.2))
+plotData %>% ggplot(aes(time, mean, color = condition)) +
+  geom_ribbon(aes(ymin=min, ymax=max, fill = condition, colour=NA),alpha = 0.3) +
+  geom_line(size = 1) + facet_wrap(~condition, scales = "free") +
+  scale_color_manual(values = conditionColors) + scale_fill_manual(values = conditionColors) + xlab("Cumulative task time (min)") +
+  scale_x_continuous(breaks = seq(0, max(tGrid), by = 60*7),
+                     labels = paste(seq(0, 21, by = 7))) + 
+  ylab("Willingness to wait (s)") +
+  geom_hline(data = policy, aes(yintercept = wt, color = condition), linetype = "dotted", size = 1.5) +
+  myTheme + ylim(c(0, 22))
+ggsave("figures/expDataAnalysis/wtw_timecourse.png", width = 6, height = 3)
+
+# plot survival curve
+select = (summaryData$stress == "no stress")
+condition =  rep(summaryData$condition[select])
+step = 0.1
+len= sapply(1 : 60, function(i) ifelse(condition[i] == "HP", tMaxs[1] / step + 1, tMaxs[2] / step + 1))
+ideal = data.frame(kmsc = c(rep(1, tMaxs[1] / step + 1),
+                            c(rep(1, 2.2 / step + 1), rep(0, tMaxs[2] / step -  2.2 / step))),
+                   time = c(seq(0, tMaxs[1], by = step), seq(0, tMaxs[2], by = step)),
+                   condition = rep(c("HP", "LP"), time = (tMaxs / step) + 1))
+
+data.frame(kmsc = unlist(kmOnGrid_[select]),
+           time = unlist(lapply(1 : 60, function(i) (1 : len[i]) * step)),
+           condition = rep(condition, time = len)) %>% group_by(condition, time) %>%
+  summarise(mean = mean(kmsc), se = sd(kmsc) / sqrt(length(kmsc)), min = mean - se, max = mean + se) %>% 
+  ggplot(aes(time, mean, color = condition)) + 
+  geom_ribbon(aes(ymin=min, ymax=max, fill = condition, colour=NA),alpha = 0.3)+
+  geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) + 
+  xlab("Elapsed time (s)") + ylab("Survival rate") + scale_color_manual(value = conditionColors)
+ggsave("figures/expDataAnalysis/kmsc_timecourse.png", width = 5, height = 4) 
+
+# learning rate
+trialReRareMove_ = lapply(1 : n, function(i){
+  movAve(trialReRate_[[i]], 11)
+})
+timeReRate_ = lapply(1 :  n,
+                     function(i) trial2sec(trialReRareMove_[[i]], trialEndTime_[[i]], tGrid))
+select = (summaryData$stress == "no stress")
+data.frame(value = unlist(timeReRate_[select]), time = rep(tGrid, sum(select)* nBlock),
+           condition = factor(rep(blockData$condition[select], each = length(tGrid)),  levels = conditions)) %>%
+  group_by(condition, time) %>%
+  summarise(mean = mean(value), se = sd(value) / sqrt(length(value)), min = mean - se, max = mean + se) %>% 
+  ggplot(aes(time, mean, color = condition, fill = condition)) + 
+  geom_ribbon(aes(ymin=min, ymax=max), colour=NA, alpha = 0.3)+
+  geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) +
+  xlab("Elapsed time (s)") + ylab(expression(bold(paste("Reward rate","(", "s"^2, ")")))) +
+  scale_color_manual(values = conditionColors)
+
