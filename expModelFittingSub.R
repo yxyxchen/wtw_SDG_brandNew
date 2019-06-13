@@ -4,6 +4,7 @@
 # while in stan, I have different expMofelfitting and modelFitting scripts for different things 
 expModelFitting = function(modelName, paras){
   # create outfiles
+  nBlock = 3
   dir.create("genData")
   dir.create("genData/expModelFittingSub")
   dir.create(sprintf("genData/expModelFittingSub/%s", modelName))
@@ -51,6 +52,21 @@ expModelFitting = function(modelName, paras){
   foreach(i = 1 : n) %dopar% {
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
+    excludedTrials = lapply(1 : nBlock, function(i)
+      which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]) &
+              (thisTrialData$blockNum == i)))
+    includeStart = which(thisTrialData$trialNum == 1)
+    includeEnd = sapply(1 : nBlock, function(i){
+      if(length(excludedTrials[[i]] > 0)){
+        min(excludedTrials[[i]])-1
+      }else{
+        max(which(thisTrialData$blockNum ==i))  
+      }
+    })
+    tempt = lapply(1 : nBlock, function(i)
+      truncateTrials(thisTrialData, includeStart[i], includeEnd[i]))
+    thisTrialData = do.call("rbind", tempt)
+    # thisTrialData = block2session(thisTrialData) actually not really necessary, but
     fileName = sprintf("genData/expModelFittingSub/%s/s%d", modelName, thisID)
     modelFitting(thisTrialData, fileName, paras, model)
   }

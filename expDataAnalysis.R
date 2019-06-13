@@ -140,151 +140,6 @@ save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridBlock.RData')
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
 
 
-
-
-# get session data 
-tGrid = seq(0, blockSecs * nBlock, by = 1)
-AUC = numeric(length = n)
-totalEarnings =  numeric(length = n)
-nAction = numeric(length = n)
-wtwEarly = numeric(length = n)
-timeWTW_ = vector(mode = "list", length = n)
-trialWTW_ = vector(mode = "list", length = n)
-kmOnGrid_ = vector(mode = "list", length = n)
-winAUC_ = vector(mode = "list", length = n)
-timeAUC_ = vector(mode = "list", length = n)
-trialReRate_ = vector(mode = "list", length = n)
-trialEndTime_ = vector(mode = "list", length = n)
-stdQuitTime = numeric(length = n)
-cvQuitTime = numeric(length = n)
-muQuitTime = numeric(length = n)
-nQuit = numeric(length = n)
-nTrial = numeric(length = n)
-stdWd = numeric(length =n)
-cvWd =  numeric(length =n)
-AUCEarly = numeric(length =n)
-plotTrialwiseData =F
-plotKMSC = F
-plotWTW = F
-for (sIdx in 1 : n) {
-  thisID = allIDs[sIdx]
-  tempt = trialData[[thisID]]
-  # change trialNum, sellTime, trialS, totalEarnings
-  thisTrialData = trialData[[thisID]]
-  nTrials = sapply(1:nBlock, function(i) sum(tempt$blockNum == i))
-  thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:2]), time = nTrials);
-                                  sellTime = sellTime + rep((1:3-1) * blockSecs, time = nTrials);
-                                  trialStartTime = trialStartTime + rep((1:3-1) * blockSecs, time = nTrials);
-                                  totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:2]]),
-                                                                         time = nTrials)
-                                  })
-  # generate arguments for later analysis 
-  label = sprintf('Subject %s, Cond %s',thisID, unique(thisTrialData$condition))
-  tMax = ifelse(unique(thisTrialData$condition) == conditions[1], tMaxs[1], tMaxs[2])
-  kmGrid = seq(0, tMax, by= 0.1) # grid on which to average survival curves.
-  
-  # calcualte totalEarnings
-  totalEarnings[sIdx] =  sum(thisTrialData$trialEarnings)
-  timeWaited = thisTrialData$timeWaited
-  trialEarnings = thisTrialData$trialEarnings
-  scheduledWait = thisTrialData$scheduledWait
-  timeWaited[trialEarnings > loseValue] = scheduledWait[trialEarnings > loseValue]
-  nAction[sIdx] = sum(round(ifelse(trialEarnings > loseValue, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1)))
-  nTrial[sIdx] = length(timeWaited)
-  # calculate varQuitTime
-  stdQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]))
-  cvQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
-  muQuitTime[sIdx] = mean(timeWaited[trialEarnings == 0])
-  nQuit[sIdx] = sum(trialEarnings == 0)
-  
-  # plot trial-by-trial data
-  if (plotTrialwiseData) {
-    trialPlots(thisTrialData,label)
-    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
-    graphics.off()
-  }
-  
-  # survival analysis
-  kmscResults = kmsc(thisTrialData, min(tMaxs), label, plotKMSC, kmGrid)
-  AUC[sIdx] = kmscResults[['auc']]
-  kmOnGrid_[[sIdx]] = kmscResults$kmOnGrid
-  if (plotKMSC) {
-    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
-    graphics.off()
-  }
-  stdWd[[sIdx]] = kmscResults$stdWd
-  cvWd[[sIdx]] =  kmscResults$stdWd / kmscResults$auc
-  
-  # WTW time series
-  wtwCeiling = min(tMaxs)
-  wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
-  timeWTW_[[sIdx]] = wtwtsResults$timeWTW
-  trialWTW_[[sIdx]] = wtwtsResults$trialWTW
-  wtwEarly[sIdx] =   wtwtsResults$trialWTW[1]
-  if (plotWTW) {
-    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
-    graphics.off()
-  }
-  
-  # moving auc
-  # window = 10
-  # by = 10
-  # tempt = kmscMoving(thisTrialData, tMax, label, plotKMSC, tGrid, window, by)
-  # timeAUC_[[sIdx]] = tempt$timeAUCs
-  # winAUC_[[sIdx]] = tempt$winAUCs
-  AUCEarly[sIdx] =  kmsc(truncateTrials(thisTrialData, 1, 10), min(tMaxs), label, plotKMSC, kmGrid)$auc
-  
-  # calculate rewardRates
-  trialReRate_[[sIdx]] = trialEarnings / (timeWaited + iti)
-  trialEndTime_[[sIdx]] = thisTrialData$sellTime
-}
-sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")), cbal = hdrData$cbal,
-                       stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,
-                     totalEarnings = totalEarnings, nAction = nAction, stdQuitTime = stdQuitTime, cvQuitTime = cvQuitTime,
-                     muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial,
-                     stdWd = stdWd, cvWd = cvWd, AUCEarly = AUCEarly)
-save(sessionData, file = 'genData/expDataAnalysis/sessionData.RData')
-save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridSess.RData')
-
-
-# correlation between AUC and triats 
-# determine summaryData
-dataType = "sess"
-if(dataType == "block"){
-  load("genData/expDataAnalysis/blockData.RData")
-  load("genData/expDataAnalysis/kmOnGridBlock.RData")
-  summaryData = blockData[blockData$blockNum == 1, ] # so summaryData only have something relevant
-}else{
-  load("genData/expDataAnalysis/sessionData.RData")
-  load("genData/expDataAnalysis/kmOnGridSess.RData")
-  summaryData = sessionData
-}
-
-# load personality data
-library("Hmisc")
-personality = read.csv("data/SDGdataset.csv")
-personality$id = personality$SubjectID
-traits = c("Delay.of.Gratification", "Barratt.Impulsiveness","Intolerance.of.Uncertainty", "Trait.Anxiety..STAIT.")
-traitNames = c("DG", "IMP", "UC", "AX")
-nTrait = length(traits)
-traitAUCCorr = list()
-# plot separately for two conditions
-for(i in 1 : nTrait){
-  trait = traits[i];
-  traitName = traitNames[i]
-  input = data.frame(personality[summaryData$stress =="no stress",trait],
-                     summaryData$AUC[summaryData$stress == "no stress"],
-                     summaryData$condition[summaryData$stress == "no stress"])
-  traitAUCCorr[[i]]= getCorrelation(input)
-  p = plotCorrelation(input, isRank = T) 
-  p + xlab(paste(capitalize(traitName), "(rank)")) + ylab("AUC (rank)") + myTheme
-  fileName = sprintf("%s/AUC_%s_%s.png", "figures/expDataAnalysis", traitName, dataType)
-  ggsave(fileName, width = 6, height = 3)
-}
-rhoTable = lapply(1:2, function(j) sapply(1: (nTrait), function(i) traitAUCCorr[[i]]$rhos[j]))
-pTable = lapply(1:2, function(j) sapply(1: (nTrait), function(i) traitAUCCorr[[i]]$ps[j]))
-
->>>>>>> 0fe25d54a9de2600c2944691b72d5ee13c815da8
 # plot AUC in two conditions
 library("ggpubr")
 blockData %>% filter(blockNum == 1) %>% ggplot(aes(condition, AUC)) + geom_boxplot() +
@@ -327,22 +182,8 @@ data.frame(kmsc = unlist(kmOnGrid_[select]), time = rep(kmGrid, sum(select)),
   ggplot(aes(time, mean, color = condition, fill = condition)) + 
   geom_ribbon(aes(ymin=min, ymax=max), colour=NA, alpha = 0.3)+
   geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) + 
-<<<<<<< HEAD
   xlab("Elapsed time (s)") + ylab("Survival rate") + scale_color_manual(values = conditionColors)
 ggsave("figures/expDataAnalysis/zTruc_kmsc_timecourse.png", width = 5, height = 4) 
-
-
-# learning curve 
-trialReRareMove_ = lapply(1 : (nBlock * n), function(i){
-  movAve(trialReRate_[[i]], 11)
-})
-timeReRate_ = lapply(1 :  (nBlock * n),
-                     function(i) trial2sec(trialReRareMove_[[i]], trialEndTime_[[i]], tGrid))
-select = (blockData$blockNum == 1)
-data.frame(value = unlist(timeReRate_[select]), time = rep(tGrid, sum(select)),
-=======
-  xlab("Elapsed time (s)") + ylab("Survival rate") + scale_color_manual(value = conditionColors)
-ggsave("figures/expDataAnalysis/kmsc_timecourse.png", width = 5, height = 4) 
 
 # learning rate
 trialReRareMove_ = lapply(1 : n, function(i){
@@ -352,19 +193,14 @@ timeReRate_ = lapply(1 :  n,
                      function(i) trial2sec(trialReRareMove_[[i]], trialEndTime_[[i]], tGrid))
 select = (summaryData$stress == "no stress")
 data.frame(value = unlist(timeReRate_[select]), time = rep(tGrid, sum(select)* nBlock),
->>>>>>> 0fe25d54a9de2600c2944691b72d5ee13c815da8
            condition = factor(rep(blockData$condition[select], each = length(tGrid)),  levels = conditions)) %>%
   group_by(condition, time) %>%
   summarise(mean = mean(value), se = sd(value) / sqrt(length(value)), min = mean - se, max = mean + se) %>% 
   ggplot(aes(time, mean, color = condition, fill = condition)) + 
   geom_ribbon(aes(ymin=min, ymax=max), colour=NA, alpha = 0.3)+
   geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) +
-<<<<<<< HEAD
-  xlab("Elapsed time (s)") + ylab("Reward rate") +
+  xlab("Elapsed time (s)") + ylab(expression(bold("Reward rate","(", "s"^2, ")"))) +
   scale_color_manual(values = conditionColors)
 ggsave("figures/expDataAnalysis/zTruc_reRate.png", width = 4, height = 3.5) 
-=======
-  xlab("Elapsed time (s)") + ylab(expression(bold(paste("Reward rate","(", "s"^2, ")")))) +
-  scale_color_manual(values = conditionColors)
 
->>>>>>> 0fe25d54a9de2600c2944691b72d5ee13c815da8
+  

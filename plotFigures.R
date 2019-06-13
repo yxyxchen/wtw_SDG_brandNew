@@ -117,3 +117,36 @@ data.frame(x = x, y = y) %>% ggplot(aes(x, y)) + geom_line(size = 3.5) +
 ggsave("discount2.png", height = 3, width = 3.5)
 
 
+# correlation between AUC and triats 
+# load personality data
+library("Hmisc")
+personality = read.csv("data/SDGdataset.csv")
+personality$id = personality$SubjectID
+traits = c("Delay.of.Gratification", "Barratt.Impulsiveness","Intolerance.of.Uncertainty", "Trait.Anxiety..STAIT.")
+traitNames = c("DG", "IMP", "UC", "AX")
+nTrait = length(traits)
+traitAUCCorr = list()
+# plot separately for two conditions
+for(i in 1 : nTrait){
+  trait = traits[i];
+  traitName = traitNames[i]
+  input = data.frame(personality[sessionData$stress =="no stress",trait],
+                     sessionData$AUC[sessionData$stress == "no stress"],
+                     sessionData$condition[sessionData$stress == "no stress"])
+  traitAUCCorr[[i]]= getCorrelation(input)
+  p = plotCorrelation(input, isRank = T) 
+  p + xlab(paste(capitalize(traitName), "(rank)")) + ylab("AUC (rank)") + myTheme
+  fileName = sprintf("%s/AUC_%s_%s.png", "figures/expDataAnalysis", traitName, dataType)
+  ggsave(fileName, width = 6, height = 3)
+}
+rhoTable = lapply(1:2, function(j) sapply(1: (nTrait), function(i) traitAUCCorr[[i]]$rhos[j]))
+pTable = lapply(1:2, function(j) sapply(1: (nTrait), function(i) traitAUCCorr[[i]]$ps[j]))
+
+
+
+
+
+
+
+
+
