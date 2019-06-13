@@ -17,6 +17,7 @@ expModelFitting = function(modelName, paras){
   source('subFxs/loadFxs.R') # for load data
   source("subFxs/helpFxs.R") # for getParas
   load("wtwSettings.RData")
+  source("subFxs/analysisFxs.R")
   
   #  set the environment for Rstan
   options(warn=-1, message =-1) # run without this for one participant to chec everything
@@ -52,6 +53,8 @@ expModelFitting = function(modelName, paras){
   foreach(i = 1 : n) %dopar% {
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
+    cond = unique(thisTrialData$condition)
+    cIdx = ifelse(cond == "HP", 1, 2)
     excludedTrials = lapply(1 : nBlock, function(i)
       which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]) &
               (thisTrialData$blockNum == i)))
