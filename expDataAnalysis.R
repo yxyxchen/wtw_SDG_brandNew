@@ -140,8 +140,7 @@ save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridBlock.RData')
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
 
 
-<<<<<<< HEAD
-=======
+
 
 # get session data 
 tGrid = seq(0, blockSecs * nBlock, by = 1)
