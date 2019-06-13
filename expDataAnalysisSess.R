@@ -24,7 +24,7 @@ trialData = allData$trialData
 allIDs = hdrData$ID                   # column of subject IDs
 n = length(allIDs)                    # n
 cat('Analyzing data for',n,'subjects.\n')
-
+nBlock = 3
 # control which individual-level plots to generate
 plotTrialwiseData =F
 plotKMSC = F
@@ -36,6 +36,7 @@ AUC = numeric(length = n)
 totalEarnings =  numeric(length = n)
 nAction = numeric(length = n)
 wtwEarly = numeric(length = n)
+nExclude = numeric(length = n)
 timeWTW_ = vector(mode = "list", length = n)
 trialWTW_ = vector(mode = "list", length = n)
 kmOnGrid_ = vector(mode = "list", length = n)
@@ -51,22 +52,33 @@ nTrial = numeric(length = n)
 stdWd = numeric(length =n)
 cvWd =  numeric(length =n)
 AUCEarly = numeric(length =n)
+tGrid = seq(0, blockSecs * nBlock, by = 1)
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
-  tempt = trialData[[thisID]]
-  # change trialNum, sellTime, trialS, totalEarnings
   thisTrialData = trialData[[thisID]]
-  nTrials = sapply(1:nBlock, function(i) sum(tempt$blockNum == i))
-  thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:2]), time = nTrials);
-  sellTime = sellTime + rep((1:3-1) * blockSecs, time = nTrials);
-  trialStartTime = trialStartTime + rep((1:3-1) * blockSecs, time = nTrials);
-  totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:2]]),
-                                       time = nTrials)
-  })
+  # truncate the last min(tMaxs) seconds
+  if(isTrun){
+    nExclude[[sIdx]] = 0
+    excludedTrials = lapply(1 : nBlock, function(i)
+      which(thisTrialData$trialStartTime > (blockSecs - min(tMaxs)) &
+        (thisTrialData$blockNum == i)))
+    includeStart = which(thisTrialData$trialNum == 1)
+    includeEnd = sapply(1 : nBlock, function(i){
+      if(length(excludedTrials[[i]] > 0)){
+        min(excludedTrials[[i]])-1
+      }else{
+        max(which(thisTrialData$blockNum ==i))  
+      }
+    })
+    tempt = lapply(1 : nBlock, function(i)
+      truncateTrials(thisTrialData, includeStart[i], includeEnd[i]))
+    thisTrialData = do.call("rbind", tempt)
+    nExclude[[sIdx]] = length(unlist(excludedTrials))
+  }
+  thisTrialData = block2session(thisTrialData)
   # generate arguments for later analysis 
   label = sprintf('Subject %s, Cond %s',thisID, unique(thisTrialData$condition))
   tMax = ifelse(unique(thisTrialData$condition) == conditions[1], tMaxs[1], tMaxs[2])
-  kmGrid = seq(0, tMax, by= 0.1) # grid on which to average survival curves.
   
   # calcualte totalEarnings
   totalEarnings[sIdx] =  sum(thisTrialData$trialEarnings)
@@ -133,18 +145,6 @@ save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridSess.RData')
 
 
 # correlation between AUC and triats 
-# determine summaryData
-dataType = "sess"
-if(dataType == "block"){
-  load("genData/expDataAnalysis/blockData.RData")
-  load("genData/expDataAnalysis/kmOnGridBlock.RData")
-  summaryData = blockData[blockData$blockNum == 1, ] # so summaryData only have something relevant
-}else{
-  load("genData/expDataAnalysis/sessionData.RData")
-  load("genData/expDataAnalysis/kmOnGridSess.RData")
-  summaryData = sessionData
-}
-
 # load personality data
 library("Hmisc")
 personality = read.csv("data/SDGdataset.csv")
@@ -157,9 +157,9 @@ traitAUCCorr = list()
 for(i in 1 : nTrait){
   trait = traits[i];
   traitName = traitNames[i]
-  input = data.frame(personality[summaryData$stress =="no stress",trait],
-                     summaryData$AUC[summaryData$stress == "no stress"],
-                     summaryData$condition[summaryData$stress == "no stress"])
+  input = data.frame(personality[sessionData$stress =="no stress",trait],
+                     sessionData$AUC[sessionData$stress == "no stress"],
+                     sessionData$condition[sessionData$stress == "no stress"])
   traitAUCCorr[[i]]= getCorrelation(input)
   p = plotCorrelation(input, isRank = T) 
   p + xlab(paste(capitalize(traitName), "(rank)")) + ylab("AUC (rank)") + myTheme
@@ -172,7 +172,7 @@ pTable = lapply(1:2, function(j) sapply(1: (nTrait), function(i) traitAUCCorr[[i
 # plot AUC in two conditions
 library("ggpubr")
 load("wtwSettings.RData")
-summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, AUC)) + geom_boxplot() +
+sessionData[sessionData$stress == "no stress",]%>% ggplot(aes(condition, AUC)) + geom_boxplot() +
   geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
   scale_fill_manual(values = conditionColors) + 
   xlab("") + ylab("Average WTW(s)") + myTheme +
@@ -186,7 +186,7 @@ ggsave(sprintf("figures/expDataAnalysis/AUC_%s.png", dataType), width = 4, heigh
 library("ggpubr")
 load("wtwSettings.RData")
 
-summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(condition, stdWd)) + geom_boxplot() +
+sessionData[sessionData$stress == "no stress",]%>% ggplot(aes(condition, stdWd)) + geom_boxplot() +
   geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
   scale_fill_manual(values = conditionColors) + 
   xlab("") + ylab(expression(bold(paste("WTW S.D.","(", "s"^2, ")")))) + myTheme +
@@ -197,7 +197,7 @@ dir.create("figures/expDataAnalysis")
 ggsave(sprintf("figures/expDataAnalysis/stdWD_%s.png", dataType), width = 4, height = 3.5)
 
 # plot correlations 
-summaryData[summaryData$stress == "no stress",]%>% ggplot(aes(AUC, stdWd, color = condition)) + geom_point() +
+sessionData[sessionData$stress == "no stress",]%>% ggplot(aes(AUC, stdWd, color = condition)) + geom_point() +
   facet_grid(~condition, scales = "free") + xlab("WTW Average (s)") +
   ylab(expression(bold(paste("WTW S.D.","(", "s"^2, ")")))) +  scale_color_manual(values = conditionColors) +
   myTheme
@@ -207,10 +207,11 @@ ggsave(sprintf("figures/expDataAnalysis/stdWD_AUC_%s.png", dataType), width = 6,
 # plot wtw 
 select = (sessionData$stress == "no stress")
 plotData = data.frame(wtw = unlist(timeWTW_[select]), time = rep(tGrid, sum(select)),
-                      condition = rep(summaryData$condition[select], each = length(tGrid))) %>% group_by(condition, time) %>%
+                      condition = rep(sessionData$condition[select], each = length(tGrid))) %>% group_by(condition, time) %>%
   summarise(mean = mean(wtw), se = sd(wtw) / sqrt(length(wtw)), min = mean - se, max = mean + se) 
 
 policy = data.frame(condition = c("HP", "LP"), wt = c(20, 2.2))
+blockEnds = 
 plotData %>% ggplot(aes(time, mean, color = condition)) +
   geom_ribbon(aes(ymin=min, ymax=max, fill = condition, colour=NA),alpha = 0.3) +
   geom_line(size = 1) + facet_wrap(~condition, scales = "free") +
@@ -219,12 +220,12 @@ plotData %>% ggplot(aes(time, mean, color = condition)) +
                      labels = paste(seq(0, 21, by = 7))) + 
   ylab("Willingness to wait (s)") +
   geom_hline(data = policy, aes(yintercept = wt, color = condition), linetype = "dotted", size = 1.5) +
-  myTheme + ylim(c(0, 22))
+  myTheme + ylim(c(0, 22))  
 ggsave("figures/expDataAnalysis/wtw_timecourse.png", width = 6, height = 3)
 
 # plot survival curve
-select = (summaryData$stress == "no stress")
-condition =  rep(summaryData$condition[select])
+select = (sessionData$stress == "no stress")
+condition =  rep(sessionData$condition[select])
 step = 0.1
 len= sapply(1 : 60, function(i) ifelse(condition[i] == "HP", tMaxs[1] / step + 1, tMaxs[2] / step + 1))
 ideal = data.frame(kmsc = c(rep(1, tMaxs[1] / step + 1),
@@ -248,7 +249,7 @@ trialReRareMove_ = lapply(1 : n, function(i){
 })
 timeReRate_ = lapply(1 :  n,
                      function(i) trial2sec(trialReRareMove_[[i]], trialEndTime_[[i]], tGrid))
-select = (summaryData$stress == "no stress")
+select = (sessionData$stress == "no stress")
 data.frame(value = unlist(timeReRate_[select]), time = rep(tGrid, sum(select)* nBlock),
            condition = factor(rep(blockData$condition[select], each = length(tGrid)),  levels = conditions)) %>%
   group_by(condition, time) %>%

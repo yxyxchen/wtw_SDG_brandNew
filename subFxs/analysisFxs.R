@@ -114,12 +114,18 @@ truncateTrials = function(data, startTidx, endTidx){
   nVar = length(data)
   varNames = names(data)
   outputs = vector(mode = "list", length = nVar)
+  anyMatrix = F
   for(i in 1 : nVar){
     junk = data[[varNames[i]]]
-    if(is.matrix(junk)) outputs[[i]] = junk[, startTidx:endTidx]
-    else outputs[[i]] = junk[startTidx:endTidx]
+    if(is.matrix(junk)){
+      outputs[[i]] = junk[, startTidx:endTidx]
+      anyMatrix  = T 
+    }else{
+      outputs[[i]] = junk[startTidx:endTidx]
+    }
   }
   names(outputs) = varNames
+  if(!anyMatrix )   outputs = as.data.frame(outputs)
   return(outputs)
 }
 
@@ -261,8 +267,8 @@ block2session = function(tempt){
   nBlock = length(unique(tempt$blockNum))
   nTrials = sapply(1:nBlock, function(i) sum(tempt$blockNum == i))
   thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:(nBlock - 1)]), time = nTrials);
-  sellTime = sellTime + rep((1:(nBlock - 1)) * blockSecs, time = nTrials);
-  trialStartTime = trialStartTime + rep((1:(nBlock - 1)) * blockSecs, time = nTrials);
+  sellTime = sellTime + rep((1:nBlock - 1) * blockSecs, time = nTrials);
+  trialStartTime = trialStartTime + rep((1:nBlock - 1) * blockSecs, time = nTrials);
   totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:(nBlock - 1)]]),
                                        time = nTrials)
   })
