@@ -34,7 +34,7 @@ expTrialData = allData$trialData
 allIDs = hdrData$ID 
 
 # load expPara
-modelName = "uniPrior"
+modelName = "PRNC"
 dirName = sprintf("figures/expModelRepitation//%s", modelName)
 dir.create(dirName)
 paras = getParas(modelName)
@@ -61,20 +61,7 @@ for(sIdx in 1 : nSub){
   cond = unique(thisExpTrialData$condition)
   if(dataType == "block") thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
   if(isTrun){
-    excludedTrials = lapply(1 : nBlock, function(i)
-      which(thisExpTrialData$trialStartTime > (blockSecs - tMaxs[i]) &
-              (thisExpTrialData$blockNum == i)))
-    includeStart = which(thisExpTrialData$trialNum == 1)
-    includeEnd = sapply(1 : nBlock, function(i){
-      if(length(excludedTrials[[i]] > 0)){
-        min(excludedTrials[[i]])-1
-      }else{
-        max(which(thisExpTrialData$blockNum ==i))  
-      }
-    })
-    tempt = lapply(1 : nBlock, function(i)
-      truncateTrials(thisExpTrialData, includeStart[i], includeEnd[i]))
-    thisExpTrialData = do.call("rbind", tempt)
+    thisExpTrialData = lastTrunc(thisExpTrialData)
   }
   scheduledWait = thisExpTrialData$scheduledWait
   # simulate
@@ -170,6 +157,12 @@ trialPlots(tempt,"Model-generated Data")
 ggsave(sprintf("figures/expModelRepitation/%s/sim_data__%d.png", modelName, id),
        width = 5, height = 4)
 
+tempt = repTrialData[[repNo[1,sIdx]]]
+as.data.frame(tempt[!names(tempt) %in% c("Gs", "deltas", "Qwaits")]) %>% filter(trialNum < 40) %>% 
+  ggplot(aes(trialNum, Qquits, color = as.factor(trialEarnings))) +geom_point() 
+
+as.data.frame(tempt[!names(tempt) %in% c("Gs", "deltas", "Qwaits")]) %>% filter(trialNum < 40) %>% 
+  ggplot(aes(trialNum, Vitis, color = as.factor(trialEarnings))) +geom_point() 
 # survival curve prediction
 idList = hdrData$ID[hdrData$stress == "no stress"]
 for(sIdx in 1 : nSub){
