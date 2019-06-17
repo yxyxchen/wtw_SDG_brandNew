@@ -9,20 +9,19 @@ data {
   vector[N] timeWaited;
   vector[N] trialEarnings;
   int Ts[N]; // terminal time step index 
+  real stepDuration;
+  real iti;
+  real tokenValue;
 }
 transformed data {
-  // constant
-  real stepDuration = 1;
-  real iti = 2;
-  real tokenValue = 10;
   int totalSteps = sum(Ts) - N;
-  }
+}
 parameters {
   real<lower = 0, upper = 0.3> phi;
   real<lower = 0, upper = 0.3> phiP; 
   real<lower = 2, upper = 22> tau;
   real<lower = 0.7, upper = 1> gamma;
-  real<lower = wIni, upper = wIni * 2> QwaitIni; 
+  real<lower = 0, upper = nTimeSteps> zeroPoint; 
 }
 transformed parameters{
   // initialize action values 
@@ -39,7 +38,7 @@ transformed parameters{
   real G1;
   // fill values
   for(i in 1 : nTimeSteps){
-    Qwait[i] = QwaitIni;
+    Qwait[i] = zeroPoint*0.1 - 0.1*(i - 1) + Qquit;
   }
   
   // fill the first element of Qwaits, Quits and Vitis 
@@ -71,11 +70,6 @@ transformed parameters{
     }
     // update Qquit by counterfactual thiking
     G1 =  RT  * gamma^(T - 2) + Viti * gamma^(T - 1);
-    if(RT > 0){
-      Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
-    }else{
-      Qquit = Qquit + phiP * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
-    }
     
     // update Viti
     if(RT > 0){
@@ -96,7 +90,7 @@ model {
   phiP ~ uniform(0, 0.3);
   tau ~ uniform(2, 22);
   gamma ~ uniform(0.7, 1);
-  QwaitIni ~ uniform(0, nTimeSteps);
+  zeroPoint ~ uniform(0, nTimeSteps);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){
@@ -140,4 +134,3 @@ generated quantities {
   }// end of the loop
   LL_all =sum(log_lik);
 }
-

@@ -71,12 +71,7 @@ transformed parameters{
     }
     // update Qquit by counterfactual thiking
     G1 =  RT  * gamma^(T - 2) + Viti * gamma^(T - 1);
-    if(RT > 0){
-      Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
-    }else{
-      Qquit = Qquit + phiP * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
-    }
-    
+
     // update Viti
     if(RT > 0){
        Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);

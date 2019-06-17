@@ -56,26 +56,13 @@ AUCEarly = numeric(length =n)
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
   thisTrialData = trialData[[thisID]]
-  cond = unique(thisTrialData$condition)
-  cIdx = ifelse(cond == "HP", 1, 2)
   # truncate the last min(tMaxs) seconds
   if(isTrun){
-    nExclude[[sIdx]] = 0
-    excludedTrials = lapply(1 : nBlock, function(i)
-      which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]) &
-        (thisTrialData$blockNum == i)))
-    includeStart = which(thisTrialData$trialNum == 1)
-    includeEnd = sapply(1 : nBlock, function(i){
-      if(length(excludedTrials[[i]] > 0)){
-        min(excludedTrials[[i]])-1
-      }else{
-        max(which(thisTrialData$blockNum ==i))  
-      }
-    })
-    tempt = lapply(1 : nBlock, function(i)
-      truncateTrials(thisTrialData, includeStart[i], includeEnd[i]))
-    thisTrialData = do.call("rbind", tempt)
-    nExclude[[sIdx]] = length(unlist(excludedTrials))
+    cond = unique(thisTrialData$condition)
+    cIdx = ifelse(cond == "HP", 1, 2)
+    excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+    thisTrialData = thisTrialData[! (1 : nrow(thisTrialData) %in% excludedTrials),]
+    nExclude[sIdx] = length(excludedTrials)
   }
   thisTrialData = block2session(thisTrialData)
   # generate arguments for later analysis 
@@ -181,7 +168,7 @@ ggsave("figures/expDataAnalysisSess/zTruc_AUC.png", width = 4, height = 3)
 select = (sessionData$stress == "no stress")
 plotData = data.frame(wtw = unlist(timeWTW_[select]), time = rep(tGrid, sum(select)),
                       condition = rep(sessionData$condition[select], each = length(tGrid))) %>% group_by(condition, time) %>%
-  summarise(mean = mean(wtw), se = sd(wtw) / sqrt(length(wtw)), min = mean - se, max = mean + se) 
+  dplyr::summarise(mean = mean(wtw), se = sd(wtw) / sqrt(length(wtw)), min = mean - se, max = mean + se) 
 
 policy = data.frame(condition = c("HP", "LP"), wt = c(20, 2.2))
 blockEnds = cumsum(c(blockSecs, blockSecs))
@@ -204,7 +191,7 @@ condition =  sessionData$condition[select]
 data.frame(kmsc = unlist(kmOnGrid_[select]),
            time = rep(kmGrid, sum(select)),
            condition = rep(condition, each = length(kmGrid))) %>% group_by(condition, time) %>%
-  summarise(mean = mean(kmsc), se = sd(kmsc) / sqrt(length(kmsc)), min = mean - se, max = mean + se) %>% 
+  dplyr::summarise(mean = mean(kmsc), se = sd(kmsc) / sqrt(length(kmsc)), min = mean - se, max = mean + se) %>% 
   ggplot(aes(time, mean, color = condition, fill = condition)) + 
   geom_ribbon(aes(ymin=min, ymax=max),alpha = 0.3,  colour=NA)+
   geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) + 
@@ -221,7 +208,7 @@ select = (sessionData$stress == "no stress")
 data.frame(value = unlist(timeReRate_[select]), time = rep(tGrid, sum(select)* nBlock),
            condition = factor(rep(sessionData$condition[select], each = length(tGrid)),  levels = conditions)) %>%
   group_by(condition, time) %>%
-  summarise(mean = mean(value), se = sd(value) / sqrt(length(value)), min = mean - se, max = mean + se) %>% 
+  dplyr::summarise(mean = mean(value), se = sd(value) / sqrt(length(value)), min = mean - se, max = mean + se) %>% 
   ggplot(aes(time, mean, color = condition, fill = condition)) + 
   geom_ribbon(aes(ymin=min, ymax=max), colour=NA, alpha = 0.3)+
   geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) +

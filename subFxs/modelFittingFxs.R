@@ -18,7 +18,7 @@ modelFitting = function(thisTrialData, fileName, paras, model){
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
   if(any(paras == "phiR")){
     wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
-  }else if(any(paras == "gamma") || modelName == "baseline"){
+  }else if(any(paras %in% c("gamma", "k")) || modelName == "baseline"){
     wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
   }else{
     print("wrong model name!")

@@ -363,3 +363,31 @@ movAve = function(x, windowSize){
   })
   return(y)
 }
+
+# lastTrunc = function(thisTrialData){
+#   cond = unique(thisTrialData$condition)
+#   cIdx = ifelse(cond == "HP", 1, 2)
+#   excludedTrials = lapply(1 : nBlock, function(i)
+#     which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]) &
+#             (thisTrialData$blockNum == i)))
+#   includeStart = which(thisTrialData$trialNum == 1)
+#   includeEnd = sapply(1 : nBlock, function(i){
+#     if(length(excludedTrials[[i]] > 0)){
+#       min(excludedTrials[[i]])-1
+#     }else{
+#       max(which(thisTrialData$blockNum ==i))  
+#     }
+#   })
+#   tempt = lapply(1 : nBlock, function(i)
+#     truncateTrials(thisTrialData, includeStart[i], includeEnd[i]))
+#   thisTrialData = do.call("rbind", tempt)
+#   
+# }
+
+lastTrunc = function(thisTrialData){
+  cond = unique(thisTrialData$condition)
+  cIdx = ifelse(cond == "HP", 1, 2)
+  excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+  thisTrialData = thisTrialData[! (1 : nrow(thisTrialData) %in% excludedTrials),]
+}
+

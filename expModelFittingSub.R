@@ -2,7 +2,7 @@
 # using Rstan
 # here I change all my modelFitting function into the risk version
 # while in stan, I have different expMofelfitting and modelFitting scripts for different things 
-expModelFitting = function(modelName, paras){
+expModelFitting = function(modelName){
   # create outfiles
   nBlock = 3
   dir.create("genData")
