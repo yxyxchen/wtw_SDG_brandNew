@@ -40,7 +40,7 @@ rep.PR = modelRepitation(modelName, summaryData, expTrialData, nComb)
 
 plotKMSC = F
 # initialize 
-thisRep = rep.PR
+thisRep = rep.PRbsNC
 repTrialData = thisRep$repTrialData
 useID = thisRep$useID
 repNo = thisRep$repNo

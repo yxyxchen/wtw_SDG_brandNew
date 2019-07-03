@@ -8,6 +8,7 @@ getParas = function(modelName){
   else if(modelName %in% c("uniPrior", "uniPriorNC")) paras = c("phi", "phiP", "tau", "gamma", "QwaitIni")
   else if(modelName == "risk") paras = c("phi", "tau", "gamma", "utiCurve")
   else if(modelName == "baseline") paras = c("waitRate")
+  else if(modelName == "Rlearn") paras = c("phi", "phiP", "tau", "zeroPoint")
   else return("wrong model name")
   return(paras)
 }

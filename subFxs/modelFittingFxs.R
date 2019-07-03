@@ -3,7 +3,7 @@
 # we save LL_all in both the summary and the all samples data since some times out of memory will change it a lot
 # we use log_like to calculate WAIC and looStat
 # but we don't save log_like
-modelFitting = function(thisTrialData, fileName, paras, model){
+modelFitting = function(thisTrialData, fileName, paras, model, modelName){
     #
     load("wtwSettings.RData")
     # simulation parameters
@@ -16,9 +16,9 @@ modelFitting = function(thisTrialData, fileName, paras, model){
     subOptimalRatio = 0.9 
     QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
     QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-    if(any(paras == "phiR")){
+    if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT", "Rlearn")){
       wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
-    }else if(any(paras %in% c("gamma", "k")) || modelName %in% c("baseline", "MVT")){
+    }else if(any(paras %in% c("gamma", "k"))){
       wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
     }else{
       print("wrong model name!")

@@ -28,8 +28,8 @@ load("genData/expDataAnalysis/sessionData.RData")
 # simluation for one para and one scheduledWait from simulation or ...
 # error prone.. try 3 and everything changes 
 sIdx = 2
-paras =  c(0.02, 0.05, 10, 0.2, 1)
-modelName = "MVT"
+paras =  c(0.02, 0.01, 10, 30, 0.02, 0.01)
+modelName = "Rlearn"
 repModelFun = getRepModelFun(modelName)
 id = idList[[sIdx]]
 cond = hdrData$cond[hdrData$ID == id]
