@@ -27,9 +27,9 @@ load("genData/expDataAnalysis/sessionData.RData")
 ##### get a sense of the model ######
 # simluation for one para and one scheduledWait from simulation or ...
 # error prone.. try 3 and everything changes 
-sIdx = 1
-paras =  c(0.03, 0.03, 3.4, 0.95, 35)
-modelName = "PR"
+sIdx = 2
+paras =  c(0.02, 0.05, 10, 0.2, 1)
+modelName = "MVT"
 repModelFun = getRepModelFun(modelName)
 id = idList[[sIdx]]
 cond = hdrData$cond[hdrData$ID == id]
@@ -37,8 +37,6 @@ thisExpTrialData = expTrialData[[id]]
 # thisExpTrialData = thisExpTrialData[thisExpTrialData$blockNum ==1, ]
 scheduledWait = thisExpTrialData$scheduledWait
 set.seed(123)
-# cond = "LP"
-# scheduledWait = unlist(lapply(1:800, function(x) drawSample(cond)))
 tempt = repModelFun(paras, cond, scheduledWait)
 trialPlots(tempt, cond)
 fileName = sprintf("simulation_s%d.png", sIdx)

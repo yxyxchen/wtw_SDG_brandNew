@@ -59,21 +59,23 @@ transformed parameters{
         Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);
       }
     }else{
-      real G =  RT  + Viti * gamma;
-      Qquit = Qquit + phiP * (G - Qquit) * (G > Qquit) + phiP *  (G - Qquit) * (G <= Qquit) ;
       if(T > 2){
         for(t in 1 : (T-2)){
-          G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
+          real G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
           Qwait[t] = Qwait[t] + phiP * (G - Qwait[t]);    
         }
       }
     }
     // update Qquit by counterfactual thiking
     G1 =  RT  * gamma^(T - 2) + Viti * gamma^(T - 1);
-    if(RT > 0){
-      Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
-    }else{
-      Qquit = Qquit + phiP * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+    if(tIdx > 1){
+      if(trialEarnings[tIdx - 1] == 0){
+        if(RT > 0){
+          Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+        }else{
+          Qquit = Qquit + phiP * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+        }
+      }
     }
     
     // update Viti

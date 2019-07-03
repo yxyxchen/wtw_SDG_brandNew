@@ -1,12 +1,8 @@
-# this script fits the RL model for each participant
-# using Rstan
-# here I change all my modelFitting function into the risk version
-# while in stan, I have different expMofelfitting and modelFitting scripts for different things 
-expModelFitting = function(modelName){
+# differences from the cluster version can be found by searching # needed in local computers
+expModelFitting = function(modelName, paras){
   # create outfiles
-  nBlock = 3
-  dir.create("genData")
-  dir.create("genData/expModelFitting")
+  dir.create("genData") 
+  dir.create("genData/expModelFitting") 
   dir.create(sprintf("genData/expModelFitting/%s", modelName))
   
   #load libraries
@@ -17,7 +13,6 @@ expModelFitting = function(modelName){
   source('subFxs/loadFxs.R') # for load data
   source("subFxs/helpFxs.R") # for getParas
   load("wtwSettings.RData")
-  source("subFxs/analysisFxs.R")
   
   #  set the environment for Rstan
   options(warn=-1, message =-1) # run without this for one participant to chec everything
@@ -25,13 +20,14 @@ expModelFitting = function(modelName){
   rstan_options(auto_write = TRUE) 
   
   # compile the stan model 
+  dir.create(sprintf("genData/expModelFitting/%s", modelName))
   model = stan_model(file = sprintf("stanModels/%s.stan", modelName))
-  
+
   # load expData
   allData = loadAllData()
   hdrData = allData$hdrData           
   trialData = allData$trialData       
-  idList = hdrData$ID[hdrData$stress == "no stress"]                 
+  idList = hdrData$ID                   
   n = length(idList)                    
   
   # determine paras
@@ -40,7 +36,7 @@ expModelFitting = function(modelName){
     print(paras)
     break
   }
-  
+
   # loop over participants 
   library("doMC")
   library("foreach")
@@ -49,14 +45,10 @@ expModelFitting = function(modelName){
   nCore = parallel::detectCores() -1 # only for the local computer
   registerDoMC(nCore)
   
-  # use nIter = 10000 for id = 20, 47, 65, 79, 102, since they have every low learning rates
   foreach(i = 1 : n) %dopar% {
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
-    cond = unique(thisTrialData$condition)
-    cIdx = ifelse(cond == "HP", 1, 2)
-    excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
-    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
+    thisTrialData = thisTrialData[thisTrialData$blockNum == 1,]
     fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
     modelFitting(thisTrialData, fileName, paras, model)
   }

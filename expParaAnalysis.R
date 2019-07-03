@@ -40,13 +40,12 @@ if(dataType == "block"){
 # load expPara
 paras = getParas(modelName)
 nPara = length(paras)
-parentDir = ifelse(dataType == "block", "genData/expModelFitting", "genData/expModelFittingSub")
+parentDir = "genData/expModelFitting"
 dirName = sprintf("%s/%s",parentDir, modelName)
 tempt = loadExpPara(paras, dirName)
 useID = getUseID(tempt, paras)
 expPara = merge(x=tempt[,c(paras, "id")],y=summaryData, by="id",all.x=TRUE)
 
-tempt$id[!tempt$id %in% useID]
 # load and merge trait data
 personality = read.csv("data/SDGdataset.csv")
 personality$id = personality$SubjectID

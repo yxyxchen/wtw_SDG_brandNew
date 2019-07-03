@@ -59,11 +59,9 @@ transformed parameters{
         Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);
       }
     }else{
-      real G =  RT  + Viti * gamma;
-      Qquit = Qquit + phiP * (G - Qquit) * (G > Qquit) + phiP *  (G - Qquit) * (G <= Qquit) ;
       if(T > 2){
         for(t in 1 : (T-2)){
-          G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
+          real G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
           Qwait[t] = Qwait[t] + phiP * (G - Qwait[t]);    
         }
       }

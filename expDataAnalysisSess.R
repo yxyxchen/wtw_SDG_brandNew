@@ -27,7 +27,7 @@ allIDs = hdrData$ID                   # column of subject IDs
 n = length(allIDs)                    # n
 cat('Analyzing data for',n,'subjects.\n')
 # control which individual-level plots to generate
-plotTrialwiseData =F
+plotTrialwiseData =T
 plotKMSC = F
 plotWTW = F
 
@@ -56,73 +56,75 @@ AUCEarly = numeric(length =n)
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
   thisTrialData = trialData[[thisID]]
-  # truncate the last min(tMaxs) seconds
-  if(isTrun){
-    cond = unique(thisTrialData$condition)
-    cIdx = ifelse(cond == "HP", 1, 2)
-    excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
-    thisTrialData = thisTrialData[! (1 : nrow(thisTrialData) %in% excludedTrials),]
-    nExclude[sIdx] = length(excludedTrials)
+  if(unique(thisTrialData$stress == "no stress")){
+    # truncate the last min(tMaxs) seconds
+    if(isTrun){
+      cond = unique(thisTrialData$condition)
+      cIdx = ifelse(cond == "HP", 1, 2)
+      excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+      thisTrialData = thisTrialData[! (1 : nrow(thisTrialData) %in% excludedTrials),]
+      nExclude[sIdx] = length(excludedTrials)
+    }
+    thisTrialData = block2session(thisTrialData)
+    # generate arguments for later analysis 
+    label = sprintf('Subject %s, Cond %s',thisID, unique(thisTrialData$condition))
+    tMax = ifelse(unique(thisTrialData$condition) == conditions[1], tMaxs[1], tMaxs[2])
+    
+    # calcualte totalEarnings
+    totalEarnings[sIdx] =  sum(thisTrialData$trialEarnings)
+    timeWaited = thisTrialData$timeWaited
+    trialEarnings = thisTrialData$trialEarnings
+    scheduledWait = thisTrialData$scheduledWait
+    timeWaited[trialEarnings > loseValue] = scheduledWait[trialEarnings > loseValue]
+    nAction[sIdx] = sum(round(ifelse(trialEarnings > loseValue, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1)))
+    nTrial[sIdx] = length(timeWaited)
+    # calculate varQuitTime
+    stdQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]))
+    cvQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
+    muQuitTime[sIdx] = mean(timeWaited[trialEarnings == 0])
+    nQuit[sIdx] = sum(trialEarnings == 0)
+    
+    # plot trial-by-trial data
+    if (plotTrialwiseData) {
+      trialPlots(thisTrialData,label)
+      readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
+      graphics.off()
+    }
+    
+    # survival analysis
+    kmscResults = kmsc(thisTrialData, min(tMaxs), label, plotKMSC, kmGrid)
+    AUC[sIdx] = kmscResults[['auc']]
+    kmOnGrid_[[sIdx]] = kmscResults$kmOnGrid
+    if (plotKMSC) {
+      readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
+      graphics.off()
+    }
+    stdWd[[sIdx]] = kmscResults$stdWd
+    cvWd[[sIdx]] =  kmscResults$stdWd / kmscResults$auc
+    
+    # WTW time series
+    wtwCeiling = min(tMaxs)
+    wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
+    timeWTW_[[sIdx]] = wtwtsResults$timeWTW
+    trialWTW_[[sIdx]] = wtwtsResults$trialWTW
+    wtwEarly[sIdx] =   wtwtsResults$trialWTW[1]
+    if (plotWTW) {
+      readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
+      graphics.off()
+    }
+    
+    # moving auc
+    # window = 10
+    # by = 10
+    # tempt = kmscMoving(thisTrialData, tMax, label, plotKMSC, tGrid, window, by)
+    # timeAUC_[[sIdx]] = tempt$timeAUCs
+    # winAUC_[[sIdx]] = tempt$winAUCs
+    AUCEarly[sIdx] =  kmsc(truncateTrials(thisTrialData, 1, 10), min(tMaxs), label, plotKMSC, kmGrid)$auc
+    
+    # calculate rewardRates
+    trialReRate_[[sIdx]] = trialEarnings / (timeWaited + iti)
+    trialEndTime_[[sIdx]] = thisTrialData$sellTime    
   }
-  thisTrialData = block2session(thisTrialData)
-  # generate arguments for later analysis 
-  label = sprintf('Subject %s, Cond %s',thisID, unique(thisTrialData$condition))
-  tMax = ifelse(unique(thisTrialData$condition) == conditions[1], tMaxs[1], tMaxs[2])
-  
-  # calcualte totalEarnings
-  totalEarnings[sIdx] =  sum(thisTrialData$trialEarnings)
-  timeWaited = thisTrialData$timeWaited
-  trialEarnings = thisTrialData$trialEarnings
-  scheduledWait = thisTrialData$scheduledWait
-  timeWaited[trialEarnings > loseValue] = scheduledWait[trialEarnings > loseValue]
-  nAction[sIdx] = sum(round(ifelse(trialEarnings > loseValue, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1)))
-  nTrial[sIdx] = length(timeWaited)
-  # calculate varQuitTime
-  stdQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]))
-  cvQuitTime[sIdx] = ifelse(totalEarnings[sIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
-  muQuitTime[sIdx] = mean(timeWaited[trialEarnings == 0])
-  nQuit[sIdx] = sum(trialEarnings == 0)
-  
-  # plot trial-by-trial data
-  if (plotTrialwiseData) {
-    trialPlots(thisTrialData,label)
-    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
-    graphics.off()
-  }
-  
-  # survival analysis
-  kmscResults = kmsc(thisTrialData, min(tMaxs), label, plotKMSC, kmGrid)
-  AUC[sIdx] = kmscResults[['auc']]
-  kmOnGrid_[[sIdx]] = kmscResults$kmOnGrid
-  if (plotKMSC) {
-    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
-    graphics.off()
-  }
-  stdWd[[sIdx]] = kmscResults$stdWd
-  cvWd[[sIdx]] =  kmscResults$stdWd / kmscResults$auc
-  
-  # WTW time series
-  wtwCeiling = min(tMaxs)
-  wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
-  timeWTW_[[sIdx]] = wtwtsResults$timeWTW
-  trialWTW_[[sIdx]] = wtwtsResults$trialWTW
-  wtwEarly[sIdx] =   wtwtsResults$trialWTW[1]
-  if (plotWTW) {
-    readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
-    graphics.off()
-  }
-  
-  # moving auc
-  # window = 10
-  # by = 10
-  # tempt = kmscMoving(thisTrialData, tMax, label, plotKMSC, tGrid, window, by)
-  # timeAUC_[[sIdx]] = tempt$timeAUCs
-  # winAUC_[[sIdx]] = tempt$winAUCs
-  AUCEarly[sIdx] =  kmsc(truncateTrials(thisTrialData, 1, 10), min(tMaxs), label, plotKMSC, kmGrid)$auc
-  
-  # calculate rewardRates
-  trialReRate_[[sIdx]] = trialEarnings / (timeWaited + iti)
-  trialEndTime_[[sIdx]] = thisTrialData$sellTime
 }
 sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition, levels = c("HP", "LP")), cbal = hdrData$cbal,
                          stress = factor(hdrData$stress, levels = c("no stress", "stress")), AUC = AUC, wtwEarly = wtwEarly,

@@ -1,7 +1,8 @@
 library("stringr")
 getParas = function(modelName){
   if(modelName %in% c("para4", "curiosityTrialSp")) paras = c("phi", "tau", "gamma", "zeroPoint")
-  else if(modelName  %in% c("PR", "PRNC")) paras = c("phi", "phiP", "tau", "gamma", "zeroPoint")
+  else if(modelName  %in% c("PR", "PRNC", "PRbs", "PRbsNC")) paras = c("phi", "phiP", "tau", "gamma", "zeroPoint")
+  else if(modelName %in% c(("MVT"))) paras = c("phi", "phiP", "tau", "reRateIni", "slope")
   else if(modelName  %in% c("hyper")) paras = c("phi", "phiP", "tau", "k", "zeroPoint")
   else if(modelName == "PR_cost") paras = c("phi", "phiP", "tau", "gamma", "zeroPoint", "cost")
   else if(modelName %in% c("uniPrior", "uniPriorNC")) paras = c("phi", "phiP", "tau", "gamma", "QwaitIni")

@@ -3,11 +3,14 @@
 # here I change all my modelFitting function into the risk version
 # while in stan, I have different expMofelfitting and modelFitting scripts for different things 
 expModelFitting = function(modelName){
-  # create outfiles
+  # model fitting parameters 
   nBlock = 3
+  nFold = 10
+  
+  # create outfiles
   dir.create("genData")
-  dir.create("genData/expModelFittingSub")
-  dir.create(sprintf("genData/expModelFittingSub/%s", modelName))
+  dir.create("genData/expModelFittingCV")
+  dir.create(sprintf("genData/expModelFittingCV/%s", modelName))
   
   #load libraries
   library('plyr'); library(dplyr); library(ggplot2);library('tidyr');library('rstan')
@@ -25,7 +28,6 @@ expModelFitting = function(modelName){
   rstan_options(auto_write = TRUE) 
   
   # compile the stan model 
-  dir.create(sprintf("genData/expModelFittingSub/%s", modelName))
   model = stan_model(file = sprintf("stanModels/%s.stan", modelName))
   
   # load expData
@@ -50,27 +52,22 @@ expModelFitting = function(modelName){
   nCore = parallel::detectCores() -1 # only for the local computer
   registerDoMC(nCore)
   
-  foreach(i = 1 : n) %dopar% {
+  foreach(i = 1 : n)%dopar%{
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
     cond = unique(thisTrialData$condition)
     cIdx = ifelse(cond == "HP", 1, 2)
-    excludedTrials = lapply(1 : nBlock, function(i)
-      which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]) &
-              (thisTrialData$blockNum == i)))
-    includeStart = which(thisTrialData$trialNum == 1)
-    includeEnd = sapply(1 : nBlock, function(i){
-      if(length(excludedTrials[[i]] > 0)){
-        min(excludedTrials[[i]])-1
-      }else{
-        max(which(thisTrialData$blockNum ==i))  
-      }
-    })
-    tempt = lapply(1 : nBlock, function(i)
-      truncateTrials(thisTrialData, includeStart[i], includeEnd[i]))
-    thisTrialData = do.call("rbind", tempt)
-    # thisTrialData = block2session(thisTrialData) actually not really necessary, but
-    fileName = sprintf("genData/expModelFittingSub/%s/s%d", modelName, thisID)
-    modelFitting(thisTrialData, fileName, paras, model)
+    excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
+    # determine partitions 
+    nPart = ceiling(nrow(thisTrialData) / nFold)
+    partTable = sapply(1 : nPart, function(i) sample(1:nFold,replace = FALSE) + (i -1) * nFold)
+    # loop
+    for(j in 1 : nFold) {
+      select = as.vector(partTable[-j,])
+      thisTrialData = thisTrialData[(1 : nrow(thisTrialData)) %in% select,]
+      fileName = sprintf("genData/expModelFittingCV/%s/s%d_f%d", modelName, thisID, j)
+      modelFittingCV(thisTrialData, fileName, paras, model)
+    }
   }
 }
