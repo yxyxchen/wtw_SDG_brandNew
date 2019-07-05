@@ -11,7 +11,7 @@ load("wtwSettings.RData")
 
 # input 
 dataType = "sess"
-modelName = "PR"
+modelName = "Rlearn"
 
 # create output directories
 if(dataType == "sess"){
@@ -144,7 +144,8 @@ sumInput = group_by(input, cond, xGroup) %>% dplyr::summarise(meanY = mean(y))
 ggplot(sumInput, aes(xGroup, meanY)) + geom_point() +facet_grid(~cond) + xlab("Impulsive")+ylab("Gamma")
 
 # plot hist 
-paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
+# paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
+paraNames = c("LR", "LP", expression(tau), "P")
 expPara$condition = summaryData$condition[summaryData$id %in% expPara$id]
 expPara %>% filter(id %in% useID) %>% select(c(paras, "condition")) %>%
   gather(-c("condition"), key = "para", value = "value") %>%
@@ -152,7 +153,6 @@ expPara %>% filter(id %in% useID) %>% select(c(paras, "condition")) %>%
   ggplot(aes(value)) + geom_histogram(bins = 8) +
   facet_grid(condition ~ para, scales = "free", labeller = label_parsed) + 
   myTheme + xlab(" ") + ylab(" ")
-
 fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysisSub", modelName)
 ggsave(fileName, width = 8, height = 4)
 

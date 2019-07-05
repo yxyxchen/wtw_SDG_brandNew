@@ -24,6 +24,7 @@ hdrData = allData$hdrData
 expTrialData = allData$trialData       
 allIDs = hdrData$ID 
 
+  
 # re-simulate data
 modelName = "PRbs"
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
@@ -33,16 +34,22 @@ modelName = "PRbsNC"
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
 rep.PRbsNC = modelRepitation(modelName, summaryData, expTrialData, nComb)
 
-modelName = "PR"
+modelName = "Rlearn"
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-rep.PR = modelRepitation(modelName, summaryData, expTrialData, nComb)
+rep.Rlearn = modelRepitation(modelName, summaryData, expTrialData, nComb)
 
-
+modelName = "RlearnL"
+dir.create(sprintf("figures/expModelRepitation/%s",modelName))
+rep.Rlearn = modelRepitation(modelName, summaryData, expTrialData, nComb)
 plotKMSC = F
+
 # initialize 
-thisRep = rep.PRbsNC
+thisRep = rep.Rlearn
+expPara = thisRep$expPara
 repTrialData = thisRep$repTrialData
+paras = getParas("RlearnL")
 useID = thisRep$useID
+# useID = getUseID(expPara, paras)
 repNo = thisRep$repNo
 nSub =(length(useID))
 AUCRep_ = matrix(NA, nrow = nComb , ncol = nSub)
@@ -55,13 +62,9 @@ for(sIdx in 1 : nSub){
   tMax = ifelse( cond == "HP", tMaxs[1], tMaxs[2])
   nTrial = summaryData$nTrial[summaryData$id == id]
   label = sprintf("sub%d", id)
-  # calculate outputs for each participant 
-  thisRepTrialData = do.call("rbind", lapply(1 : nComb, function(i){
-    repTrialData[[repNo[i, sIdx]]]
-  }))
   kmOnGridMatrix = matrix(NA, nrow = length(kmGrid), ncol = nComb)
   for(cIdx in 1 : nComb){
-    thisRepTrialData = repTrialData[[repNo[cIdx, sIdx]]]
+    thisRepTrialData = repTrialData[[repNo[cIdx, which(thisRep$useID == id)]]]
     kmscResults = kmsc(thisRepTrialData, min(tMaxs), label ,plotKMSC, kmGrid)
     AUCRep_[cIdx,sIdx] = kmscResults[['auc']]
     stdWdRep_[cIdx, sIdx] = kmscResults$stdWd
@@ -121,8 +124,8 @@ tempt$timeWaited =  matrix(unlist(lapply(1:nComb, function(i) repTrialData[[repN
 tempt = within(tempt, sapply(1 : length(timeWaited), function(i) ifelse(timeWaited[i] >= scheduledWait[i], tokenValue, 0)))
 tempt$blockNum = junk$blockNum
 trialPlots(tempt,"Model-generated Data")
-ggsave(sprintf("figures/expModelRepitation/%s/sim_data__%d.png", modelName, id),
-       width = 5, height = 4)
+# ggsave(sprintf("figures/expModelRepitation/%s/sim_data__%d.png", modelName, id),
+#        width = 5, height = 4)
 })
 
 

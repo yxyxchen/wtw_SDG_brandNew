@@ -9,6 +9,7 @@ getParas = function(modelName){
   else if(modelName == "risk") paras = c("phi", "tau", "gamma", "utiCurve")
   else if(modelName == "baseline") paras = c("waitRate")
   else if(modelName == "Rlearn") paras = c("phi", "phiP", "tau", "zeroPoint")
+  else if(modelName %in% c("RlearnL", "RlearnLdb")) paras = c("phi", "phiP", "tau", "zeroPoint", "beta", "betaP")
   else return("wrong model name")
   return(paras)
 }

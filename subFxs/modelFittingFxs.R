@@ -16,7 +16,7 @@ modelFitting = function(thisTrialData, fileName, paras, model, modelName){
     subOptimalRatio = 0.9 
     QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
     QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-    if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT", "Rlearn")){
+    if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL", "RlearnLdb")){
       wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
     }else if(any(paras %in% c("gamma", "k"))){
       wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
@@ -79,9 +79,9 @@ modelFittingCV = function(thisTrialData, fileName, paras, model){
   subOptimalRatio = 0.9 
   QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-  if(any(paras == "phiR")){
+  if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL", "RlearnLdb")){
     wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
-  }else if(any(paras %in% c("gamma", "k")) || modelName %in% c("baseline", "MVT")){
+  }else if(any(paras %in% c("gamma", "k"))){
     wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
   }else{
     print("wrong model name!")
