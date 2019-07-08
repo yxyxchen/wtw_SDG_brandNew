@@ -60,14 +60,14 @@ data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=best
 
 
 # extract logEvidence, cross validation
-modelNames = c("PRbs", "PRbsNC", "reduce_gamma")
+modelNames = c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma")
 nModel = length(modelNames)
 ids = hdrData$ID[hdrData$stress == "no stress"]
 nSub = length(ids)
 nFold = 10
 logEvidence = matrix(nrow = length(ids), ncol= nModel) 
 logEvidenceTrain = list(length = nModel)
-for(mIdx in 1 : nModel){
+for(mIdx in 4 : nModel){
   modelName = modelNames[mIdx]
   paras = getParas(modelName)
   nPara = length(paras)
@@ -75,7 +75,7 @@ for(mIdx in 1 : nModel){
   thisLogEvidenceTrain = matrix(nrow = nFold, ncol = nSub)
   for(sIdx in 1 : nSub){
     id = ids[sIdx]
-    load(sprintf("genData/expModelFittingCV/%s/s%d_split.RData",modelName, id))
+    load(sprintf("genData/expModelFittingCV/split/s%d.RData", id))
     thisTrialData = trialData[[id]]
     nTrial = length(thisTrialData$trialEarnings)
     cond = unique(thisTrialData$condition)
@@ -84,8 +84,9 @@ for(mIdx in 1 : nModel){
     timeWaited = pmin(thisTrialData$timeWaited, tMax)
     Ts = round(ceiling(timeWaited / stepDuration) + 1)
     scheduledWait = thisTrialData$scheduledWait
-    cvPara = loadCVPara(paras, sprintf("genData/expModelFittingCV/%s",modelName),
-                        id)
+    cvPara = loadCVPara(paras,
+                      sprintf("genData/expModelFittingCV/%s",modelName),
+                      pattern = sprintf("s%d_f[0-9]{1,2}_summary.txt", id))
     # initialize 
     LL_ = vector(length = nFold)
     if(length(getUseID(cvPara, paras)) == 10){

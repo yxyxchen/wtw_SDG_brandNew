@@ -345,28 +345,6 @@ RlearnL = function(thisParas, cond, trialEarnings, timeWaited){
     T = Ts[tIdx]
     # loop for each timestep t and determine At
     lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp(Qquit - Qwait[i])* tau))
-    # update values 
-    while(t <= nTimeStep){
-      # determine At
-      waitRate =  1 / sum(1  + exp((Qquit - Qwait[t])* tau))
-      action = ifelse(runif(1) < waitRate, 'wait', 'quit')
-      # observe St+1 and Rt+1
-      rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
-      getReward = (action == 'wait' && rewardOccur);
-      nextReward = ifelse(getReward, tokenValue, 0) 
-      # dertime whether St+1 is the terminal state
-      nextStateTerminal = (getReward || action == "quit")
-      if(nextStateTerminal){
-        T = t+1
-        trialEarnings[tIdx] = ifelse(nextReward == tokenValue, tokenValue, 0);
-        timeWaited[tIdx] = ifelse(getReward, thisScheduledWait, t * stepDuration)
-        sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
-        elapsedTime = elapsedTime + timeWaited[tIdx] + iti
-        break
-      }else{
-        t = t + 1
-      }
-    }# end of the action selection section
     
     # update values 
     if(tIdx < nTrial){
