@@ -3,17 +3,15 @@
 # here I change all my modelFitting function into the risk version
 # while in stan, I have different expMofelfitting and modelFitting scripts for different things 
 expModelFitting = function(modelName){
-  # model fitting parameters 
-  nBlock = 3
-  nFold = 10
-  
   # create outfiles
+  nBlock = 3
   dir.create("genData")
-  dir.create("genData/expModelFittingCV")
-  dir.create(sprintf("genData/expModelFittingCV/%s", modelName))
+  dir.create("genData/expModelFitting")
+  dir.create(sprintf("genData/expModelFitting/%s", modelName))
   
   #load libraries
   library('plyr'); library(dplyr); library(ggplot2);library('tidyr');library('rstan')
+  library("stringr")
   library("loo")
   library("coda") 
   source('subFxs/modelFittingFxs.R') # for fitting each single participant
@@ -39,6 +37,7 @@ expModelFitting = function(modelName){
   
   # determine paras
   paras = getParas(modelName)
+  nPara = length(paras)
   if(paras == "wrong model name"){
     print(paras)
     break
@@ -52,26 +51,25 @@ expModelFitting = function(modelName){
   nCore = parallel::detectCores() -1 # only for the local computer
   registerDoMC(nCore)
   
-  set.seed(123)
-  foreach(i = 1 : n)%dopar%{
+  # idList = c(1, 13, 25, 26, 32, 44, 51, 65, 77, 87, 91, 94, 101, 102, 109) # Rlearn
+  idList = c(1, 15, 25, 26, 31, 44, 51, 53, 69, 71, 79, 91, 94, 96, 109, 110) # RlearnL
+  # idList = c(2, 16, 26, 44, 56, 62, 63,64, 77, 85, 100, 109, 110) $ uniPiror
+  # idList = c(20, 56, 65, 106, 110)
+  # idList = c(20, 45) # PRbsNC
+  n = length(idList)
+  foreach(i = 1 : n) %dopar% {
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
     cond = unique(thisTrialData$condition)
     cIdx = ifelse(cond == "HP", 1, 2)
     excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
     thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
-    # determine partitions 
-    nPart = ceiling(nrow(thisTrialData) / nFold)
-    partTable = sapply(1 : nPart, function(i) sample(1:nFold,replace = FALSE) + (i -1) * nFold)
-    fileName = sprintf("genData/expModelFittingCV/%s/s%d_split.RData", modelName, thisID)
-    save("partTable", file = fileName)
-    
-    # loop
-    for(j in 1 : nFold) {
-      select = as.vector(partTable[-j,])
-      thisTrialData = thisTrialData[(1 : nrow(thisTrialData)) %in% select,]
-      fileName = sprintf("genData/expModelFittingCV/%s/s%d_f%d", modelName, thisID, j)
-      modelFittingCV(thisTrialData, fileName, paras, model)
-    }
+    fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
+    # load upper and lower
+    tempt = read.csv(sprintf("genData/expModelFitting/%s/s%d_summary.txt", substr(modelName, 1, nchar(modelName) -2), thisID),
+                     header = F)
+    low= tempt[1:nPara,4]
+    up = tempt[1 : nPara,8]
+    modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up)
   }
 }

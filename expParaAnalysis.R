@@ -9,31 +9,20 @@ source("subFxs/helpFxs.R") # getParas
 source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 load("wtwSettings.RData")
 
-# input 
-dataType = "sess"
+
 modelName = "Rlearn"
 
 # create output directories
-if(dataType == "sess"){
-  dir.create("figures/expParaAnalysisSub")
-  saveDir = sprintf("figures/expParaAnalysisSub/%s", modelName)
-  dir.create(saveDir)
-}else{
-  dir.create("figures/expParaAnalysis")
-  saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
-  dir.create(saveDir)
-}
+dir.create("figures/expParaAnalysis")
+saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
+dir.create(saveDir)
+
 
 # load blockdata data
-if(dataType == "block"){
-  load("genData/expDataAnalysis/blockData.RData")
-  load("genData/expDataAnalysis/kmOnGridBlock.RData")
-  summaryData = blockData[blockData$blockNum == 1, ] # so summaryData only have something relevant
-}else{
-  load("genData/expDataAnalysis/sessionData.RData")
-  load("genData/expDataAnalysis/kmOnGridSess.RData")
-  summaryData = sessionData
-}
+
+load("genData/expDataAnalysis/sessionData.RData")
+load("genData/expDataAnalysis/kmOnGridSess.RData")
+summaryData = sessionData
 
 # maybe I shoud truncate summaryData to make them the same as balabala 
 
@@ -83,7 +72,8 @@ for(pIdx in 1 : (length(paras) + 1)){
     # ggsave(fileName, width = 6, height = 3)
   }
 }
-paraNames = c("LR", "LP", "Tau", "Gamma", "P", "deltaL")
+# paraNames = c("LR", "LP", "Tau", "Gamma", "P", "deltaL")
+paraNames = c(paras, "deltaL")
 dimNames = list(paraNames, c("DG", "IM", "IU", "AX"))
 rhoTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * (nPara+1)), function(i) traitParaCorr[[i]]$rhos[j]),
                                           nrow = nPara+1, dimnames = dimNames))
@@ -99,7 +89,7 @@ col2 <- colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D", "#F4A582",
 parentDir = ifelse(dataType == "sess", "figures/expParaAnalysisSub", "figures/expParaAnalysis")
 for(i in 1 : 2){
   cond = conditions[i]
-  fileName = sprintf("%s/%s/traitPara%s_%s.png", parentDir, modelName, cond, dataType)
+  fileName = sprintf("%s/%s/traitPara%s.png", "figures/expParaAnalysis/", modelName, cond)
   png(fileName)
   corrplot(rhoTable[[i]], 
            p.mat = pTable[[i]], 
@@ -124,7 +114,7 @@ for(cIdx in 1 : 2){
     ggplot(aes(x = traitValue, y = paraValue)) + geom_point() +
     facet_grid(para ~ trait, scales = "free") + theme_linedraw(base_size = 13)+
     xlab("") + ylab("") + ggtitle(cond) + theme(plot.title = element_text(face = "bold", hjust = 0.5))
-  parentDir = ifelse(dataType == "sess", "figures/expParaAnalysisSub", "figures/expParaAnalysis")
+  parentDir = "figures/expParaAnalysis"
   fileName = sprintf("%s/%s/lm_%s.png", parentDir, modelName, cond)
   ggsave(fileName, width = 6, height = 6)
 }
@@ -145,7 +135,8 @@ ggplot(sumInput, aes(xGroup, meanY)) + geom_point() +facet_grid(~cond) + xlab("I
 
 # plot hist 
 # paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
-paraNames = c("LR", "LP", expression(tau), "P")
+# paraNames = c("LR", "LP", expression(tau), "P")
+paraNames = paras
 expPara$condition = summaryData$condition[summaryData$id %in% expPara$id]
 expPara %>% filter(id %in% useID) %>% select(c(paras, "condition")) %>%
   gather(-c("condition"), key = "para", value = "value") %>%
@@ -153,7 +144,7 @@ expPara %>% filter(id %in% useID) %>% select(c(paras, "condition")) %>%
   ggplot(aes(value)) + geom_histogram(bins = 8) +
   facet_grid(condition ~ para, scales = "free", labeller = label_parsed) + 
   myTheme + xlab(" ") + ylab(" ")
-fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysisSub", modelName)
+fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysis", modelName)
 ggsave(fileName, width = 8, height = 4)
 
 

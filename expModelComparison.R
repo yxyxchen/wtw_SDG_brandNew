@@ -3,6 +3,8 @@ library("stringr")
 library("ggplot2")
 source("subFxs/helpFxs.R")
 source("subFxs/loadFxs.R")
+source("subFxs/modelComparisonFxs.R")
+source("subFxs/plotThemes.R")
 # load model names
 allData = loadAllData()
 hdrData = allData$hdrData           
@@ -10,36 +12,9 @@ trialData = allData$trialData
 allIDs = hdrData$ID                   # column of subject IDs
 n = length(allIDs) 
 
-
-likRatioTest("PR", "PRNC", 1, "all")
-likRatioTest("fullModel", "PR", 1, "all")
-likRatioTest("baseline", "PR", 4, "all")
-
-likRatioTest = function(modelName1, modelName2, df, group = "all"){
-  paras1 = getParas(modelName1)
-  expPara1 = loadExpPara(paras1,
-                         sprintf("genData/expModelFitting/%s", modelName1))
-  useID1 = getUseID(expPara1, paras1)
-  paras2 = getParas(modelName2)
-  expPara2 = loadExpPara(paras2,
-                         sprintf("genData/expModelFitting/%s", modelName2))
-  useID2 = getUseID(expPara2, paras2)
-  if(group == "HP" || group == "LP"){
-    useID = allIDs[allIDs %in% useID1 & allIDs %in% useID2 & hdrData$condition == group]
-  }
-  
-  sumLogEvi1 = filter(expPara1, id %in% useID) %>% summarise(sum(LL_all))
-  sumLogEvi2 = filter(expPara2, id %in% useID) %>% summarise(sum(LL_all))
-  
-  delta = -2 * as.double(sumLogEvi1 - sumLogEvi2)
-  p = pchisq(delta, df * length(useID), lower.tail=FALSE)
-  return(p)
-}
-
-# define a function for convinence
-# select useID
+# select common useID
 idList = hdrData$ID
-modelNames = c("PRbs", "PRbsNC")
+modelNames = c("PRbs", "PRbsNC", "Rlearn", "RlearnL")
 nModel = length(modelNames)
 useID_ = vector(mode = "list", length = nModel)
 source("subFxs/loadFxs.R")
@@ -53,6 +28,7 @@ useID = idList[apply(sapply(1 : nModel, function(i )idList %in% useID_[[i]]), MA
               all)]
 nUse = length(useID)
 
+# extract logEvidece_ from loo 
 logEvidence_ = matrix(NA, nUse, nModel)
 logLik_ = matrix(NA, nUse, nModel)
 pWaic_ = matrix(NA, nUse, nModel)
@@ -62,31 +38,69 @@ for(m in 1 : nModel){
     id = useID[sIdx]
     fileName = sprintf("genData/expModelFitting/%s/s%d_waic.RData", modelName, id)
     load(fileName)
-    logEvidence_[sIdx, m] = WAIC$elpd_waic
+    logEvidence_[sIdx, m] = WAIC$elpd_waic # here is like loglikelyhood, larger the better 
     logLik_[sIdx, m] = WAIC$elpd_waic  + WAIC$p_waic / 2
     pWaic_[sIdx, m] = WAIC$p_waic
   }
 }
+# save output for modelComparision 
 output = data.frame(logEvidence_,
-                    condition = ifelse(hdrData$condition[hdrData$ID %in% useID] == "HP", 1, 2))
-f= "genData/expModelFittingSub/logEvidenceList.csv"
+                    condition = ifelse(hdrData$condition[hdrData$ID %in% useID] == "HP", 1, 2),
+                    AUC = sessionData$AUC[sessionData$id %in% useID])
+f= "genData/expModelFitting/logEvidenceList.csv"
 write.table(file = f, output, sep = ",", col.names = F, row.names = F)
 
+# participants best desribed by 
 library("ggpubr")
-condition = hdrData$condition[hdrData$ID %in% useID]
-nQuit = sessionData$nQuit[hdrData$ID %in% useID]
-data.frame(logLik = as.vector(logLik_), condition = rep(condition, nModel),
-           model = as.factor(rep(modelNames, each = nrow(logLik_))),
-           nQuit =  rep(nQuit, nModel)) %>% 
-  filter(nQuit < 5) %>% ggplot(aes(model, logLik)) +
-  geom_boxplot() + stat_compare_means()
+bestNums = sapply(1 : nModel, function(i) sum(apply(logEvidence_[,1:nModel], MARGIN = 1, FUN = function(x) which.max(x) == i)))
+data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=bestNums, fill=model)) +
+  geom_bar(width = 1, stat = "identity") + 
+  coord_polar("y", start=0) + ylab("") + xlab("") + ggtitle(sprintf("Participants best described (n = %d)", nUse))+ 
+  myTheme
 
 
-
-# is there any logLik differences within a subset of data?
-zoomInID = unique(blockData$id[blockData$AUC> 11 & blockData$AUC < 25 & blockData$condition == "LP"])
-a = medianLogLik_[useID %in% zoomInID, ]
-arbMinusThe = a[,1] - a[,2]
-hist(arbMinusThe)
+# extract logEvidence, cross validation
+ids = hdrData$ID[hdrData$stress == "no stress"]
+modelName = "PRbs"
+paras = getParas(modelName)
+nPara = length(paras)
+nFold = 10
+logLikFun = getLogLikFun(modelName)
+logEvidence = vector(length = length(ids))
+nCore = parallel::detectCores() -1 # only for the local computer
+registerDoMC(nCore)
+for(sIdx in 1 : length(ids)){
+  id = ids[sIdx]
+  load(sprintf("genData/expModelFittingCV/%s/s%d_split.RData",modelName, id))
+  thisTrialData = trialData[[id]]
+  nTrial = length(thisTrialData$trialEarnings)
+  cond = unique(thisTrialData$condition)
+  tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  trialEarnings = thisTrialData$trialEarnings
+  timeWaited = pmin(thisTrialData$timeWaited, tMax)
+  Ts = round(ceiling(timeWaited / stepDuration) + 1)
+  scheduledWait = thisTrialData$scheduledWait
+  cvPara = loadCVPara(paras, sprintf("genData/expModelFittingCV/%s",modelName),
+                      id)
+  # initialize 
+  LL_ = vector(length = nFold)
+  if(length(getUseID(cvPara, paras)) == 10){
+    for(f in 1 : nFold){
+      trials = partTable[f,]
+      trials = trials[trials < nTrial]
+      thisParas = tempt[1:nPara,1]
+      logLik_ = logLikFun(thisParas, cond, trialEarnings, timeWaited)$logLik_
+      LL_[f] = sum(sapply(1 : length(trials), function(i){
+        trial = trials[i]
+        if(trialEarnings[trial] > 0){
+          sum(logLik_[1 : max(Ts[trial]-1, 1), trial])
+        }else{
+          sum(logLik_[1:max(Ts[trial] - 2,1), trial]) + log(1-exp(logLik_[Ts[trial] - 1, trial]))
+        }
+      }))
+    }
+    logEvidence[sIdx] = sum(LL_)
+  }
+}
 
 

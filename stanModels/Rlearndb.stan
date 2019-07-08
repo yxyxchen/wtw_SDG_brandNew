@@ -13,8 +13,8 @@ data {
   real stepDuration;
   real iti;
   real tokenValue;
+  vector[nPara] up;
   vector[nPara] low;
-  vector[nPara] up; 
 }
 transformed data {
   int totalSteps = sum(Ts) - N;
@@ -24,8 +24,6 @@ parameters {
   real<lower = low[2], upper = up[2]> phiP; 
   real<lower = low[3], upper = up[3]> tau;
   real<lower = low[4], upper = up[4]> zeroPoint; 
-  real<lower = low[5], upper = up[5]> beta;
-  real<lower = low[6], upper = up[6]> betaP;   
 }
 transformed parameters{
   // initialize action values 
@@ -88,9 +86,9 @@ transformed parameters{
    
     // update reRate 
     if(RT > 0){
-      reRate = reRate +  beta * delta;
+      reRate = reRate +  phi * delta;
     }else{
-      reRate = reRate + betaP * delta;
+      reRate = reRate + phiP * delta;
     }
     
     // save action values
@@ -103,8 +101,7 @@ model {
   phiP ~ uniform(low[2], up[2]);
   tau ~ uniform(low[3], up[3]);
   zeroPoint ~ uniform(low[4], up[4]);
-  beta ~ uniform(low[5], up[5]);
-  betaP ~ uniform(low[6], up[6]);  
+  
   // calculate the likelihood 
   for(tIdx in 1 : N){
     int action;

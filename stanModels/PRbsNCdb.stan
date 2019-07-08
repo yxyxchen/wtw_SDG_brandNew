@@ -14,7 +14,7 @@ data {
   real iti;
   real tokenValue;
   vector[nPara] low;
-  vector[nPara] up; 
+  vector[nPara] up;
 }
 transformed data {
   int totalSteps = sum(Ts) - N;
@@ -23,24 +23,22 @@ parameters {
   real<lower = low[1], upper = up[1]> phi;
   real<lower = low[2], upper = up[2]> phiP; 
   real<lower = low[3], upper = up[3]> tau;
-  real<lower = low[4], upper = up[4]> zeroPoint; 
-  real<lower = low[5], upper = up[5]> beta;
-  real<lower = low[6], upper = up[6]> betaP;   
+  real<lower = low[4], upper = up[4]> gamma;
+  real<lower = low[5], upper = up[5]> zeroPoint; 
 }
 transformed parameters{
   // initialize action values 
   // especially for this version use 0.9, original 1
-  real Qquit = 0;
-  real Viti = 0;
-  real reRate = wIni;
+  real Qquit = wIni;
+  real Viti = wIni;
   vector[nTimeSteps] Qwait;
     // initialize variables to record action values 
   matrix[nTimeSteps, N] Qwaits = rep_matrix(0, nTimeSteps, N);
   vector[N] Qquits = rep_vector(0, N);
+  vector[N] Vitis = rep_vector(0, N);
 
   // initialize caching variables
   real G1;
-  real delta;
   // fill values
   for(i in 1 : nTimeSteps){
     Qwait[i] = zeroPoint*0.1 - 0.1*(i - 1) + Qquit;
@@ -49,7 +47,8 @@ transformed parameters{
   // fill the first element of Qwaits, Quits and Vitis 
   Qwaits[,1] = Qwait;
   Qquits[1] = Qquit;
-  
+  Vitis[1] = Viti;
+ 
   //loop over trial
   for(tIdx in 1 : (N -1)){
     // determine the termial timestep T 
@@ -59,52 +58,50 @@ transformed parameters{
     // update action values for rewarded trials
     if(RT > 0){
       for(t in 1 : (T - 1)){
-        real G = RT - reRate * (T - t) + Viti;
+        real G = RT * gamma^(T - t -1) + Viti * gamma^(T - t);
         Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);
       }
     }else{
       if(T > 2){
         for(t in 1 : (T-2)){
-          real G =  RT  - reRate * (T - t) + Viti;
+          real G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
           Qwait[t] = Qwait[t] + phiP * (G - Qwait[t]);    
         }
       }
     }
     // update Qquit by counterfactual thiking
-    G1 =  RT  - reRate*(T - 1) + Viti;
-    if(RT > 0){
-      Qquit = Qquit + phi * (G1 - reRate * (iti / stepDuration + 1) - Qquit);
-    }else{
-      Qquit = Qquit + phiP * (G1 - reRate * (iti / stepDuration + 1) - Qquit);
+    G1 =  RT  * gamma^(T - 2) + Viti * gamma^(T - 1);
+    if(tIdx > 1){
+      if(trialEarnings[tIdx - 1] == 0){
+        if(RT > 0){
+          Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+        }else{
+          Qquit = Qquit + phiP * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+        }
+      }
     }
     
     // update Viti
-    delta = (G1 - reRate * (iti / stepDuration) - Viti);
     if(RT > 0){
-       Viti = Viti + phi * delta;
+       Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);
     }else{
-       Viti = Viti + phiP * delta;
+       Viti = Viti + phiP * (G1 * gamma^(iti / stepDuration) - Viti);
     }
    
-    // update reRate 
-    if(RT > 0){
-      reRate = reRate +  beta * delta;
-    }else{
-      reRate = reRate + betaP * delta;
-    }
     
     // save action values
     Qwaits[,tIdx+1] = Qwait;
     Qquits[tIdx+1] = Qquit;
+    Vitis[tIdx + 1] = Viti;
   }// end of the loop
 }
 model {
   phi ~ uniform(low[1], up[1]);
   phiP ~ uniform(low[2], up[2]);
   tau ~ uniform(low[3], up[3]);
-  zeroPoint ~ uniform(low[4], up[4]);
-  beta ~ uniform(low[5], up[5]);
-  betaP ~ uniform(low[6], up[6]);  
+  gamma ~ uniform(low[4], up[4]);
+  zeroPoint ~ uniform(low[5], up[5]);
+  
   // calculate the likelihood 
   for(tIdx in 1 : N){
     int action;

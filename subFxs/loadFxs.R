@@ -100,7 +100,7 @@ loadExpPara = function(paras, dirName){
       junk = junk[1:nE,]
     }
     expPara[i, 1:nE] = junk[,1]
-    expPara[i, (nE + 1) : (2 * nE)] = junk[,2]
+    expPara[i, (nE + 1) : (2 * nE)] = junk[,3]
     expPara[i, (2*nE + 1) : (3 * nE)] = junk[,9]
     expPara[i, (3 * nE + 1) : (4 * nE)] = junk[,10]
   }
@@ -112,53 +112,85 @@ loadExpPara = function(paras, dirName){
   return(expPara)
 }
 
-getMode = function(x){
-  ob = density(x)
-  value = ob$x
-  dense = ob$y
-  return(value[which.max(dense)])
-}
 
-loadExpParaExtra = function(modelName, paras){
-  nE = length(paras) + 2
-  load("genData/expDataAnalysis/blockData.RData")
-  idList = unique(blockData$id) 
-  n = length(idList)
+
+loadCVPara = function(paras, dirName, id){
+  # number of paras 
   nE = length(paras) + 1
-  expParaMode = matrix(NA, n, nE)
-  expParaMedian = matrix(NA, n, nE)
+  # number of files
+  fileNames = list.files(path= dirName, pattern=(sprintf("s%d_f[0-9]{1,2}_summary.txt", id)))
+  library("gtools")
+  fileNames = mixedsort(sort(fileNames))
+  n = length(fileNames) 
+  sprintf("load %d files", n)
+  
+  # initialize the outout variable 
+  expPara = matrix(NA, n, nE * 4)
+  idList = vector(length = n)
+  # loop over files
   for(i in 1 : n){
-    ID = idList[i]
-    fileName = sprintf("genData/expModelFitting/%s/s%d.txt", modelName, ID)
-    junk = read.csv(fileName, header = F)
-    
-    expParaMode[i, ] = apply(junk[,1:nE], MARGIN = 2, getMode)
-    expParaMedian[i, ] = apply(junk[,1:nE], MARGIN = 2, median)
+    fileName = fileNames[[i]]
+    address = sprintf("%s/%s", dirName, fileName)
+    junk = read.csv(address, header = F)
+    idIndexs = str_locate(fileName, "f[0-9]{1,2}")
+    idList[i] = as.double(substr(fileName, idIndexs[1]+1, idIndexs[2]))
+    # delete the lp__ in the old version
+    if(nrow(junk) > nE){
+      junk = junk[1:nE,]
+    }
+    expPara[i, 1:nE] = junk[,1]
+    expPara[i, (nE + 1) : (2 * nE)] = junk[,3]
+    expPara[i, (2*nE + 1) : (3 * nE)] = junk[,9]
+    expPara[i, (3 * nE + 1) : (4 * nE)] = junk[,10]
   }
-  expParaMode = data.frame(expParaMode)
-  expParaMedian = data.frame(expParaMedian)
-  
-  junk = c(paras, "log_lik")
-  colnames(expParaMode) =  paste0(junk, "Mode")
-  expParaMode$id = idList  # needed for left_join
-  colnames(expParaMedian) =  paste0(junk, "Median")
-  expParaMedian$id = idList  # needed for left_join
-  
-  outputs = list("expParaMedian" = expParaMedian, "expParaMode" = expParaMode)
-  return(outputs)
+  # transfer expPara to data.frame
+  expPara = data.frame(expPara)
+  junk = c(paras, "LL_all")
+  colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"))
+  expPara$id = idList
+  return(expPara)
 }
 
-# for each sub
-loadExpParaMedian = function(modelName, paras, id){
-  nE = length(paras) + 2
-  load("genData/expDataAnalysis/blockData.RData")
+loadExpParaExtra = function(paras, dirName){
+  # number of paras 
   nE = length(paras) + 1
-  expParaMedian = vector(length = nE)
-    fileName = sprintf("genData/expModelFitting/%s/s%d.txt", modelName, id)
-    junk = read.csv(fileName, header = F)
-    expParaMedian  = apply(junk[,1:nE], MARGIN = 2, median)
-  return(expParaMedian)
+  # number of files
+  fileNames = list.files(path= dirName, pattern=("*_summary.txt"))
+  library("gtools")
+  fileNames = mixedsort(sort(fileNames))
+  n = length(fileNames) 
+  sprintf("load %d files", n)
+  
+  # initialize the outout variable 
+  expPara = matrix(NA, n, nE * 6)
+  idList = vector(length = n)
+  # loop over files
+  for(i in 1 : n){
+    fileName = fileNames[[i]]
+    address = sprintf("%s/%s", dirName, fileName)
+    junk = read.csv(address, header = F)
+    idIndexs = str_locate(fileName, "s[0-9]+")
+    idList[i] = as.double(substr(fileName, idIndexs[1]+1, idIndexs[2]))
+    # delete the lp__ in the old version
+    if(nrow(junk) > nE){
+      junk = junk[1:nE,]
+    }
+    expPara[i, 1:nE] = junk[,1]
+    expPara[i, (nE + 1) : (2 * nE)] = junk[,3]
+    expPara[i, (2*nE + 1) : (3 * nE)] = junk[,9]
+    expPara[i, (3 * nE + 1) : (4 * nE)] = junk[,10]
+    expPara[i, (4*nE + 1) : (5 * nE)] = junk[,4]
+    expPara[i, (5 * nE + 1) : (6 * nE)] = junk[,8]
+  }
+  # transfer expPara to data.frame
+  expPara = data.frame(expPara)
+  junk = c(paras, "LL_all")
+  colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"),paste0(junk, "2.5"),paste0(junk, "97.5"))
+  expPara$id = idList
+  return(expPara)
 }
+
+
 
 loadSimPara = function(paras, dirName){
   # number of paras 

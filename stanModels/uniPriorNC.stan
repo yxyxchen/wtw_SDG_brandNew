@@ -9,20 +9,19 @@ data {
   vector[N] timeWaited;
   vector[N] trialEarnings;
   int Ts[N]; // terminal time step index 
+  real stepDuration;
+  real iti;
+  real tokenValue;
 }
 transformed data {
-  // constant
-  real stepDuration = 1;
-  real iti = 2;
-  real tokenValue = 10;
   int totalSteps = sum(Ts) - N;
-  }
+}
 parameters {
   real<lower = 0, upper = 0.3> phi;
   real<lower = 0, upper = 0.3> phiP; 
-  real<lower = 2, upper = 22> tau;
+  real<lower = 0.1, upper = 22> tau;
   real<lower = 0.7, upper = 1> gamma;
-  real<lower = wIni, upper = wIni * 2> QwaitIni; 
+  real<lower = wIni * 0.5, upper = wIni * 2> QwaitIni; 
 }
 transformed parameters{
   // initialize action values 
@@ -60,18 +59,25 @@ transformed parameters{
         Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);
       }
     }else{
-      real G =  RT  + Viti * gamma;
-      Qquit = Qquit + phiP * (G - Qquit) * (G > Qquit) + phiP *  (G - Qquit) * (G <= Qquit) ;
       if(T > 2){
         for(t in 1 : (T-2)){
-          G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
+          real G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
           Qwait[t] = Qwait[t] + phiP * (G - Qwait[t]);    
         }
       }
     }
     // update Qquit by counterfactual thiking
     G1 =  RT  * gamma^(T - 2) + Viti * gamma^(T - 1);
-
+    if(tIdx > 1){
+      if(trialEarnings[tIdx - 1] == 0){
+        if(RT > 0){
+          Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+        }else{
+          Qquit = Qquit + phiP * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+        }
+      }
+    }
+    
     // update Viti
     if(RT > 0){
        Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);
@@ -89,9 +95,9 @@ transformed parameters{
 model {
   phi ~ uniform(0, 0.3);
   phiP ~ uniform(0, 0.3);
-  tau ~ uniform(2, 22);
+  tau ~ uniform(0.1, 22);
   gamma ~ uniform(0.7, 1);
-  QwaitIni ~ uniform(0, nTimeSteps);
+  QwaitIni ~ uniform(wIni * 0.5, wIni * 2);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){
@@ -135,4 +141,3 @@ generated quantities {
   }// end of the loop
   LL_all =sum(log_lik);
 }
-

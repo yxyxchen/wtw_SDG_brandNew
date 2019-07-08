@@ -44,7 +44,6 @@ transformed parameters{
   // fill the first element of Qwaits, Quits and Vitis 
   Qwaits[,1] = Qwait;
   Qquits[1] = Qquit;
-  Vitis[1] = Viti;
  
   //loop over trial
   for(tIdx in 1 : (N -1)){
@@ -85,7 +84,6 @@ transformed parameters{
     // save action values
     Qwaits[,tIdx+1] = Qwait;
     Qquits[tIdx+1] = Qquit;
-    Vitis[tIdx + 1] = Viti;
   }// end of the loop
 }
 model {

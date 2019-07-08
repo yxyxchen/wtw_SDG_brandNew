@@ -14,7 +14,7 @@ source("subFxs/analysisFxs.R") # kmsc, trialPlot
 
 # load summaryData
 nBlock = 3
-nComb = 10
+nComb = 1
 load("genData/expDataAnalysis/sessionData.RData")
 load("genData/expDataAnalysis/kmOnGridSess.RData")
 summaryData = sessionData
@@ -24,7 +24,7 @@ hdrData = allData$hdrData
 expTrialData = allData$trialData       
 allIDs = hdrData$ID 
 
-  
+
 # re-simulate data
 modelName = "PRbs"
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
@@ -40,21 +40,77 @@ rep.Rlearn = modelRepitation(modelName, summaryData, expTrialData, nComb)
 
 modelName = "RlearnL"
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-rep.Rlearn = modelRepitation(modelName, summaryData, expTrialData, nComb)
+rep.RlearnL = modelRepitation(modelName, summaryData, expTrialData, nComb)
 plotKMSC = F
 
+modelName = "Rlearndb"
+dir.create(sprintf("figures/expModelRepitation/%s",modelName))
+rep.Rlearndb = modelRepitation(modelName, summaryData, expTrialData, nComb)
+
+modelName = "reduce_gamma"
+dir.create(sprintf("figures/expModelRepitation/%s",modelName))
+rep.gamma = modelRepitation(modelName, summaryData, expTrialData, nComb)
+
+modelName = "RlearnL"
+expPara = loadExpPara(getParas(modelName), sprintf("genData/expModelFitting/%s", modelName))
+useID = getUseID(expPara, getParas(modelName))
+length(useID)
+ids = hdrData$ID[hdrData$stress == "no stress"]
+ids[!ids %in% useID]
+expPara = loadExpParaExtra(getParas(modelName), sprintf("genData/expModelFitting/%s", modelName))
+hist(expPara$phi97.5[!expPara$id %in% useID])
+
+# to understand why Rlearn didn't converge 
+expPara_PR = rep.PRbs$expPara
+expPara_Rlearn = rep.RlearnL$expPara
+useID_PR = getUseID(expPara_PR, getParas("PRbs"))
+useID_Rlearn = getUseID(expPara_Rlearn, getParas("RlearnL"))
+
+expPara_db = rep.Rlearndb$expPara
+useID_db = getUseID(expPara_db, paras = getParas("Rlearndb"))
+
+# unconverge and gamma
+unConverge = expPara_PR$gamma[!expPara_PR$id %in% useID_Rlearn]
+converge = expPara_PR$gamma[expPara_PR$id %in% useID_Rlearn]
+a = hist(unConverge)
+breaks = a$breaks
+medians = a$mids
+a = hist(unConverge, breaks = breaks)
+b = hist(converge, breaks = breaks)
+unConvergeRatio = a$counts / (a$counts + b$counts)
+plot(medians, unConvergeRatio, xlab = "Gamma",
+     ylab = "Unconverged ratio") 
+hist(expPara_PR$gamma, breaks = breaks)
+
+# unconverge and nExclude
+unConverge = expPara_PR$nExclude[!expPara_PR$id %in% useID_Rlearn]
+converge = expPara_PR$nExclude[expPara_PR$id %in% useID_Rlearn]
+breaks = c(0, 5, 10, 15, 20, 25, 30, 35)
+medians = c(2.5, 7.5, 12.5, 17.5, 22.5, 27.5, 32.5)
+a = hist(unConverge, breaks = breaks)
+b = hist(converge, breaks = breaks)
+unConvergeRatio = a$counts / (a$counts + b$counts)
+plot(medians, unConvergeRatio, xlab = "nExclude",
+     ylab = "Unconverged ratio") 
+hist(expPara_PR$nExclude)
+
+ids = expPara_PR$id
+ids[!ids %in% useID_Rlearn]
+
 # initialize 
-thisRep = rep.Rlearn
+thisRep = rep.gamma
 expPara = thisRep$expPara
 repTrialData = thisRep$repTrialData
-paras = getParas("RlearnL")
-useID = thisRep$useID
-# useID = getUseID(expPara, paras)
+modelName = "reduce_gamma"
+paras = getParas(modelName)
+
+useID = getUseID(expPara, paras)
 repNo = thisRep$repNo
 nSub =(length(useID))
 AUCRep_ = matrix(NA, nrow = nComb , ncol = nSub)
 stdWdRep_ = matrix(NA, nrow = nComb, ncol = nSub)
 kmOnGridRep_ = vector(mode = "list", length = nSub)
+plotKMSC = F
 for(sIdx in 1 : nSub){
   # prepare inputs
   id = useID[[sIdx]]
@@ -124,8 +180,8 @@ tempt$timeWaited =  matrix(unlist(lapply(1:nComb, function(i) repTrialData[[repN
 tempt = within(tempt, sapply(1 : length(timeWaited), function(i) ifelse(timeWaited[i] >= scheduledWait[i], tokenValue, 0)))
 tempt$blockNum = junk$blockNum
 trialPlots(tempt,"Model-generated Data")
-# ggsave(sprintf("figures/expModelRepitation/%s/sim_data__%d.png", modelName, id),
-#        width = 5, height = 4)
+ggsave(sprintf("figures/expModelRepitation/%s/sim_data__%d.png", modelName, id),
+       width = 5, height = 4)
 })
 
 
