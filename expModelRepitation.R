@@ -14,7 +14,7 @@ source("subFxs/analysisFxs.R") # kmsc, trialPlot
 
 # load summaryData
 nBlock = 3
-nComb = 1
+nComb = 10
 load("genData/expDataAnalysis/sessionData.RData")
 load("genData/expDataAnalysis/kmOnGridSess.RData")
 summaryData = sessionData
@@ -28,7 +28,7 @@ allIDs = hdrData$ID
 # re-simulate data
 modelName = "PRbs"
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-rep.PRbs = modelRepitation(modelName, summaryData, expTrialData, nComb)
+rep.PRbs = modelRepitation(modelName, summaryData, expTrialData, nComb) # set seeds indise
 
 modelName = "PRbsNC"
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
@@ -41,11 +41,6 @@ rep.Rlearn = modelRepitation(modelName, summaryData, expTrialData, nComb)
 modelName = "RlearnL"
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
 rep.RlearnL = modelRepitation(modelName, summaryData, expTrialData, nComb)
-plotKMSC = F
-
-modelName = "Rlearndb"
-dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-rep.Rlearndb = modelRepitation(modelName, summaryData, expTrialData, nComb)
 
 modelName = "reduce_gamma"
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
@@ -98,10 +93,12 @@ ids = expPara_PR$id
 ids[!ids %in% useID_Rlearn]
 
 # initialize 
-thisRep = rep.gamma
+modelName = "PRbsNC"
+dir.create(sprintf("figures/expModelRepitation/%s", modelName))
+thisRep = rep.PRbsNC
 expPara = thisRep$expPara
 repTrialData = thisRep$repTrialData
-modelName = "reduce_gamma"
+
 paras = getParas(modelName)
 
 useID = getUseID(expPara, paras)
@@ -159,7 +156,7 @@ fileName = sprintf("figures/expModelRepitation/%s/std_stdRep.png", modelName)
 ggsave(filename = fileName,  width = 6, height = 4)
 
 # compare emipircal and reproduced trialPlot, for one participant 
-id = 1
+id = 9
 sIdx = which(useID  == id)
 cond = unique(summaryData$condition[summaryData$id == id])
 label = sprintf("Sub %d, %s", id, cond)

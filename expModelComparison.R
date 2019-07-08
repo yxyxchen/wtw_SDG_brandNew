@@ -14,7 +14,7 @@ n = length(allIDs)
 
 # select common useID
 idList = hdrData$ID
-modelNames = c("PRbs", "PRbsNC", "Rlearn", "RlearnL")
+modelNames = c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma")
 nModel = length(modelNames)
 useID_ = vector(mode = "list", length = nModel)
 source("subFxs/loadFxs.R")
@@ -60,47 +60,73 @@ data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=best
 
 
 # extract logEvidence, cross validation
+modelNames = c("PRbs", "PRbsNC", "reduce_gamma")
+nModel = length(modelNames)
 ids = hdrData$ID[hdrData$stress == "no stress"]
-modelName = "PRbs"
-paras = getParas(modelName)
-nPara = length(paras)
+nSub = length(ids)
 nFold = 10
-logLikFun = getLogLikFun(modelName)
-logEvidence = vector(length = length(ids))
-nCore = parallel::detectCores() -1 # only for the local computer
-registerDoMC(nCore)
-for(sIdx in 1 : length(ids)){
-  id = ids[sIdx]
-  load(sprintf("genData/expModelFittingCV/%s/s%d_split.RData",modelName, id))
-  thisTrialData = trialData[[id]]
-  nTrial = length(thisTrialData$trialEarnings)
-  cond = unique(thisTrialData$condition)
-  tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
-  trialEarnings = thisTrialData$trialEarnings
-  timeWaited = pmin(thisTrialData$timeWaited, tMax)
-  Ts = round(ceiling(timeWaited / stepDuration) + 1)
-  scheduledWait = thisTrialData$scheduledWait
-  cvPara = loadCVPara(paras, sprintf("genData/expModelFittingCV/%s",modelName),
-                      id)
-  # initialize 
-  LL_ = vector(length = nFold)
-  if(length(getUseID(cvPara, paras)) == 10){
-    for(f in 1 : nFold){
-      trials = partTable[f,]
-      trials = trials[trials < nTrial]
-      thisParas = tempt[1:nPara,1]
-      logLik_ = logLikFun(thisParas, cond, trialEarnings, timeWaited)$logLik_
-      LL_[f] = sum(sapply(1 : length(trials), function(i){
-        trial = trials[i]
-        if(trialEarnings[trial] > 0){
-          sum(logLik_[1 : max(Ts[trial]-1, 1), trial])
-        }else{
-          sum(logLik_[1:max(Ts[trial] - 2,1), trial]) + log(1-exp(logLik_[Ts[trial] - 1, trial]))
-        }
-      }))
+logEvidence = matrix(nrow = length(ids), ncol= nModel) 
+logEvidenceTrain = list(length = nModel)
+for(mIdx in 1 : nModel){
+  modelName = modelNames[mIdx]
+  paras = getParas(modelName)
+  nPara = length(paras)
+  logLikFun = getLogLikFun(modelName)
+  thisLogEvidenceTrain = matrix(nrow = nFold, ncol = nSub)
+  for(sIdx in 1 : nSub){
+    id = ids[sIdx]
+    load(sprintf("genData/expModelFittingCV/%s/s%d_split.RData",modelName, id))
+    thisTrialData = trialData[[id]]
+    nTrial = length(thisTrialData$trialEarnings)
+    cond = unique(thisTrialData$condition)
+    tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+    trialEarnings = thisTrialData$trialEarnings
+    timeWaited = pmin(thisTrialData$timeWaited, tMax)
+    Ts = round(ceiling(timeWaited / stepDuration) + 1)
+    scheduledWait = thisTrialData$scheduledWait
+    cvPara = loadCVPara(paras, sprintf("genData/expModelFittingCV/%s",modelName),
+                        id)
+    # initialize 
+    LL_ = vector(length = nFold)
+    if(length(getUseID(cvPara, paras)) == 10){
+      for(f in 1 : nFold){
+        # determine training end testing trials
+        trials = partTable[f,]
+        trials = trials[trials < nTrial]
+        junk = 1 : nTrial
+        trialsTrain = junk[!junk %in% trials]
+        
+        thisParas = as.double(cvPara[f,1:nPara])
+        lik_ = logLikFun(thisParas, cond, trialEarnings, timeWaited)$lik_
+        LL_[f] = sum(sapply(1 : length(trials), function(i){
+          trial = trials[i]
+          if(trialEarnings[trial] > 0){
+            sum(log(lik_[1 : max(Ts[trial]-1, 1), trial]))
+          }else{
+            sum(log(lik_[1:max(Ts[trial] - 2,1), trial])) + log(1-lik_[Ts[trial] - 1, trial])
+          }
+        }))
+        thisLogEvidenceTrain[f, sIdx] = sum(sapply(1 : length(trialsTrain), function(i){
+          trial = trialsTrain[i]
+          if(trialEarnings[trial] > 0){
+            sum(log(lik_[1 : max(Ts[trial]-1, 1), trial]))
+          }else{
+            sum(log(lik_[1:max(Ts[trial] - 2,1), trial])) + log(1-lik_[Ts[trial] - 1, trial])
+          }
+        }))
+          
+      }
+      logEvidence[sIdx, mIdx] = sum(LL_)
+      logEvidenceTrain[[mIdx]] = thisLogEvidenceTrain
     }
-    logEvidence[sIdx] = sum(LL_)
   }
 }
+select = apply(sapply(1 : nModel, function(i) !is.na(logEvidence[,i])), MARGIN = 1, FUN = all)
+useID = ids[select]
 
-
+output = data.frame(cvLik = logEvidence[select,],
+                    cond = ifelse(sessionData$condition[hdrData$ID %in% useID] == "HP", 1, 2),
+                    AUC = sessionData$AUC[hdrData$ID %in% useID], id = useID)
+f= "genData/expModelFitting/logEvidenceListCV.csv"
+write.table(file = f, output, sep = ",", col.names = F, row.names = F)
+nZeros = sapply(1 : nFold, function(i) sum(trialEarnings[(1 : nTrial) %in% as.vector(partTable[-i,])] == 0))

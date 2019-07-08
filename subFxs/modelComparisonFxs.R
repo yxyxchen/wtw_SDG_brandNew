@@ -53,7 +53,7 @@ getLogLikFun = function(modelName){
 
 PRbs = function(paras, cond, trialEarnings, timeWaited){
   # parse para
-  phi = paras[1]; phiP = paras[2]; tau = paras[3]; gamma = paras[4]; zeroPoint = paras[5]
+  phi = thisParas[1]; phiP = thisParas[2]; tau = thisParas[3]; gamma = thisParas[4]; zeroPoint = thisParas[5]
   
   # determine number of trials and nTimeSteps 
   nTrial = length(scheduledWait)
@@ -78,7 +78,7 @@ PRbs = function(paras, cond, trialEarnings, timeWaited){
   Gs = matrix(NA, nTimeStep, nTrial)
   
   # initialize outputs 
-  logLik_ = matrix(nrow = nTimeStep, ncol = nTrial)
+  lik_ = matrix(nrow = nTimeStep, ncol = nTrial)
   
   # loop over trials
   for(tIdx in 1 : nTrial) {
@@ -86,8 +86,8 @@ PRbs = function(paras, cond, trialEarnings, timeWaited){
     getReward = ifelse(nextReward == tokenValue, T, F)
     T = Ts[tIdx]
     # calculate logLik
-    logLik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 
-      log(1 / sum(1  + exp((Qquit- Qwait[i])* tau))))
+    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp((Qquit- Qwait[i])* tau)))
+    
     # update values 
     if(tIdx < nTrial){
       returns = sapply(1 : (T-1), function(t) gamma^(T-t-1) *nextReward + gamma^(T-t) * Viti)
@@ -125,15 +125,15 @@ PRbs = function(paras, cond, trialEarnings, timeWaited){
   } # end of the trial loop
   
   outputs = list( 
-    "logLik_" = logLik_,
+    "lik_" = lik_,
     "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas, "Vitis" = Vitis
   )
   return(outputs)
 }
 
-PRbsNC = function(paras, cond, trialEarnings, timeWaited){
+PRbsNC = function(thisParas, cond, trialEarnings, timeWaited){
   # parse para
-  phi = paras[1]; phiP = paras[2]; tau = paras[3]; gamma = paras[4]; zeroPoint = paras[5]
+  phi = thisParas[1]; phiP = thisParas[2]; tau = thisParas[3]; gamma = thisParas[4]; zeroPoint = thisParas[5]
   
   # determine number of trials and nTimeSteps 
   nTrial = length(scheduledWait)
@@ -157,13 +157,15 @@ PRbsNC = function(paras, cond, trialEarnings, timeWaited){
   Gs = matrix(NA, nTimeStep, nTrial)
   
   # initialize outputs 
-  logLik_ = matrix(nTimeStep, nTrial)
+  lik_ = matrix(nrow = nTimeStep, ncol = nTrial)
     
   # loop over trials
   for(tIdx in 1 : nTrial) {
-    thisScheduledWait = scheduledWait[tIdx]
+    nextReward = trialEarnings[tIdx]
+    getReward = ifelse(nextReward == tokenValue, T, F)
+    T = Ts[tIdx]
     # loop for each timestep t and determine At
-    logLik_[,tIdx] =  log(1 / sum(1  + exp((rep(Qquit, nTimeStep) - Qwait)* tau)))
+    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp(Qquit - Qwait[i])* tau))
     
     # update values 
     if(tIdx < nTrial){
@@ -208,11 +210,294 @@ PRbsNC = function(paras, cond, trialEarnings, timeWaited){
   } # end of the trial loop
   
   outputs = list( 
-    "logLik_" = logLik_,
+    "lik_" = lik_,
     "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas, "Vitis" = Vitis
   )
   return(outputs)
 }
 
+Rlearn = function(thisParas, cond, trialEarnings, timeWaited){
+  # parse para
+  phi = thisParas[1]; phiP = thisParas[2]; tau = thisParas[3]; zeroPoint = thisParas[4]
+  
+  # determine number of trials and nTimeSteps 
+  nTrial = length(scheduledWait)
+  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  nTimeStep = tMax / stepDuration
+  Ts = round(ceiling(timeWaited / stepDuration) + 1)
+  
+  # initialize actionValues
+  subOptimalRatio = 0.9
+  QHPApOptim = 5 / 6 * stepDuration * subOptimalRatio
+  QLPApOptim = 0.93 * stepDuration * subOptimalRatio
+  wIni = (QHPApOptim + QLPApOptim)/ 2 
+  
+  Qquit = 0; Viti = 0; reRate = wIni 
+  Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
+  
+  # initialize varibles for recording action values
+  Qwaits = matrix(NA, nTimeStep, nTrial); Qwaits[,1] = Qwait
+  Qquits = vector(length = nTrial); Qquits[1] = Qquit
+  Vitis = vector(length = nTrial); Vitis[1] = Viti
+  reRates = vector(length = nTrial); reRates[1] = reRate
+  deltas = matrix(NA, nTimeStep, nTrial)
+  Gs = matrix(NA, nTimeStep, nTrial)
+  
+  # initialize outputs 
+  lik_ = matrix(nrow = nTimeStep, ncol = nTrial)
+  
+  # loop over trials
+  for(tIdx in 1 : nTrial) {
+    nextReward = trialEarnings[tIdx]
+    getReward = ifelse(nextReward == tokenValue, T, F)
+    T = Ts[tIdx]
+    # loop for each timestep t and determine At
+    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp(Qquit - Qwait[i])* tau))
+    # update values 
+    if(tIdx < nTrial){
+      returns = sapply(1 : (T-1), function(t) nextReward - reRate * (T-t) + Viti)
+      if(getReward){
+        Gs[1 : (T-1), tIdx] = returns[1 : (T-1)];
+        deltas[1 : (T-1), tIdx] = returns[1 : (T-1)] - Qwait[1 : (T-1)]
+        Qwait[1 : (T-1)] = Qwait[1 : (T-1)] + phi*(returns[1 : (T-1)] - Qwait[1 : (T-1)])
+      }else{
+        if(T > 2){
+          Gs[1 : (T-2), tIdx] = returns[1 : (T-2)]
+          deltas[1 : (T-2), tIdx] = returns[1 : (T-2)] - Qwait[1 : (T-2)]
+          Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phiP*(returns[1 : (T-2)] - Qwait[1 : (T-2)])
+        }
+      }
+      # update Viti
+      delta = (returns[1] - reRate * (iti / stepDuration) - Viti)
+      if(getReward){
+        Viti = Viti + phi * delta
+      }else{
+        Viti = Viti + phiP* delta
+      }
+      
+      # update Qquit by counterfactual learning
+      if(getReward){
+        Qquit = Qquit + phi*(returns[1] - reRate * (iti / stepDuration + 1) - Qquit)
+      }else{
+        Qquit = Qquit + phiP*(returns[1] - reRate * (iti / stepDuration + 1) - Qquit)
+      }
+      
+      # update reRate 
+      if(getReward){
+        reRate = reRate + phi * delta
+      }else{
+        reRate = reRate + phiP * delta
+      }      
+      
+      # record updated values
+      Qwaits[,tIdx + 1] = Qwait
+      Qquits[tIdx + 1] = Qquit
+      Vitis[tIdx + 1] = Viti
+      reRates[tIdx + 1] = reRate
+    }# end of the value update section
+    
+  } # end of the trial loop
+  
+  outputs = list( 
+    "lik_" = lik_,
+    "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas,
+    "Vitis" = Vitis, "reRates" = reRates
+  )
+  return(outputs)
+}
 
 
+RlearnL = function(thisParas, cond, trialEarnings, timeWaited){
+  # parse para
+  phi = thisParas[1]; phiP = thisParas[2]; tau = thisParas[3]; zeroPoint = thisParas[4]
+  beta = thisParas[5]; betaP = thisParas[6]
+  
+  # determine number of trials and nTimeSteps 
+  nTrial = length(scheduledWait)
+  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  nTimeStep = tMax / stepDuration
+  Ts = round(ceiling(timeWaited / stepDuration) + 1)
+  # initialize actionValues
+  subOptimalRatio = 0.9
+  QHPApOptim = 5 / 6 * stepDuration * subOptimalRatio
+  QLPApOptim = 0.93 * stepDuration * subOptimalRatio
+  wIni = (QHPApOptim + QLPApOptim)/ 2 
+  
+  Qquit = 0; Viti = 0; reRate = wIni 
+  Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
+  
+  # initialize varibles for recording action values
+  Qwaits = matrix(NA, nTimeStep, nTrial); Qwaits[,1] = Qwait
+  Qquits = vector(length = nTrial); Qquits[1] = Qquit
+  Vitis = vector(length = nTrial); Vitis[1] = Viti
+  reRates = vector(length = nTrial); reRates[1] = reRate
+  deltas = matrix(NA, nTimeStep, nTrial)
+  Gs = matrix(NA, nTimeStep, nTrial)
+  
+  # initialize outputs 
+  lik_ = matrix(nrow = nTimeStep, ncol = nTrial)
+  
+  
+  # loop over trials
+  for(tIdx in 1 : nTrial) {
+    nextReward = trialEarnings[tIdx]
+    getReward = ifelse(nextReward == tokenValue, T, F)
+    T = Ts[tIdx]
+    # loop for each timestep t and determine At
+    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp(Qquit - Qwait[i])* tau))
+    # update values 
+    while(t <= nTimeStep){
+      # determine At
+      waitRate =  1 / sum(1  + exp((Qquit - Qwait[t])* tau))
+      action = ifelse(runif(1) < waitRate, 'wait', 'quit')
+      # observe St+1 and Rt+1
+      rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
+      getReward = (action == 'wait' && rewardOccur);
+      nextReward = ifelse(getReward, tokenValue, 0) 
+      # dertime whether St+1 is the terminal state
+      nextStateTerminal = (getReward || action == "quit")
+      if(nextStateTerminal){
+        T = t+1
+        trialEarnings[tIdx] = ifelse(nextReward == tokenValue, tokenValue, 0);
+        timeWaited[tIdx] = ifelse(getReward, thisScheduledWait, t * stepDuration)
+        sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+        elapsedTime = elapsedTime + timeWaited[tIdx] + iti
+        break
+      }else{
+        t = t + 1
+      }
+    }# end of the action selection section
+    
+    # update values 
+    if(tIdx < nTrial){
+      returns = sapply(1 : (T-1), function(t) nextReward - reRate * (T-t) + Viti)
+      if(getReward){
+        Gs[1 : (T-1), tIdx] = returns[1 : (T-1)];
+        deltas[1 : (T-1), tIdx] = returns[1 : (T-1)] - Qwait[1 : (T-1)]
+        Qwait[1 : (T-1)] = Qwait[1 : (T-1)] + phi*(returns[1 : (T-1)] - Qwait[1 : (T-1)])
+      }else{
+        if(T > 2){
+          Gs[1 : (T-2), tIdx] = returns[1 : (T-2)]
+          deltas[1 : (T-2), tIdx] = returns[1 : (T-2)] - Qwait[1 : (T-2)]
+          Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phiP*(returns[1 : (T-2)] - Qwait[1 : (T-2)])
+        }
+      }
+      # update Viti
+      delta = (returns[1] - reRate * (iti / stepDuration) - Viti)
+      if(getReward){
+        Viti = Viti + phi * delta
+      }else{
+        Viti = Viti + phiP* delta
+      }
+      
+      # update Qquit by counterfactual learning
+      if(getReward){
+        Qquit = Qquit + phi*(returns[1] - reRate * (iti / stepDuration + 1) - Qquit)
+      }else{
+        Qquit = Qquit + phiP*(returns[1] - reRate * (iti / stepDuration + 1) - Qquit)
+      }
+      
+      # update reRate 
+      if(getReward){
+        reRate = reRate + beta * delta
+      }else{
+        reRate = reRate + betaP * delta
+      }      
+      
+      # record updated values
+      Qwaits[,tIdx + 1] = Qwait
+      Qquits[tIdx + 1] = Qquit
+      Vitis[tIdx + 1] = Viti
+      reRates[tIdx + 1] = reRate
+    }# end of the value update section
+    
+  } # end of the trial loop
+  
+  outputs = list( 
+    "lik_" = lik_,
+    "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas,
+    "Vitis" = Vitis, "reRates" = reRates
+  )
+  return(outputs)
+}
+
+reduce_gamma = function(thisParas, cond, trialEarnings, timeWaited){
+  # parse para
+  phi = thisParas[1]; phiP = thisParas[2]; tau = thisParas[3]; zeroPoint = thisParas[4]
+  gamma = 1;
+  
+  # determine number of trials and nTimeSteps 
+  nTrial = length(scheduledWait)
+  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  nTimeStep = tMax / stepDuration
+  Ts = round(ceiling(timeWaited / stepDuration) + 1)
+  # initialize actionValues
+  subOptimalRatio = 0.9
+  QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9) * subOptimalRatio
+  QLPApOptim = 0.93 * stepDuration / (1 - 0.9) * subOptimalRatio
+  wIni = (QHPApOptim + QLPApOptim)/ 2 
+  
+  Qquit = wIni; Viti = wIni 
+  Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
+  
+  # initialize varibles for recording action values
+  Qwaits = matrix(NA, nTimeStep, nTrial); Qwaits[,1] = Qwait
+  Qquits = vector(length = nTrial); Qquits[1] = Qquit
+  Vitis = vector(length = nTrial); Vitis[1] = Viti
+  deltas = matrix(NA, nTimeStep, nTrial)
+  Gs = matrix(NA, nTimeStep, nTrial)
+  
+  # initialize outputs 
+  lik_ = matrix(nrow = nTimeStep, ncol = nTrial)
+  
+  # loop over trials
+  for(tIdx in 1 : nTrial) {
+    nextReward = trialEarnings[tIdx]
+    getReward = ifelse(nextReward == tokenValue, T, F)
+    T = Ts[tIdx]
+    # loop for each timestep t and determine At
+    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp(Qquit - Qwait[i])* tau))
+  
+    
+    # update values 
+    if(tIdx < nTrial){
+      returns = sapply(1 : (T-1), function(t) gamma^(T-t-1) *nextReward + gamma^(T-t) * Viti)
+      if(getReward){
+        Gs[1 : (T-1), tIdx] = returns[1 : (T-1)];
+        deltas[1 : (T-1), tIdx] = returns[1 : (T-1)] - Qwait[1 : (T-1)]
+        Qwait[1 : (T-1)] = Qwait[1 : (T-1)] + phi*(returns[1 : (T-1)] - Qwait[1 : (T-1)])
+      }else{
+        if(T > 2){
+          Gs[1 : (T-2), tIdx] = returns[1 : (T-2)]
+          deltas[1 : (T-2), tIdx] = returns[1 : (T-2)] - Qwait[1 : (T-2)]
+          Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phiP*(returns[1 : (T-2)] - Qwait[1 : (T-2)])
+        }
+      }
+      # update Viti
+      if(getReward){
+        Viti = Viti + phi*(gamma^(iti / stepDuration) * returns[1] - Viti)
+      }else{
+        Viti = Viti + phiP*(gamma^(iti / stepDuration) * returns[1] - Viti)
+      }
+      
+      # update Qquit by counterfactual learning
+      if(getReward){
+        Qquit = Qquit + phi*(gamma^(iti / stepDuration + 1) * returns[1] - Qquit)
+      }else{
+        Qquit = Qquit + phiP*(gamma^(iti / stepDuration + 1) * returns[1] - Qquit)
+      }
+      
+      # record updated values
+      Qwaits[,tIdx + 1] = Qwait
+      Qquits[tIdx + 1] = Qquit
+      Vitis[tIdx + 1] = Viti
+    }# end of the value update section
+    
+  } # end of the trial loop
+  
+  outputs = list( 
+    "lik_" = lik_,
+    "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas, "Vitis" = Vitis
+  )
+  return(outputs)
+}
