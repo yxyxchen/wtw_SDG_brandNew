@@ -4,3 +4,4 @@ load("/Users/cyx/Documents/first_kick/wtw_SDG_brandNew/stanModels/curiosityTrial
 load("/Users/cdlab_admin/Documents/first_kick/wtw_SDG_brandNew/stanModels/curiosityTrialRSp.rds")
 load("/Users/cyx/Documents/first_kick/wtw_SDG_brandNew/stanModels/risk.rds")
 load("/Users/cyx/Documents/first_kick/wtw_SDG_brandNew/stanModels/RlearnLdb.rds")
+load("/Users/cdlab_admin/Documents/first_kick/wtw_SDG_brandNew/stanModels/Rlearndb.rds")

@@ -20,8 +20,8 @@ transformed data {
 parameters {
   real<lower = 0, upper = 0.3> phi;
   real<lower = 0, upper = 0.3> phiP; 
-  real<lower = 0.5, upper = 22> tau;
-  real<lower = 0, upper = nTimeSteps> zeroPoint; 
+  real<lower = 0.1, upper = 22> tau;
+  real<lower = 0, upper = 65> zeroPoint; 
 }
 transformed parameters{
   // initialize action values 
@@ -91,8 +91,8 @@ transformed parameters{
 model {
   phi ~ uniform(0, 0.3);
   phiP ~ uniform(0, 0.3);
-  tau ~ uniform(0.5, 22);
-  zeroPoint ~ uniform(0, nTimeSteps);
+  tau ~ uniform(0.1, 22);
+  zeroPoint ~ uniform(0, 65);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){

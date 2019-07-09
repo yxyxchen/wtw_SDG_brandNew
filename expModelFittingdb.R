@@ -3,14 +3,8 @@
 # here I change all my modelFitting function into the risk version
 # while in stan, I have different expMofelfitting and modelFitting scripts for different things 
 expModelFitting = function(modelName){
-  # create outfiles
-  nBlock = 3
-  dir.create("genData")
-  dir.create("genData/expModelFitting")
-  dir.create(sprintf("genData/expModelFitting/%s", modelName))
-  
   #load libraries
-  library('plyr'); library(dplyr); library(ggplot2);library('tidyr');library('rstan')
+  library('plyr'); library(dplyr); library(ggplot2);library('tidyr');
   library("stringr")
   library("loo")
   library("coda") 
@@ -21,27 +15,10 @@ expModelFitting = function(modelName){
   source("subFxs/analysisFxs.R")
   
   #  set the environment for Rstan
+  library('rstan')
   options(warn=-1, message =-1) # run without this for one participant to chec everything
   Sys.setenv(USE_CXX14=1) # needed in local computeres
   rstan_options(auto_write = TRUE) 
-  
-  # compile the stan model 
-  model = stan_model(file = sprintf("stanModels/%s.stan", modelName))
-  
-  # load expData
-  allData = loadAllData()
-  hdrData = allData$hdrData           
-  trialData = allData$trialData       
-  idList = hdrData$ID[hdrData$stress == "no stress"]                 
-  n = length(idList)                    
-  
-  # determine paras
-  paras = getParas(modelName)
-  nPara = length(paras)
-  if(paras == "wrong model name"){
-    print(paras)
-    break
-  }
   
   # loop over participants 
   library("doMC")
@@ -51,25 +28,62 @@ expModelFitting = function(modelName){
   nCore = parallel::detectCores() -1 # only for the local computer
   registerDoMC(nCore)
   
-  # idList = c(1, 13, 25, 26, 32, 44, 51, 65, 77, 87, 91, 94, 101, 102, 109) # Rlearn
-  idList = c(1, 15, 25, 26, 31, 44, 51, 53, 69, 71, 79, 91, 94, 96, 109, 110) # RlearnL
-  # idList = c(2, 16, 26, 44, 56, 62, 63,64, 77, 85, 100, 109, 110) $ uniPiror
-  # idList = c(20, 56, 65, 106, 110)
-  # idList = c(20, 45) # PRbsNC
-  n = length(idList)
-  foreach(i = 1 : n) %dopar% {
-    thisID = idList[[i]]
-    thisTrialData = trialData[[thisID]]
-    cond = unique(thisTrialData$condition)
-    cIdx = ifelse(cond == "HP", 1, 2)
-    excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
-    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
-    fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
-    # load upper and lower
-    tempt = read.csv(sprintf("genData/expModelFitting/%s/s%d_summary.txt", substr(modelName, 1, nchar(modelName) -2), thisID),
-                     header = F)
-    low= tempt[1:nPara,4]
-    up = tempt[1 : nPara,8]
-    modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up)
+  # compile the stan model 
+  model = stan_model(file = sprintf("stanModels/%s.stan", paste(modelName, "db", sep = "")))
+  
+  # load expData
+  allData = loadAllData()
+  hdrData = allData$hdrData           
+  trialData = allData$trialData       
+  ids = hdrData$ID[hdrData$stress == "no stress"]                 
+  nSub = length(ids)                    
+  
+  # load nFits
+  fitFile = sprintf("genData/expModelFitting/%s/fit.RData", modelName)
+  if(file.exists(fitFile)){
+    load(fitFile)
+  }else{
+    nFits = rep(1, nSub)
+  }
+  
+  # determine paras
+  paras = getParas(modelName)
+  nPara = length(paras)
+  if(paras == "wrong model name"){
+    print(paras)
+    break
+  }
+  
+  # determine excID
+  expPara = loadExpPara(paras,
+                      sprintf("genData/expModelFitting/%s", modelName))
+  useID = getUseID(expPara, paras)
+  excID = ids[!ids %in% useID]
+  
+  # loop over excID
+  n = length(excID)
+  if(n > 0){
+    for(i in 1 : n) {
+      thisID = excID[[i]]
+      thisTrialData = trialData[[thisID]]
+      cond = unique(thisTrialData$condition)
+      cIdx = ifelse(cond == "HP", 1, 2)
+      excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+      thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
+      fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
+      # enter the refit procedure
+      converge = F
+      nRefit = 0
+      while(nRefit <= 2 & !converge){
+        # load upper and lower
+        tempt = read.csv(sprintf("genData/expModelFitting/%s/s%d_summary.txt", modelName, thisID),
+                         header = F)
+        low= tempt[1:nPara,4]
+        up = tempt[1 : nPara,8]
+        converge = modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up) 
+      } # exit the refit procedure
+      nFits[which(ids == thisID)] = nFits + nRefit
+    }# loop over participants
+    save(nFits, file = sprintf("genData/expModelFitting/%s/fit.RData", modelName))
   }
 }

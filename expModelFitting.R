@@ -48,9 +48,7 @@ expModelFitting = function(modelName){
   # if(is.na(nCore)) nCore = 1 # needed for cluster
   nCore = parallel::detectCores() -1 # only for the local computer
   registerDoMC(nCore)
-  
-  idList = c(1, 13, 25, 26, 32, 44, 51, 65, 77, 87, 91, 94, 101, 102, 109)
-  n = length(idList)
+
   foreach(i = 1 : n) %dopar% {
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]

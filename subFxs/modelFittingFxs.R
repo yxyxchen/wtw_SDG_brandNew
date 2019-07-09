@@ -16,9 +16,9 @@ modelFitting = function(thisTrialData, fileName, paras, model, modelName){
     subOptimalRatio = 0.9 
     QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
     QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-    if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL", "RlearnLdb", "Rlearndb")){
+    if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT")){
       wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
-    }else if(any(paras %in% c("gamma", "k"))){
+    }else if(any(paras %in% c("gamma", "k")) || modelName == "reduce_gamma"){
       wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
     }else{
       print("wrong model name!")
@@ -61,8 +61,8 @@ modelFitting = function(thisTrialData, fileName, paras, model, modelName){
   WAIC = waic(log_lik)
   looStat = loo(log_lik)
   save("WAIC", "looStat", file = sprintf("%s_waic.RData", fileName))
-  fitSumary <- summary(fit,pars = c(paras, "LL_all"), use_cache = F)$summary
-  write.table(matrix(fitSumary, nrow = length(paras) + 1), file = sprintf("%s_summary.txt", fileName),  sep = ",",
+  fitSummary <- summary(fit,pars = c(paras, "LL_all"), use_cache = F)$summary
+  write.table(matrix(fitSummary, nrow = length(paras) + 1), file = sprintf("%s_summary.txt", fileName),  sep = ",",
             col.names = F, row.names=FALSE)
 }
 
@@ -71,7 +71,7 @@ modelFittingCV = function(thisTrialData, fileName, paras, model){
   load("wtwSettings.RData")
   # simulation parameters
   nChain = 4
-  nIter = 200
+  nIter = 5000
   
   # determine wIni
   # since the participants' initial strategies are unlikely optimal
@@ -79,9 +79,9 @@ modelFittingCV = function(thisTrialData, fileName, paras, model){
   subOptimalRatio = 0.9 
   QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-  if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL", "RlearnLdb")){
+  if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT")){
     wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
-  }else if(any(paras %in% c("gamma", "k"))){
+  }else if(any(paras %in% c("gamma", "k")) || modelName == "reduce_gamma"){
     wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
   }else{
     print("wrong model name!")
@@ -111,8 +111,8 @@ modelFittingCV = function(thisTrialData, fileName, paras, model){
   fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
                  iter = nIter) 
   # save
-  fitSumary <- summary(fit,pars = c(paras, "LL_all"), use_cache = F)$summary
-  write.table(matrix(fitSumary, nrow = length(paras) + 1), file = sprintf("%s_summary.txt", fileName),  sep = ",",
+  fitSummary <- summary(fit,pars = c(paras, "LL_all"), use_cache = F)$summary
+  write.table(matrix(fitSummary, nrow = length(paras) + 1), file = sprintf("%s_summary.txt", fileName),  sep = ",",
               col.names = F, row.names=FALSE)
 }
 
@@ -122,7 +122,7 @@ modelFittingdb = function(thisTrialData, fileName, paras, model, modelName,nPara
   load("wtwSettings.RData")
   # simulation parameters
   nChain = 4
-  nIter = 8000
+  nIter = 5000
   
   # determine wIni
   # since the participants' initial strategies are unlikely optimal
@@ -130,9 +130,9 @@ modelFittingdb = function(thisTrialData, fileName, paras, model, modelName,nPara
   subOptimalRatio = 0.9 
   QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-  if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL", "RlearnLdb", "Rlearndb")){
+  if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT")){
     wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
-  }else if(any(paras %in% c("gamma", "k"))){
+  }else if(any(paras %in% c("gamma", "k")) || modelName == "reduce_gamma"){
     wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
   }else{
     print("wrong model name!")
@@ -178,7 +178,12 @@ modelFittingdb = function(thisTrialData, fileName, paras, model, modelName,nPara
   WAIC = waic(log_lik)
   looStat = loo(log_lik)
   save("WAIC", "looStat", file = sprintf("%s_waic.RData", fileName))
-  fitSumary <- summary(fit,pars = c(paras, "LL_all"), use_cache = F)$summary
-  write.table(matrix(fitSumary, nrow = length(paras) + 1), file = sprintf("%s_summary.txt", fileName),  sep = ",",
+  fitSummary <- summary(fit,pars = c(paras, "LL_all"), use_cache = F)$summary
+  write.table(matrix(fitSummary, nrow = length(paras) + 1), file = sprintf("%s_summary.txt", fileName),  sep = ",",
               col.names = F, row.names=FALSE)
+  
+  # detmerine converge
+  converge = all(fitSummary[,"Rhat"] < 1.1) & all(fitSummary[, "n_eff"] >100)
+  return(converge)
 }
+

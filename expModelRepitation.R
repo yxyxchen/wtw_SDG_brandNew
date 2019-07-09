@@ -46,7 +46,7 @@ modelName = "reduce_gamma"
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
 rep.gamma = modelRepitation(modelName, summaryData, expTrialData, nComb)
 
-modelName = "RlearnL"
+modelName = "Rlearn"
 expPara = loadExpPara(getParas(modelName), sprintf("genData/expModelFitting/%s", modelName))
 useID = getUseID(expPara, getParas(modelName))
 length(useID)

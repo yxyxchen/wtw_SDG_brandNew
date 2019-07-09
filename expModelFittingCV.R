@@ -80,7 +80,7 @@ expModelFitting = function(modelName){
   registerDoMC(nCore)
   
   set.seed(123)
-  foreach(i = 1 : n)%dopar%{
+  for(i in 1 : n){
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
     cond = unique(thisTrialData$condition)
@@ -91,7 +91,7 @@ expModelFitting = function(modelName){
     load(sprintf("genData/expModelFittingCV/split/s%d.RData", thisID))
     
     # loop
-    for(j in 1 : nFold) {
+    foreach(j = 1 : nFold) %dopar% {
       select = as.vector(partTable[-j,])
       thisTrialData = thisTrialData[(1 : nrow(thisTrialData)) %in% select,]
       fileName = sprintf("genData/expModelFittingCV/%s/s%d_f%d", modelName, thisID, j)
