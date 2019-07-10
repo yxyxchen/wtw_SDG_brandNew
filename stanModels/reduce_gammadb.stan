@@ -3,7 +3,7 @@ data {
   real wIni;
   int tMax;
   int nTimeSteps; // nTimeSteps = tMax / stepDuration
-  in nPara;
+  int nPara;
   
   // depending on each subject
   int N; // number of trials

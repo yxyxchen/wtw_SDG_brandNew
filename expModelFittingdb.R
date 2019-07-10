@@ -63,7 +63,7 @@ expModelFitting = function(modelName){
   # loop over excID
   n = length(excID)
   if(n > 0){
-    for(i in 1 : n) {
+    foreach(i = 1 : n) %dopar% {
       thisID = excID[[i]]
       thisTrialData = trialData[[thisID]]
       cond = unique(thisTrialData$condition)
@@ -81,9 +81,12 @@ expModelFitting = function(modelName){
         low= tempt[1:nPara,4]
         up = tempt[1 : nPara,8]
         converge = modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up) 
+        # update nRefit
+        nRefit = nRefit + 1
       } # exit the refit procedure
-      nFits[which(ids == thisID)] = nFits + nRefit
+      nFits[which(ids == thisID)] = nFits[which(ids == thisID)] + nRefit
     }# loop over participants
     save(nFits, file = sprintf("genData/expModelFitting/%s/fit.RData", modelName))
   }
+  print(nFits)
 }

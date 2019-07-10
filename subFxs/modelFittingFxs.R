@@ -16,7 +16,7 @@ modelFitting = function(thisTrialData, fileName, paras, model, modelName){
     subOptimalRatio = 0.9 
     QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
     QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-    if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT")){
+    if(modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL")){
       wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
     }else if(any(paras %in% c("gamma", "k")) || modelName == "reduce_gamma"){
       wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
@@ -66,7 +66,7 @@ modelFitting = function(thisTrialData, fileName, paras, model, modelName){
             col.names = F, row.names=FALSE)
 }
 
-modelFittingCV = function(thisTrialData, fileName, paras, model){
+modelFittingCV = function(thisTrialData, fileName, paras, model, modelName){
   #
   load("wtwSettings.RData")
   # simulation parameters
@@ -79,7 +79,7 @@ modelFittingCV = function(thisTrialData, fileName, paras, model){
   subOptimalRatio = 0.9 
   QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-  if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT")){
+  if(modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL")){
     wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
   }else if(any(paras %in% c("gamma", "k")) || modelName == "reduce_gamma"){
     wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
@@ -122,7 +122,7 @@ modelFittingdb = function(thisTrialData, fileName, paras, model, modelName,nPara
   load("wtwSettings.RData")
   # simulation parameters
   nChain = 4
-  nIter = 5000
+  nIter = 100
   
   # determine wIni
   # since the participants' initial strategies are unlikely optimal
@@ -130,7 +130,7 @@ modelFittingdb = function(thisTrialData, fileName, paras, model, modelName,nPara
   subOptimalRatio = 0.9 
   QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-  if(any(paras == "phiR")  || modelName %in% c("baseline", "MVT")){
+  if(modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL")){
     wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
   }else if(any(paras %in% c("gamma", "k")) || modelName == "reduce_gamma"){
     wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
