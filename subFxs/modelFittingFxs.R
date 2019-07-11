@@ -122,7 +122,7 @@ modelFittingdb = function(thisTrialData, fileName, paras, model, modelName,nPara
   load("wtwSettings.RData")
   # simulation parameters
   nChain = 4
-  nIter = 100
+  nIter = 5000
   
   # determine wIni
   # since the participants' initial strategies are unlikely optimal
@@ -187,3 +187,57 @@ modelFittingdb = function(thisTrialData, fileName, paras, model, modelName,nPara
   return(converge)
 }
 
+modelFittingCVdb = function(thisTrialData, fileName, paras, model, modelName,nPara, low, up){
+  #
+  load("wtwSettings.RData")
+  # simulation parameters
+  nChain = 4
+  nIter = 5000
+  
+  # determine wIni
+  # since the participants' initial strategies are unlikely optimal
+  # we multiple the optimal opportunity cost by subOptimalRatio
+  subOptimalRatio = 0.9 
+  QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
+  QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
+  if(modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL")){
+    wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
+  }else if(any(paras %in% c("gamma", "k")) || modelName == "reduce_gamma"){
+    wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
+  }else{
+    print("wrong model name!")
+    break
+  }
+  
+  # prepare input
+  timeWaited = thisTrialData$timeWaited
+  scheduledWait = thisTrialData$scheduledWait
+  trialEarnings = thisTrialData$trialEarnings
+  timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
+  cond = unique(thisTrialData$condition)
+  tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  condIdx = ifelse(cond =="HP", 1, 2)
+  nTimeSteps = tMax / stepDuration
+  Ts = round(ceiling(timeWaited / stepDuration) + 1)
+  data_list <- list(tMax = tMax,
+                    wIni = wIni,
+                    nTimeSteps = nTimeSteps,
+                    nPara = nPara,
+                    timeWaited = timeWaited,
+                    N = length(timeWaited),
+                    trialEarnings = trialEarnings,
+                    Ts = Ts,
+                    iti = iti,
+                    stepDuration = stepDuration,
+                    tokenValue = tokenValue,
+                    low =low,
+                    up = up)
+  fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
+                 iter = nIter) 
+  fitSummary <- summary(fit,pars = c(paras, "LL_all"), use_cache = F)$summary
+  write.table(matrix(fitSummary, nrow = length(paras) + 1), file = sprintf("%s_summary.txt", fileName),  sep = ",",
+              col.names = F, row.names=FALSE)
+  # detmerine converge
+  converge = all(fitSummary[,"Rhat"] < 1.1) & all(fitSummary[, "n_eff"] >100)
+  return(converge)
+}

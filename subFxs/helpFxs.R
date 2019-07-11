@@ -16,6 +16,7 @@ getParas = function(modelName){
 }
 
 getUseID = function(expPara, paras){
+  paras = c(paras, "LL_all")
   idList = expPara$id
   RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(paras)]
   EffeCols = which(str_detect(colnames(expPara), "Effe"))[1 : length(paras)]

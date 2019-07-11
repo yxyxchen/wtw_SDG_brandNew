@@ -2,6 +2,7 @@
 # using Rstan
 # here I change all my modelFitting function into the risk version
 # while in stan, I have different expMofelfitting and modelFitting scripts for different things 
+# current algorithm might, you know increase nFit yet didn't really refit
 expModelFitting = function(modelName){
   #load libraries
   library('plyr'); library(dplyr); library(ggplot2);library('tidyr');
@@ -38,12 +39,20 @@ expModelFitting = function(modelName){
   ids = hdrData$ID[hdrData$stress == "no stress"]                 
   nSub = length(ids)                    
   
-  # load nFits
-  fitFile = sprintf("genData/expModelFitting/%s/fit.RData", modelName)
-  if(file.exists(fitFile)){
-    load(fitFile)
-  }else{
-    nFits = rep(1, nSub)
+  originalFile = sprintf("genData/expModelFitting/%s", modelName)
+  dbFile = sprintf("genData/expModelFitting/%sdb", modelName)
+  if(!file.exists(dbFile)){
+    dir.create(dbFile)
+    allFiles = list.files(path = originalFile)
+    nFile = length(allFiles)
+    if(nFile == nSub * 3){
+      lapply(1 : nFile, function(i) file.copy(sprintf("%s/%s", originalFile, allFiles[i]),
+                                              sprintf("%s/%s", dbFile, allFiles[i])))
+      print("creat the debug folder")
+    }else{
+      print("Wrong number of files in the original folder!")
+      break
+    }
   }
   
   # determine paras
@@ -56,37 +65,51 @@ expModelFitting = function(modelName){
   
   # determine excID
   expPara = loadExpPara(paras,
-                      sprintf("genData/expModelFitting/%s", modelName))
+                      sprintf("genData/expModelFitting/%sdb", modelName))
   useID = getUseID(expPara, paras)
   excID = ids[!ids %in% useID]
   
   # loop over excID
   n = length(excID)
   if(n > 0){
+    text = sprintf("Start to refit %d participants", length(excID))
+    print(text)
     foreach(i = 1 : n) %dopar% {
       thisID = excID[[i]]
+      text = sprintf("refit s%d", thisID)
+      print(text)
+      # update nFits and converge
+      fitFile = sprintf("genData/expModelFitting/%sdb/afit_s%d.RData", modelName, thisID)
+      if(file.exists(fitFile)){
+        load(fitFile)
+        nFit = nFit  + 1
+        save(nFit, file = fitFile)
+      }else{
+        nFit = 2
+        save(nFit, file = fitFile)
+      }
+      
+      # prepare
       thisTrialData = trialData[[thisID]]
       cond = unique(thisTrialData$condition)
       cIdx = ifelse(cond == "HP", 1, 2)
       excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
       thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
-      fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
-      # enter the refit procedure
-      converge = F
-      nRefit = 0
-      while(nRefit <= 2 & !converge){
-        # load upper and lower
-        tempt = read.csv(sprintf("genData/expModelFitting/%s/s%d_summary.txt", modelName, thisID),
-                         header = F)
-        low= tempt[1:nPara,4]
-        up = tempt[1 : nPara,8]
-        converge = modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up) 
-        # update nRefit
-        nRefit = nRefit + 1
-      } # exit the refit procedure
-      nFits[which(ids == thisID)] = nFits[which(ids == thisID)] + nRefit
+      fileName = sprintf("genData/expModelFitting/%sdb/s%d", modelName, thisID)
+      # refit
+      # load upper and lower
+      tempt = read.csv(sprintf("genData/expModelFitting/%sdb/s%d_summary.txt", modelName, thisID),
+                       header = F)
+      low= tempt[1:nPara,4]
+      up = tempt[1 : nPara,8]
+      converge = modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up)
     }# loop over participants
-    save(nFits, file = sprintf("genData/expModelFitting/%s/fit.RData", modelName))
+    # evaluate useID again
+    expPara = loadExpPara(paras,
+                          sprintf("genData/expModelFitting/%sdb", modelName))
+    useID = getUseID(expPara, paras)
+    print(length(useID))
+  }else{
+    print("All converged!") # add later
   }
-  print(nFits)
 }

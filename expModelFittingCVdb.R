@@ -1,3 +1,7 @@
+# if there is an error, especially when the errors occurs after modelFitting
+# nFits will not match summary.txt
+# in expModelFittingCV.R, ids in useID, expPara, converges are 1,2,3,
+# others, like all ids in the filename, are like original ids
 expModelFitting = function(modelName){
   
   library('plyr'); library(dplyr); library(ggplot2);library('tidyr');library("stringr")
@@ -32,33 +36,56 @@ expModelFitting = function(modelName){
   ids = hdrData$ID[hdrData$stress == "no stress"] # id encoded in trialData
   # initialize outputs
   
+  # for a specific model 
+  
+  # detect the debug folder
+  originalFile = sprintf("genData/expModelFittingCV/%s", modelName)
+  dbFile = sprintf("genData/expModelFittingCV/%sdb", modelName)
+  if(!file.exists(dbFile)){
+    dir.create(dbFile)
+    allFiles = list.files(path = originalFile)
+    nFile = length(allFiles)
+    if(nFile == length(idsCV)){
+      lapply(1 : nFile, function(i) file.copy(sprintf("%s/%s", originalFile, allFiles[i]),
+                                              sprintf("%s/%s", dbFile, allFiles[i])))
+      print("creat the debug folder")
+    }else{
+      print("Wrong number of files in the original folder!")
+      break
+    }
+  }
+  
   # loop over models
   paras = getParas(modelName)
   nPara = length(paras)
   
-  # load nFits
-  fitFile = sprintf("genData/expModelFittingCV/%s/fit.RData", modelName)
-  if(file.exists(fitFile)){
-    load(fitFile)
-  }else{
-    nFits = matrix(rep(1, nrow * ncol), nrow = nFold, ncol = nSub)
-  }
-  
   # load cvPara
-  cvPara = loadCVPara(paras,
-                      sprintf("genData/expModelFittingCV/%s", modelName),
-                      "*.txt")
+  cvPara = loadCVPara(paras, sprintf("genData/expModelFittingCV/%sdb", modelName),
+                      "*_summary.txt")
   useID = getUseID(cvPara, paras)
   excID = idsCV[!idsCV %in% useID]
-  
   # refit the mode
   if(length(excID) > 0){
+    text = sprintf("Start to refit %d participants", length(excID))
+    print(text)
     # compile the debug version of the model
-    model = stan_model(file = sprintf("stanModels/%s.stan", paste(modelName, "db", sep= "")))
+    model = stan_model(file = sprintf("stanModels/%sdb.stan", modelName))
     foreach(i = 1 : length(excID)) %dopar% {
       # extract sIdx and fIdx from the id encoded in cvPara
       sIdx = floor(excID[i] / nFold) + 1
       fIdx = excID[i] - (sIdx-1) * nFold
+      text = sprintf("reFit s%d_f%d", ids[sIdx], fIdx)
+      print(text)
+      # update nFits and converge
+      fitFile = sprintf("genData/expModelFittingCV/%sdb/afit_s%d_f%d.RData", modelName, ids[sIdx], fIdx)
+      if(file.exists(fitFile)){
+        load(fitFile)
+        nFit = nFit  + 1
+        save(nFit, file = fitFile)
+      }else{
+        nFit = 2
+        save(nFit, file = fitFile)
+      }
       # prepare data
       thisTrialData = trialData[[ids[sIdx]]]
       cond = unique(thisTrialData$condition)
@@ -69,26 +96,24 @@ expModelFitting = function(modelName){
       load(sprintf("genData/expModelFittingCV/split/s%d.RData", ids[sIdx]))
       select = as.vector(partTable[-fIdx,])
       thisTrialData = thisTrialData[(1 : nrow(thisTrialData)) %in% select,]
-      fileName = sprintf("genData/expModelFittingCV/%s/s%d_f%d", modelName,
+      fileName = sprintf("genData/expModelFittingCV/%sdb/s%d_f%d", modelName,
                          ids[sIdx], fIdx)
-      # the refit loop
-      nRefit = 0
-      converge = F
-      while(nRefit <= 2 & (!converge)){
-        # load upper and lower
-        tempt = read.csv(sprintf("genData/expModelFittingCV/%s/s%d_f%d_summary.txt", modelName,
-                                 ids[sIdx], fIdx),header = F)
-        low= tempt[1:nPara,4]
-        up = tempt[1 : nPara,8]
-        converge = modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up)
-        # update nRefit
-        nRefit = nRefit + 1
-      } # exit the refit procedure
-      nFits[fIdx, sIdx] = nFits[fIdx, sIdx] + nRefit
+      # refit
+      # load upper and lower
+      tempt = read.csv(sprintf("genData/expModelFittingCV/%sdb/s%d_f%d_summary.txt", modelName,
+                               ids[sIdx], fIdx),header = F)
+      low= tempt[1:nPara,4]
+      up = tempt[1 : nPara,8]
+      converge = modelFittingCVdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up)
     }# loop over participants
-    save(nFits, sprintf("genData/expModelFittingCV/%s/fit.RData", modelName))
-  }
-  
+    # evaluate useID again
+    cvPara = loadCVPara(paras, sprintf("genData/expModelFittingCV/%sdb", modelName),
+                        "*_summary.txt")
+    useID = getUseID(cvPara, paras)
+    print(length(useID))
+  }else(
+    print("All converged!")
+  )
 }# end of the function
 
 
