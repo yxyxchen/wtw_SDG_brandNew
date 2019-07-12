@@ -64,6 +64,7 @@ expModelFitting = function(modelName){
                       "*_summary.txt")
   useID = getUseID(cvPara, paras)
   excID = idsCV[!idsCV %in% useID]
+  
   # refit the mode
   if(length(excID) > 0){
     text = sprintf("Start to refit %d participants", length(excID))
@@ -72,7 +73,7 @@ expModelFitting = function(modelName){
     model = stan_model(file = sprintf("stanModels/%sdb.stan", modelName))
     foreach(i = 1 : length(excID)) %dopar% {
       # extract sIdx and fIdx from the id encoded in cvPara
-      sIdx = floor(excID[i] / nFold) + 1
+      sIdx = ceiling(excID[i] / nFold)  # ceiling groups 1-10 together yet floor + 1 groups 0-9 together
       fIdx = excID[i] - (sIdx-1) * nFold
       text = sprintf("reFit s%d_f%d", ids[sIdx], fIdx)
       print(text)
