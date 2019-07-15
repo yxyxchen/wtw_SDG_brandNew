@@ -384,10 +384,4 @@ movAve = function(x, windowSize){
 #   
 # }
 
-lastTrunc = function(thisTrialData){
-  cond = unique(thisTrialData$condition)
-  cIdx = ifelse(cond == "HP", 1, 2)
-  excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
-  thisTrialData = thisTrialData[! (1 : nrow(thisTrialData) %in% excludedTrials),]
-}
 

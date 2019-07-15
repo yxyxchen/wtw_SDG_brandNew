@@ -10,7 +10,7 @@ source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 load("wtwSettings.RData")
 
 
-modelName = "RlearnL"
+modelName = "reduce_gamma"
 
 # create output directories
 dir.create("figures/expParaAnalysis")

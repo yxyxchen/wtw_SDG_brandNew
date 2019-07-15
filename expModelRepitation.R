@@ -26,32 +26,10 @@ allIDs = hdrData$ID
 
 
 # re-simulate data
-modelName = "PRbs"
-dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-rep.PRbs = modelRepitation(modelName, summaryData, expTrialData, nComb) # set seeds indise
-
-modelName = "PRbsNC"
-dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-rep.PRbsNC = modelRepitation(modelName, summaryData, expTrialData, nComb)
-
-modelName = "Rlearn"
-dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-rep.Rlearn = modelRepitation(modelName, summaryData, expTrialData, nComb)
-
-modelName = "RlearnL"
-dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-rep.RlearnL = modelRepitation(modelName, summaryData, expTrialData, nComb)
-
 modelName = "reduce_gamma"
+dir.create("figures/expModelRepitation/")
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-rep.gamma = modelRepitation(modelName, summaryData, expTrialData, nComb)
-
-
-
-# initialize 
-modelName = "RlearnL"
-dir.create(sprintf("figures/expModelRepitation/%s", modelName))
-thisRep = rep.RlearnL
+thisRep = modelRepitation(modelName, summaryData, expTrialData, nComb) # set seeds indise
 expPara = thisRep$expPara
 repTrialData = thisRep$repTrialData
 

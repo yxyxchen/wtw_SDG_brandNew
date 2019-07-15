@@ -5,6 +5,7 @@ source("subFxs/helpFxs.R")
 source("subFxs/loadFxs.R")
 source("subFxs/modelComparisonFxs.R")
 source("subFxs/plotThemes.R")
+load("wtwSettings.RData")
 # load model names
 allData = loadAllData()
 hdrData = allData$hdrData           
@@ -57,7 +58,8 @@ data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=best
   geom_bar(width = 1, stat = "identity") + 
   coord_polar("y", start=0) + ylab("") + xlab("") + ggtitle(sprintf("Participants best described (n = %d)", nUse))+ 
   myTheme
-
+dir.create("figures/expModelComparison")
+ggsave("figures/expModelComparison/loo_nBest.png", width = 5, height = 3.5)
 
 # extract logEvidence, cross validation
 modelNames = c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma")
