@@ -35,7 +35,7 @@ getRepModelFun = function(modelName){
 modelRepitation = function(modelName, summaryData, expTrialData,  nComb){
   paras = getParas(modelName)
   parentDir ="genData/expModelFitting"
-  dirName = sprintf("%s/%s",parentDir, modelName)
+  dirName = sprintf("%s/%sdb",parentDir, modelName)
   tempt = loadExpPara(paras, dirName)
   # useID = getUseID(tempt, paras)
   useID = tempt$id
@@ -50,7 +50,7 @@ modelRepitation = function(modelName, summaryData, expTrialData,  nComb){
   for(sIdx in 1 : nSub){
     id = useID[[sIdx]]
     # load para samples
-    paraSamples = read.table(sprintf("%s/%s/s%d.txt", parentDir, modelName, id),sep = ",", row.names = NULL)
+    paraSamples = read.table(sprintf("%s/%sdb/s%d.txt", parentDir, modelName, id),sep = ",", row.names = NULL)
     # load behavioral inputs
     thisExpTrialData = expTrialData[[id]] # here we useID
     cond = unique(thisExpTrialData$condition)

@@ -4,34 +4,38 @@ source("subFxs/helpFxs.R") # getPars
 source("subFxs/taskFxs.R") # drawSamples
 source("subFxs/repetitionFxs.R") # getRepFunction
 source("subFxs/simulationFxs.R")
-modelName = "PR" 
-nSeq = 1
-nRep = 10
-nTrial = 50
-# initialize simTrialData
-simTrialData = vector(mode = "list", length = 2)
-paraTable =  vector(mode = "list", length = 2)
-set.seed(123)
-for(cIdx in 1 : 2){
-  cond = conditions[cIdx]
-  thisParaTable = data.frame(phi = c(0.02, 0.08), phiP = c(0.02, 0.08), tau = c(5, 15),
-                         gamma = c(0.85, 0.95))
-  if(cond == "HP") thisParaTable$zeroPoint = c(12, 20) else thisParaTable$zeroPoint = c(25, 35) 
-  scheduledWaitList = replicate(nSeq, replicate(nTrial, drawSample(cond)),  simplify = F)
-  simTrialData[[cIdx]] = simulate(modelName, nRep, thisParaTable, scheduledWaitList, cond)
-  paraTable[[cIdx]] = thisParaTable
-}
 
-# save para
-nComb = length(getParaComb(thisParaTable)) / length(thisParaTable)
-nSeq = length(scheduledWaitList)
-simNo = array(t(seq(1 : (nComb * nSeq * nRep))), dim = c(nRep, nSeq, nComb)) 
-save("paraTable", "nComb", "nRep", "simNo", file = sprintf("genData/simulation/%s/%dTrialPara.RData", modelName,
-                                                          length(scheduledWaitList[[1]])))
-# save simTrialData
+# load model names
+allData = loadAllData()
+hdrData = allData$hdrData           
+trialData = allData$trialData       
+ids = hdrData$ID[hdrData$stress == "no stress"]
+nSub = length(ids)
+
+modelName = "PRbs" 
+repModelFun = getRepModelFun(modelName)
+# initialize simTrialData
+simTrialData = vector(mode = "list", length = nSub)
+paraTable =  vector(mode = "list", length = nSub)
+set.seed(123)
+for(sIdx in 1 : nSub){
+  thisID = ids[sIdx]
+  thisTrialData = trialData[[thisID]]
+  cond = unique(thisTrialData$condition)
+  cIdx = ifelse(cond == "HP", 1, 2)
+  excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+  thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
+  scheduledWait = thisTrialData$scheduledWait
+  cond = unique(thisTrialData$cond)
+  # read paras
+  junk = read.csv(sprintf("genData/expModelFitting/%sdb/s%d_summary.txt", modelName, thisID), header = F)
+  paras = junk[1 : (nrow(junk) - 1),1]
+  
+  simTrialData[[thisID]] = repModelFun(paras, cond, scheduledWait)
+}
 dirName = sprintf("genData/simulation/%s", modelName)
 dir.create(dirName)
-save( simTrialData, file = sprintf("%s/%dTrial.RData", dirName, nTrial))
+save( simTrialData, file = sprintf("%s/simTrialData.RData", dirName))
 
 # simModelFitting
 simModelFitting = function(modelName, paras, nTrial){

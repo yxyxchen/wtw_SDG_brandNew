@@ -11,7 +11,7 @@ hdrData = allData$hdrData
 trialData = allData$trialData       
 allIDs = hdrData$ID                   # column of subject IDs
 n = length(allIDs) 
-
+load("genData/expDataAnalysis/sessionData.RData")
 # select common useID
 idList = hdrData$ID
 modelNames = c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma")
@@ -21,7 +21,7 @@ source("subFxs/loadFxs.R")
 for(i in 1 : nModel){
   modelName = modelNames[i]
   paras = getParas(modelName)
-  expPara = loadExpPara(paras, sprintf("genData/expModelFitting/%s", modelName))
+  expPara = loadExpPara(paras, sprintf("genData/expModelFitting/%sdb", modelName))
   useID_[[i]] = getUseID(expPara, paras)
 }
 useID = idList[apply(sapply(1 : nModel, function(i )idList %in% useID_[[i]]), MARGIN = 1,
@@ -36,7 +36,7 @@ for(m in 1 : nModel){
   modelName = modelNames[m]
   for(sIdx in 1 : nUse ){
     id = useID[sIdx]
-    fileName = sprintf("genData/expModelFitting/%s/s%d_waic.RData", modelName, id)
+    fileName = sprintf("genData/expModelFitting/%sdb/s%d_waic.RData", modelName, id)
     load(fileName)
     logEvidence_[sIdx, m] = WAIC$elpd_waic # here is like loglikelyhood, larger the better 
     logLik_[sIdx, m] = WAIC$elpd_waic  + WAIC$p_waic / 2
@@ -67,7 +67,7 @@ nSub = length(ids)
 nFold = 10
 logEvidence = matrix(nrow = length(ids), ncol= nModel) 
 logEvidenceTrain = list(length = nModel)
-for(mIdx in 4 : nModel){
+for(mIdx in 1 : nModel){
   modelName = modelNames[mIdx]
   paras = getParas(modelName)
   nPara = length(paras)
@@ -85,7 +85,7 @@ for(mIdx in 4 : nModel){
     Ts = round(ceiling(timeWaited / stepDuration) + 1)
     scheduledWait = thisTrialData$scheduledWait
     cvPara = loadCVPara(paras,
-                      sprintf("genData/expModelFittingCV/%s",modelName),
+                      sprintf("genData/expModelFittingCV/%sdb",modelName),
                       pattern = sprintf("s%d_f[0-9]{1,2}_summary.txt", id))
     # initialize 
     LL_ = vector(length = nFold)
@@ -126,8 +126,8 @@ select = apply(sapply(1 : nModel, function(i) !is.na(logEvidence[,i])), MARGIN =
 useID = ids[select]
 
 output = data.frame(cvLik = logEvidence[select,],
-                    cond = ifelse(sessionData$condition[hdrData$ID %in% useID] == "HP", 1, 2),
-                    AUC = sessionData$AUC[hdrData$ID %in% useID], id = useID)
+                    cond = ifelse(sessionData$condition[sessionData$id %in% useID] == "HP", 1, 2),
+                    AUC = sessionData$AUC[sessionData$id %in% useID], id = useID)
 f= "genData/expModelFitting/logEvidenceListCV.csv"
 write.table(file = f, output, sep = ",", col.names = F, row.names = F)
-nZeros = sapply(1 : nFold, function(i) sum(trialEarnings[(1 : nTrial) %in% as.vector(partTable[-i,])] == 0))
+

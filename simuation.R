@@ -21,7 +21,7 @@ allData = loadAllData()
 hdrData = allData$hdrData  
 allIDs = hdrData$ID     
 expTrialData = allData$trialData   
-idList = hdrData$ID
+idList = hdrData$ID[hdrData$stress = "no stress"]
 n = length(idList)
 load("genData/expDataAnalysis/sessionData.RData")
 ##### get a sense of the model ######

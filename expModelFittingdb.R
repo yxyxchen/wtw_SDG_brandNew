@@ -63,53 +63,55 @@ expModelFitting = function(modelName){
     break
   }
   
-  # determine excID
-  expPara = loadExpPara(paras,
-                      sprintf("genData/expModelFitting/%sdb", modelName))
-  useID = getUseID(expPara, paras)
-  excID = ids[!ids %in% useID]
-  
-  # loop over excID
-  n = length(excID)
-  if(n > 0){
-    text = sprintf("Start to refit %d participants", length(excID))
-    print(text)
-    foreach(i = 1 : n) %dopar% {
-      thisID = excID[[i]]
-      text = sprintf("refit s%d", thisID)
+  # enter the refit process
+  nLoop = 1
+  while(nLoop < 5){
+    # determine excID
+    expPara = loadExpPara(paras,
+                          sprintf("genData/expModelFitting/%sdb", modelName))
+    useID = getUseID(expPara, paras)
+    excID = ids[!ids %in% useID]
+    
+    # loop over excID
+    n = length(excID)
+    if(n > 0){
+      text = sprintf("Start to refit %d participants", length(excID))
       print(text)
-      # update nFits and converge
-      fitFile = sprintf("genData/expModelFitting/%sdb/afit_s%d.RData", modelName, thisID)
-      if(file.exists(fitFile)){
-        load(fitFile)
-        nFit = nFit  + 1
-        save(nFit, file = fitFile)
-      }else{
-        nFit = 2
-        save(nFit, file = fitFile)
+      foreach(i = 1 : n) %dopar% {
+        thisID = excID[[i]]
+        text = sprintf("refit s%d", thisID)
+        print(text)
+        # update nFits and converge
+        fitFile = sprintf("genData/expModelFitting/%sdb/afit_s%d.RData", modelName, thisID)
+        if(file.exists(fitFile)){
+          load(fitFile); nFit = nFit  + 1; save(nFit, file = fitFile)
+        }else{
+          nFit = 2; save(nFit, file = fitFile)
+        }
+        
+        # prepare
+        thisTrialData = trialData[[thisID]]
+        cond = unique(thisTrialData$condition)
+        cIdx = ifelse(cond == "HP", 1, 2)
+        excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+        thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
+        fileName = sprintf("genData/expModelFitting/%sdb/s%d", modelName, thisID)
+        
+        # load upper and lower
+        tempt = read.csv(sprintf("genData/expModelFitting/%sdb/s%d_summary.txt", modelName, thisID),
+                         header = F)
+        low= tempt[1:nPara,4]
+        up = tempt[1 : nPara,8]
+        converge = modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up)
       }
-      
-      # prepare
-      thisTrialData = trialData[[thisID]]
-      cond = unique(thisTrialData$condition)
-      cIdx = ifelse(cond == "HP", 1, 2)
-      excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
-      thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
-      fileName = sprintf("genData/expModelFitting/%sdb/s%d", modelName, thisID)
-      # refit
-      # load upper and lower
-      tempt = read.csv(sprintf("genData/expModelFitting/%sdb/s%d_summary.txt", modelName, thisID),
-                       header = F)
-      low= tempt[1:nPara,4]
-      up = tempt[1 : nPara,8]
-      converge = modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up)
-    }# loop over participants
+      nLoop = nLoop + 1  
+    }else{
+      break
+    }# loop over participants    
+  }
     # evaluate useID again
     expPara = loadExpPara(paras,
                           sprintf("genData/expModelFitting/%sdb", modelName))
     useID = getUseID(expPara, paras)
     print(length(useID))
-  }else{
-    print("All converged!") # add later
-  }
 }

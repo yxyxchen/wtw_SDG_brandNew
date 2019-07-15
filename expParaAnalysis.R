@@ -10,7 +10,7 @@ source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 load("wtwSettings.RData")
 
 
-modelName = "PRbs"
+modelName = "RlearnL"
 
 # create output directories
 dir.create("figures/expParaAnalysis")
@@ -19,21 +19,33 @@ dir.create(saveDir)
 
 
 # load blockdata data
-
 load("genData/expDataAnalysis/sessionData.RData")
 load("genData/expDataAnalysis/kmOnGridSess.RData")
 summaryData = sessionData
-
-# maybe I shoud truncate summaryData to make them the same as balabala 
 
 # load expPara
 paras = getParas(modelName)
 nPara = length(paras)
 parentDir = "genData/expModelFitting"
-dirName = sprintf("%s/%s",parentDir, modelName)
+dirName = sprintf("%s/%sdb",parentDir, modelName)
 tempt = loadExpPara(paras, dirName)
 useID = getUseID(tempt, paras)
 expPara = merge(x=tempt[,c(paras, "id")],y=summaryData, by="id",all.x=TRUE)
+
+# plot hist 
+# paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
+# paraNames = c("LR", "LP", expression(tau), "P")
+paraNames = paras
+expPara$condition = summaryData$condition[summaryData$id %in% expPara$id]
+expPara %>% filter(id %in% useID) %>% select(c(paras, "condition")) %>%
+  gather(-c("condition"), key = "para", value = "value") %>%
+  mutate(para = factor(para, levels = paras, labels = paraNames ))%>%
+  ggplot(aes(value)) + geom_histogram(bins = 8) +
+  facet_grid(condition ~ para, scales = "free", labeller = label_parsed) + 
+  myTheme + xlab(" ") + ylab(" ")
+fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysis", modelName)
+ggsave(fileName, width = 8, height = 4)
+
 
 # load and merge trait data
 personality = read.csv("data/SDGdataset.csv")
@@ -103,7 +115,6 @@ for(i in 1 : 2){
   dev.off()
 }
 
-
 # look at trait linearly
 for(cIdx in 1 : 2){
   cond = conditions[cIdx]
@@ -120,32 +131,6 @@ for(cIdx in 1 : 2){
 }
 
 
-trait = traits[1]
-para = "gamma"
-input = data.frame(x = personality[summaryData$id %in% useID,trait], y = expPara[expPara$id %in% useID,para],
-           cond= summaryData$condition[summaryData$id %in% useID])
-input = input[!is.na(input$x),]
-ggplot(input, aes(x, y)) + geom_point() + facet_grid(~cond)
-
-gapSize = 5
-input$xGroup = cut2(input$x, cuts = seq(floor(min(input$x) / gapSize) * gapSize,
-                                        ceiling(max(input$x) / gapSize) * gapSize, by = gapSize))
-sumInput = group_by(input, cond, xGroup) %>% dplyr::summarise(meanY = mean(y))
-ggplot(sumInput, aes(xGroup, meanY)) + geom_point() +facet_grid(~cond) + xlab("Impulsive")+ylab("Gamma")
-
-# plot hist 
-# paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
-# paraNames = c("LR", "LP", expression(tau), "P")
-paraNames = paras
-expPara$condition = summaryData$condition[summaryData$id %in% expPara$id]
-expPara %>% filter(id %in% useID) %>% select(c(paras, "condition")) %>%
-  gather(-c("condition"), key = "para", value = "value") %>%
-  mutate(para = factor(para, levels = paras, labels = paraNames ))%>%
-  ggplot(aes(value)) + geom_histogram(bins = 8) +
-  facet_grid(condition ~ para, scales = "free", labeller = label_parsed) + 
-  myTheme + xlab(" ") + ylab(" ")
-fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysis", modelName)
-ggsave(fileName, width = 8, height = 4)
 
 
 

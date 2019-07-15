@@ -46,56 +46,12 @@ modelName = "reduce_gamma"
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
 rep.gamma = modelRepitation(modelName, summaryData, expTrialData, nComb)
 
-modelName = "Rlearn"
-expPara = loadExpPara(getParas(modelName), sprintf("genData/expModelFitting/%s", modelName))
-useID = getUseID(expPara, getParas(modelName))
-length(useID)
-ids = hdrData$ID[hdrData$stress == "no stress"]
-ids[!ids %in% useID]
-expPara = loadExpParaExtra(getParas(modelName), sprintf("genData/expModelFitting/%s", modelName))
-hist(expPara$phi97.5[!expPara$id %in% useID])
 
-# to understand why Rlearn didn't converge 
-expPara_PR = rep.PRbs$expPara
-expPara_Rlearn = rep.RlearnL$expPara
-useID_PR = getUseID(expPara_PR, getParas("PRbs"))
-useID_Rlearn = getUseID(expPara_Rlearn, getParas("RlearnL"))
-
-expPara_db = rep.Rlearndb$expPara
-useID_db = getUseID(expPara_db, paras = getParas("Rlearndb"))
-
-# unconverge and gamma
-unConverge = expPara_PR$gamma[!expPara_PR$id %in% useID_Rlearn]
-converge = expPara_PR$gamma[expPara_PR$id %in% useID_Rlearn]
-a = hist(unConverge)
-breaks = a$breaks
-medians = a$mids
-a = hist(unConverge, breaks = breaks)
-b = hist(converge, breaks = breaks)
-unConvergeRatio = a$counts / (a$counts + b$counts)
-plot(medians, unConvergeRatio, xlab = "Gamma",
-     ylab = "Unconverged ratio") 
-hist(expPara_PR$gamma, breaks = breaks)
-
-# unconverge and nExclude
-unConverge = expPara_PR$nExclude[!expPara_PR$id %in% useID_Rlearn]
-converge = expPara_PR$nExclude[expPara_PR$id %in% useID_Rlearn]
-breaks = c(0, 5, 10, 15, 20, 25, 30, 35)
-medians = c(2.5, 7.5, 12.5, 17.5, 22.5, 27.5, 32.5)
-a = hist(unConverge, breaks = breaks)
-b = hist(converge, breaks = breaks)
-unConvergeRatio = a$counts / (a$counts + b$counts)
-plot(medians, unConvergeRatio, xlab = "nExclude",
-     ylab = "Unconverged ratio") 
-hist(expPara_PR$nExclude)
-
-ids = expPara_PR$id
-ids[!ids %in% useID_Rlearn]
 
 # initialize 
-modelName = "PRbsNC"
+modelName = "RlearnL"
 dir.create(sprintf("figures/expModelRepitation/%s", modelName))
-thisRep = rep.PRbsNC
+thisRep = rep.RlearnL
 expPara = thisRep$expPara
 repTrialData = thisRep$repTrialData
 
@@ -137,7 +93,7 @@ data.frame(muAUCRep, minAUCRep, maxAUCRep,muStdWdRep, minStdWdRep, maxStdWdRep,
   ggplot(aes(AUC, muAUCRep)) +  geom_errorbar(aes(ymin = minAUCRep, ymax = maxAUCRep), color = "grey") +
   geom_point(size = 2) + facet_grid(~condition) + 
   geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(-2, 22)) + ylim(c(-2, 22)) +
-  ylab("Model-generated (s)") + xlab("Observed (s)") + ggtitle("Average WTW") +
+  ylab("Model-generated (s)") + xlab("Observed (s)") + ggtitle(sprintf("Average WTW, n = %d", length(useID))) +
   myThemeBig + theme(plot.title = element_text(face = "bold", hjust = 0.5))
 fileName = sprintf("figures/expModelRepitation/%s/AUC_AUCRep.png", modelName)
 ggsave(filename = fileName,  width = 6, height = 4)
@@ -150,7 +106,7 @@ data.frame(muAUCRep, minAUCRep, maxAUCRep,muStdWdRep, minStdWdRep, maxStdWdRep,
   geom_point(size = 2) + facet_grid(~condition) + 
   geom_abline(slope = 1, intercept = 0) + saveTheme  +
   ylab(expression(bold(paste("Model-generated (s"^2,")")))) +
-  xlab(expression(bold(paste("Observed (s"^2,")")))) +ggtitle("std WTW") +
+  xlab(expression(bold(paste("Observed (s"^2,")")))) +ggtitle(sprintf("Std WTW, n = %d", length(useID)))+
   myThemeBig + theme(plot.title = element_text(face = "bold", hjust = 0.5))
 fileName = sprintf("figures/expModelRepitation/%s/std_stdRep.png", modelName)
 ggsave(filename = fileName,  width = 6, height = 4)
