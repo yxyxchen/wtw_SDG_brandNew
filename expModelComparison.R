@@ -133,3 +133,10 @@ output = data.frame(cvLik = logEvidence[select,],
 f= "genData/expModelFitting/logEvidenceListCV.csv"
 write.table(file = f, output, sep = ",", col.names = F, row.names = F)
 
+bestNums = sapply(1 : nModel, function(i) sum(apply(logEvidence[,1:nModel], MARGIN = 1, FUN = function(x) which.max(x) == i)))
+data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=bestNums, fill=model)) +
+  geom_bar(width = 1, stat = "identity") + 
+  coord_polar("y", start=0) + ylab("") + xlab("") + ggtitle(sprintf("Participants best described (n = %d)", nUse))+ 
+  myTheme
+dir.create("figures/expModelComparison")
+ggsave("figures/expModelComparison/CV_nBest.png", width = 5, height = 3.5)

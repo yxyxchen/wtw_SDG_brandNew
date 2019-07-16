@@ -1,17 +1,19 @@
 library("stringr")
 getParas = function(modelName){
   if(modelName %in% c("para4", "curiosityTrialSp")) paras = c("phi", "tau", "gamma", "zeroPoint")
-  else if(modelName  %in% c("PR", "PRNC", "PRbs", "PRbsNC", "PRbsNCdb", "PRbsdb")) paras = c("phi", "phiP", "tau", "gamma", "zeroPoint")
+  else if(modelName  %in% c("PR", "PRNC", "PRbs", "PRbsNC", "PRbsNCdb", "PRbsdb", "PRsp", "PRNCsp")) paras = c("phi", "phiP", "tau", "gamma", "zeroPoint")
   else if(modelName %in% c(("MVT"))) paras = c("phi", "phiP", "tau", "reRateIni", "slope")
   else if(modelName  %in% c("hyper")) paras = c("phi", "phiP", "tau", "k", "zeroPoint")
   else if(modelName == "PR_cost") paras = c("phi", "phiP", "tau", "gamma", "zeroPoint", "cost")
   else if(modelName %in% c("uniPrior", "uniPriorNC", "uniPriordb", "uniPriordbNC")) paras = c("phi", "phiP", "tau", "gamma", "QwaitIni")
   else if(modelName == "risk") paras = c("phi", "tau", "gamma", "utiCurve")
   else if(modelName == "baseline") paras = c("waitRate")
-  else if(modelName %in% c("Rlearn", "Rlearndb")) paras = c("phi", "phiP", "tau", "zeroPoint")
-  else if(modelName %in% c("RlearnL", "RlearnLdb")) paras = c("phi", "phiP", "tau", "zeroPoint", "beta", "betaP")
+  else if(modelName %in% c("Rlearn", "Rlearndb", "Rlearnsp")) paras = c("phi", "phiP", "tau", "zeroPoint")
+  else if(modelName %in% c("RlearnL", "RlearnLdb", "RlearnLsp")) paras = c("phi", "phiP", "tau", "zeroPoint", "beta", "betaP")
   else if(modelName %in% c("reduce_gamma")) paras = c("phi", "phiP", "tau", "zeroPoint")
   else return("wrong model name")
+  
+  if(modelName %in% c("PRsp", "PRNCsp", "Rlearnsp", "RlearnLsp")) paras = paras[!paras %in% c("phiP",  "betaP")]
   return(paras)
 }
 

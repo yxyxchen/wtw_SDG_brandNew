@@ -21,9 +21,9 @@ transformed data {
 }
 parameters {
   real<lower = low[1], upper = up[1]> phi;
-  real<lower = low[3], upper = up[3]> tau;
-  real<lower = low[4], upper = up[4]> gamma;
-  real<lower = low[5], upper = up[5]> zeroPoint; 
+  real<lower = low[2], upper = up[2]> tau;
+  real<lower = low[3], upper = up[3]> gamma;
+  real<lower = low[4], upper = up[4]> zeroPoint; 
 }
 transformed parameters{
   // initialize action values 
@@ -90,9 +90,9 @@ transformed parameters{
 }
 model {
   phi ~ uniform(low[1], up[1]);
-  tau ~ uniform(low[3], up[3]);
-  gamma ~ uniform(low[4], up[4]);
-  zeroPoint ~ uniform(low[5], up[5]);
+  tau ~ uniform(low[2], up[2]);
+  gamma ~ uniform(low[3], up[3]);
+  zeroPoint ~ uniform(low[4], up[4]);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){
