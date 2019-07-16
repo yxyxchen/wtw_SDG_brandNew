@@ -3,6 +3,7 @@ data {
   real wIni;
   int tMax;
   int nTimeSteps; // nTimeSteps = tMax / stepDuration
+  int nPara;
   
   // depending on each subject
   int N; // number of trials
@@ -12,16 +13,17 @@ data {
   real stepDuration;
   real iti;
   real tokenValue;
+  vector[nPara] low;
+  vector[nPara] up;
 }
 transformed data {
   int totalSteps = sum(Ts) - N;
 }
 parameters {
-  real<lower = 0, upper = 0.3> phi;
-  real<lower = 0, upper = 0.3> phiP; 
-  real<lower = 2, upper = 22> tau;
-  real<lower = 0.7, upper = 1> gamma;
-  real<lower = 0, upper = nTimeSteps> zeroPoint; 
+  real<lower = low[1], upper = up[1]> phi;
+  real<lower = low[3], upper = up[3]> tau;
+  real<lower = low[4], upper = up[4]> gamma;
+  real<lower = low[5], upper = up[5]> zeroPoint; 
 }
 transformed parameters{
   // initialize action values 
@@ -59,23 +61,30 @@ transformed parameters{
         Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);
       }
     }else{
-      real G =  RT  + Viti * gamma;
-      Qquit = Qquit + phiP * (G - Qquit) * (G > Qquit) + phiP *  (G - Qquit) * (G <= Qquit) ;
       if(T > 2){
         for(t in 1 : (T-2)){
-          G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
-          Qwait[t] = Qwait[t] + phiP * (G - Qwait[t]);    
+          real G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
+          Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);    
         }
       }
     }
     // update Qquit by counterfactual thiking
     G1 =  RT  * gamma^(T - 2) + Viti * gamma^(T - 1);
+    if(tIdx > 1){
+      if(trialEarnings[tIdx - 1] == 0){
+        if(RT > 0){
+          Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+        }else{
+          Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+        }
+      }
+    }
     
     // update Viti
     if(RT > 0){
        Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);
     }else{
-       Viti = Viti + phiP * (G1 * gamma^(iti / stepDuration) - Viti);
+       Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);
     }
    
     
@@ -86,11 +95,10 @@ transformed parameters{
   }// end of the loop
 }
 model {
-  phi ~ uniform(0, 0.3);
-  phiP ~ uniform(0, 0.3);
-  tau ~ uniform(2, 22);
-  gamma ~ uniform(0.7, 1);
-  zeroPoint ~ uniform(0, nTimeSteps);
+  phi ~ uniform(low[1], up[1]);
+  tau ~ uniform(low[3], up[3]);
+  gamma ~ uniform(low[4], up[4]);
+  zeroPoint ~ uniform(low[5], up[5]);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){
