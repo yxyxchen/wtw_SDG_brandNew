@@ -16,13 +16,10 @@ modelFitting = function(thisTrialData, fileName, paras, model, modelName){
     subOptimalRatio = 0.9 
     QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
     QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-    if(modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL")){
+    if(any(paras  == "gamma") || modelName == "BL" ){
       wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
-    }else if(any(paras %in% c("gamma", "k")) || modelName == "reduce_gamma"){
-      wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
     }else{
-      print("wrong model name!")
-      break
+      wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
     }
     
     # prepare input
@@ -35,16 +32,13 @@ modelFitting = function(thisTrialData, fileName, paras, model, modelName){
     condIdx = ifelse(cond =="HP", 1, 2)
     nTimeSteps = tMax / stepDuration
     Ts = round(ceiling(timeWaited / stepDuration) + 1)
-    data_list <- list(tMax = tMax,
-                      wIni = wIni,
+    data_list <- list(wIni = wIni,
                       nTimeSteps = nTimeSteps,
-                      timeWaited = timeWaited,
                       N = length(timeWaited),
                       trialEarnings = trialEarnings,
                       Ts = Ts,
                       iti = iti,
-                      stepDuration = stepDuration,
-                      tokenValue = tokenValue)
+                      stepDuration = stepDuration)
     fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
                  iter = nIter) 
   # extract parameters
@@ -79,13 +73,10 @@ modelFittingCV = function(thisTrialData, fileName, paras, model, modelName){
   subOptimalRatio = 0.9 
   QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-  if(modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL")){
+  if(any(paras  == "gamma") || modelName == "BL" ){
     wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
-  }else if(any(paras %in% c("gamma", "k")) || modelName == "reduce_gamma"){
-    wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
   }else{
-    print("wrong model name!")
-    break
+    wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
   }
   
   # prepare input
@@ -98,16 +89,13 @@ modelFittingCV = function(thisTrialData, fileName, paras, model, modelName){
   condIdx = ifelse(cond =="HP", 1, 2)
   nTimeSteps = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
-  data_list <- list(tMax = tMax,
-                    wIni = wIni,
+  data_list <- list(wIni = wIni,
                     nTimeSteps = nTimeSteps,
-                    timeWaited = timeWaited,
                     N = length(timeWaited),
                     trialEarnings = trialEarnings,
                     Ts = Ts,
                     iti = iti,
-                    stepDuration = stepDuration,
-                    tokenValue = tokenValue)
+                    stepDuration = stepDuration)
   fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
                  iter = nIter) 
   # save
@@ -130,14 +118,12 @@ modelFittingdb = function(thisTrialData, fileName, paras, model, modelName,nPara
   subOptimalRatio = 0.9 
   QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-  if(modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL")){
+  if(any(paras  == "gamma") || modelName == "BL" ){
     wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
-  }else if(any(paras %in% c("gamma", "k")) || modelName == "reduce_gamma"){
-    wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
   }else{
-    print("wrong model name!")
-    break
+    wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
   }
+  
   
   # prepare input
   timeWaited = thisTrialData$timeWaited
@@ -149,17 +135,14 @@ modelFittingdb = function(thisTrialData, fileName, paras, model, modelName,nPara
   condIdx = ifelse(cond =="HP", 1, 2)
   nTimeSteps = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
-  data_list <- list(tMax = tMax,
-                    wIni = wIni,
+  data_list <- list(wIni = wIni,
                     nTimeSteps = nTimeSteps,
                     nPara = nPara,
-                    timeWaited = timeWaited,
                     N = length(timeWaited),
                     trialEarnings = trialEarnings,
                     Ts = Ts,
                     iti = iti,
                     stepDuration = stepDuration,
-                    tokenValue = tokenValue,
                     low =low,
                     up = up)
   fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
@@ -200,14 +183,12 @@ modelFittingCVdb = function(thisTrialData, fileName, paras, model, modelName,nPa
   subOptimalRatio = 0.9 
   QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
   QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
-  if(modelName %in% c("baseline", "MVT", "Rlearn", "RlearnL")){
+  if(any(paras  == "gamma") || modelName == "BL" ){
     wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
-  }else if(any(paras %in% c("gamma", "k")) || modelName == "reduce_gamma"){
-    wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
   }else{
-    print("wrong model name!")
-    break
+    wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
   }
+  
   
   # prepare input
   timeWaited = thisTrialData$timeWaited
@@ -219,17 +200,14 @@ modelFittingCVdb = function(thisTrialData, fileName, paras, model, modelName,nPa
   condIdx = ifelse(cond =="HP", 1, 2)
   nTimeSteps = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
-  data_list <- list(tMax = tMax,
-                    wIni = wIni,
+  data_list <- list(wIni = wIni,
                     nTimeSteps = nTimeSteps,
                     nPara = nPara,
-                    timeWaited = timeWaited,
                     N = length(timeWaited),
                     trialEarnings = trialEarnings,
                     Ts = Ts,
                     iti = iti,
                     stepDuration = stepDuration,
-                    tokenValue = tokenValue,
                     low =low,
                     up = up)
   fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
