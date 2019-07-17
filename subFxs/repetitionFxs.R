@@ -54,9 +54,8 @@ modelRepitation = function(modelName, summaryData, expTrialData,  nComb){
     # load behavioral inputs
     thisExpTrialData = expTrialData[[id]] # here we useID
     cond = unique(thisExpTrialData$condition)
-    if(isTrun){
-      thisExpTrialData = lastTrunc(thisExpTrialData)
-    }
+    excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
     scheduledWait = thisExpTrialData$scheduledWait
     # simulate
     for(cbIdx in 1 : nComb){
