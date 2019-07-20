@@ -17,8 +17,8 @@ n = length(allIDs)
 load("genData/expDataAnalysis/sessionData.RData")
 # select common useID
 idList = hdrData$ID
-modelNames = factor(c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma"),
-                    levels = c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma"))
+modelNames = factor(c("QL1", "QL2", "RL1", "RL2", "BL"),
+                    levels = c("QL1", "QL2", "RL1", "RL2", "BL"))
 nModel = length(modelNames)
 useID_ = vector(mode = "list", length = nModel)
 source("subFxs/loadFxs.R")

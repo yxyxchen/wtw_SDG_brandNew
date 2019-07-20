@@ -73,7 +73,7 @@ transformed parameters{
 model {
   phi ~ uniform(0, 0.3);
   tau ~ uniform(0.1, 22);
-  gamma ~ uniform(0.7, 1);
+  gamma ~ uniform(0.5, 1);
   prior ~ uniform(0, 65);
   
   // calculate the likelihood 

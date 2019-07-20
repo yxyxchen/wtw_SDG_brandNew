@@ -11,17 +11,20 @@ data {
   int N; // number of trials
   vector[N] trialEarnings;
   int Ts[N]; // terminal time step index 
+  
+  // debug
+  int nPara;
+  vector[nPara] low;
+  vector[nPara] up;
 }
 transformed data {
   int totalSteps = sum(Ts) - N;
 }
 parameters {
-  real<lower = 0, upper = 0.3> phi;
-  real<lower = 0, upper = 0.3> phiP; 
-  real<lower = 0.1, upper = 22> tau;
-  real<lower = 0, upper = 65> prior; 
-  real<lower = 0, upper = 0.3> beta;
-  real<lower = 0, upper = 0.3> betaP;   
+  real<lower = low[1], upper = up[1]> phi;
+  real<lower = low[2], upper = up[2]> tau;
+  real<lower = low[3], upper = up[3]> prior; 
+  real<lower = low[4], upper = up[4]> beta;
 }
 transformed parameters{
   // initialize action values 
@@ -62,7 +65,7 @@ transformed parameters{
       if(T > 2){
         for(t in 1 : (T-2)){
           real G =  RT  - reRate * (T - t) + Viti;
-          Qwait[t] = Qwait[t] + phiP * (G - Qwait[t]);    
+          Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);    
         }
       }
     }
@@ -70,18 +73,10 @@ transformed parameters{
     // update Viti
     G1 =  RT  - reRate*(T - 1) + Viti;
     delta = (G1 - reRate * (iti / stepDuration) - Viti);
-    if(RT > 0){
-       Viti = Viti + phi * delta;
-    }else{
-       Viti = Viti + phiP * delta;
-    }
+    Viti = Viti + phi * delta;
    
     // update reRate 
-    if(RT > 0){
-      reRate = reRate +  beta * delta;
-    }else{
-      reRate = reRate + betaP * delta;
-    }
+    reRate = reRate + beta * delta;
     
     // save action values
     Qwaits[,tIdx+1] = Qwait;
@@ -91,12 +86,10 @@ transformed parameters{
   }// end of the loop
 }
 model {
-  phi ~ uniform(0, 0.3);
-  phiP ~ uniform(0, 0.3);
-  tau ~ uniform(0.1, 22);
-  prior ~ uniform(0, 65);
-  beta ~ uniform(0, 0.3);
-  betaP ~ uniform(0, 0.3);  
+  phi ~ uniform(low[1], up[1]);
+  tau ~ uniform(low[2], up[2]);
+  prior ~ uniform(low[3], up[3]);
+  beta ~ uniform(low[4], up[4]);
   // calculate the likelihood 
   for(tIdx in 1 : N){
     int action;

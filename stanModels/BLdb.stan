@@ -11,15 +11,20 @@ data {
   int N; // number of trials
   vector[N] trialEarnings;
   int Ts[N]; // terminal time step index 
+  
+  // debug
+  int nPara;
+  vector[nPara] low;
+  vector[nPara] up;
 }
 transformed data {
   int totalSteps = sum(Ts) - N;
 }
 parameters {
-  real<lower = 0, upper = 1> pWait;
+  real<lower = low[1], upper = up[1]> pWait;
 }
 model {
-  pWait ~ uniform(0, 1);
+  pWait ~ uniform(low[1], up[1]);
   // calculate the likelihood 
   for(tIdx in 1 : N){
     int action;

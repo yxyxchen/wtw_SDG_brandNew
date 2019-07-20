@@ -65,9 +65,9 @@ expModelFitting = function(modelName){
   n = length(idList)                    
   
   # determine paras
-  paras = getParas(modelName)
-  if(paras == "wrong model name"){
-    print(paras)
+  paraNames = getParaNames(modelName)
+  if(paraNames == "wrong model name"){
+    print(paraNames)
     break
   }
   
@@ -95,7 +95,7 @@ expModelFitting = function(modelName){
       select = as.vector(partTable[-j,])
       thisTrialData = thisTrialData[(1 : nrow(thisTrialData)) %in% select,]
       fileName = sprintf("genData/expModelFittingCV/%s/s%d_f%d", modelName, thisID, j)
-      modelFittingCV(thisTrialData, fileName, paras, model, modelName)
+      modelFittingCV(thisTrialData, fileName, paraNames, model, modelName)
     }
   }
 }

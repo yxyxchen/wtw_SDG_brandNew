@@ -1,7 +1,6 @@
 # be careful to always to use id in code, instead of expTrialData
 # determine if truncated
 expModelRepitation = function(modelName){
-  isTrun = T
   library("ggplot2") 
   library("dplyr")
   library("tidyr")
@@ -19,25 +18,25 @@ expModelRepitation = function(modelName){
   load("genData/expDataAnalysis/sessionData.RData")
   load("genData/expDataAnalysis/kmOnGridSess.RData")
   summaryData = sessionData
+  
   # load trialData since we need scheduledWait 
   allData = loadAllData()
   hdrData = allData$hdrData 
-  expTrialData = allData$trialData       
-  allIDs = hdrData$ID 
-  
+  trialData = allData$trialData       
+  ids = hdrData$ID[hdrData$stress == "no stress"]
   
   # re-simulate data
   dir.create("figures/expModelRepitation/")
   dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-  thisRep = modelRepitation(modelName, summaryData, expTrialData, nComb) # set seeds indise
+  thisRep = modelRepitation(modelName, summaryData, trialData, nComb) # set seeds indise
   expPara = thisRep$expPara
   repTrialData = thisRep$repTrialData
-  
-  paras = getParas(modelName)
-  
-  useID = getUseID(expPara, paras)
+  paraNames = getParaNames(modelName)
+  useID = getUseID(expPara, paraNames)
   repNo = thisRep$repNo
   nSub =(length(useID))
+  
+  # survival analysis for all valid participants
   AUCRep_ = matrix(NA, nrow = nComb , ncol = nSub)
   stdWdRep_ = matrix(NA, nrow = nComb, ncol = nSub)
   kmOnGridRep_ = vector(mode = "list", length = nSub)
@@ -46,12 +45,11 @@ expModelRepitation = function(modelName){
     # prepare inputs
     id = useID[[sIdx]]
     cond = unique(summaryData$condition[summaryData$id == id])
-    tMax = ifelse( cond == "HP", tMaxs[1], tMaxs[2])
     nTrial = summaryData$nTrial[summaryData$id == id]
     label = sprintf("sub%d", id)
     kmOnGridMatrix = matrix(NA, nrow = length(kmGrid), ncol = nComb)
     for(cIdx in 1 : nComb){
-      thisRepTrialData = repTrialData[[repNo[cIdx, which(thisRep$useID == id)]]]
+      thisRepTrialData = repTrialData[[repNo[cIdx, which(ids == id)]]]
       kmscResults = kmsc(thisRepTrialData, min(tMaxs), label ,plotKMSC, kmGrid)
       AUCRep_[cIdx,sIdx] = kmscResults[['auc']]
       stdWdRep_[cIdx, sIdx] = kmscResults$stdWd
@@ -65,6 +63,7 @@ expModelRepitation = function(modelName){
   minAUCRep = muAUCRep - stdAUCRep;maxAUCRep = muAUCRep + stdAUCRep
   muStdWdRep = apply(stdWdRep_, MARGIN = 2, mean);stdStdWdRep = apply(stdWdRep_, MARGIN = 2, sd)
   minStdWdRep = muStdWdRep - stdStdWdRep;maxStdWdRep = muStdWdRep + stdStdWdRep
+  
   data.frame(muAUCRep, minAUCRep, maxAUCRep,muStdWdRep, minStdWdRep, maxStdWdRep,
              AUC = summaryData$AUC[summaryData$id %in% useID], stdWD = summaryData$stdWd[summaryData$id %in% useID],
              condition = summaryData$condition[summaryData$id %in% useID]) %>%

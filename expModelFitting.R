@@ -35,9 +35,9 @@ expModelFitting = function(modelName){
   n = length(idList)                    
   
   # determine paras
-  paras = getParas(modelName)
-  if(paras == "wrong model name"){
-    print(paras)
+  paraNames = getParaNames(modelName)
+  if(paraNames == "wrong model name"){
+    print(paraNames)
     break
   }
   
@@ -57,6 +57,6 @@ expModelFitting = function(modelName){
     excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
     thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
     fileName = sprintf("genData/expModelFitting/%s/s%d", modelName, thisID)
-    modelFitting(thisTrialData, fileName, paras, model, modelName)
+    modelFitting(thisTrialData, fileName, paraNames, model, modelName)
   }
 }

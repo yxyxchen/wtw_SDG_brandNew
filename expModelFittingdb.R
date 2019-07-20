@@ -56,20 +56,20 @@ expModelFitting = function(modelName){
   }
   
   # determine paras
-  paras = getParas(modelName)
-  nPara = length(paras)
-  if(paras == "wrong model name"){
-    print(paras)
+  paraNames = getParaNames(modelName)
+  nPara = length(paraNames)
+  if(paraNames == "wrong model name"){
+    print(paraNames)
     break
   }
   
   # enter the refit process
   nLoop = 1
-  while(nLoop < 5){
+  while(nLoop < 15){
     # determine excID
-    expPara = loadExpPara(paras,
+    expPara = loadExpPara(paraNames,
                           sprintf("genData/expModelFitting/%sdb", modelName))
-    useID = getUseID(expPara, paras)
+    useID = getUseID(expPara, paraNames)
     excID = ids[!ids %in% useID]
     
     # loop over excID
@@ -102,16 +102,21 @@ expModelFitting = function(modelName){
                          header = F)
         low= tempt[1:nPara,4]
         up = tempt[1 : nPara,8]
-        converge = modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up)
+        converge = modelFittingdb(thisTrialData, fileName, paraNames, model, modelName, nPara, low, up)
       }
       nLoop = nLoop + 1  
     }else{
+      print("finished!")
+      print(modelName)
+      print(nSub)
       break
     }# loop over participants    
   }
     # evaluate useID again
-    expPara = loadExpPara(paras,
+    expPara = loadExpPara(paraNames,
                           sprintf("genData/expModelFitting/%sdb", modelName))
-    useID = getUseID(expPara, paras)
+    useID = getUseID(expPara, paraNames)
+    print("finished!")
+    print(modelName)
     print(length(useID))
 }

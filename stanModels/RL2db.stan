@@ -11,17 +11,22 @@ data {
   int N; // number of trials
   vector[N] trialEarnings;
   int Ts[N]; // terminal time step index 
+  
+  // debug
+  int nPara;
+  vector[nPara] low;
+  vector[nPara] up;
 }
 transformed data {
   int totalSteps = sum(Ts) - N;
 }
 parameters {
-  real<lower = 0, upper = 0.3> phi;
-  real<lower = 0, upper = 0.3> phiP; 
-  real<lower = 0.1, upper = 22> tau;
-  real<lower = 0, upper = 65> prior; 
-  real<lower = 0, upper = 0.3> beta;
-  real<lower = 0, upper = 0.3> betaP;   
+  real<lower = low[1], upper = up[1]> phi;
+  real<lower = low[2], upper = up[2]> phiP; 
+  real<lower = low[3], upper = up[3]> tau;
+  real<lower = low[4], upper = up[4]> prior; 
+  real<lower = low[5], upper = up[5]> beta;
+  real<lower = low[6], upper = up[6]> betaP;   
 }
 transformed parameters{
   // initialize action values 
@@ -91,12 +96,12 @@ transformed parameters{
   }// end of the loop
 }
 model {
-  phi ~ uniform(0, 0.3);
-  phiP ~ uniform(0, 0.3);
-  tau ~ uniform(0.1, 22);
-  prior ~ uniform(0, 65);
-  beta ~ uniform(0, 0.3);
-  betaP ~ uniform(0, 0.3);  
+  phi ~ uniform(low[1], up[1]);
+  phiP ~ uniform(low[2], up[2]);
+  tau ~ uniform(low[3], up[3]);
+  prior ~ uniform(low[4], up[4]);
+  beta ~ uniform(low[5], up[5]);
+  betaP ~ uniform(low[6], up[6]);  
   // calculate the likelihood 
   for(tIdx in 1 : N){
     int action;

@@ -18,7 +18,7 @@ transformed data {
 parameters {
   real<lower = 0, upper = 0.3> phi;
   real<lower = 0.1, upper = 22> tau;
-  real<lower = 0, upper = 65> zeroPoint; 
+  real<lower = 0, upper = 65> prior; 
   real<lower = 0, upper = 0.3> beta;
 }
 transformed parameters{
@@ -38,7 +38,7 @@ transformed parameters{
   
   // enter the initial values
   for(i in 1 : nTimeSteps){
-    Qwait[i] = zeroPoint*0.1 - 0.1*(i - 1) + Viti;
+    Qwait[i] = prior*0.1 - 0.1*(i - 1) + Viti;
   }
   Qwaits[,1] = Qwait;
   Vitis[1] = Viti;
@@ -83,7 +83,7 @@ transformed parameters{
 model {
   phi ~ uniform(0, 0.3);
   tau ~ uniform(0.1, 22);
-  zeroPoint ~ uniform(0, 65);
+  prior ~ uniform(0, 65);
   beta ~ uniform(0, 0.3);
   // calculate the likelihood 
   for(tIdx in 1 : N){
@@ -97,7 +97,7 @@ model {
         action = 1; // wait
       }
       values[1] = Qwaits[i, tIdx] * tau;
-      values[2] = Vitis[tIdx] * tau - reRates[tIdx];
+      values[2] = (Vitis[tIdx] - reRates[tIdx]) * tau;
       //action ~ categorical_logit(values);
       target += categorical_logit_lpmf(action | values);
     } 
@@ -120,7 +120,7 @@ generated quantities {
         action = 1; // wait
       }
       values[1] = Qwaits[i, tIdx] * tau;
-      values[2] = Vitis[tIdx] * tau - reRates[tIdx];
+      values[2] = (Vitis[tIdx] - reRates[tIdx]) * tau;
       log_lik[no] =categorical_logit_lpmf(action | values);
       no = no + 1;
     }
