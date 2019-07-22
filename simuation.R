@@ -42,7 +42,7 @@ for(sIdx in 1 : nSub){
   thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
   cond = unique(thisTrialData$condition)
   scheduledWait = thisTrialData$scheduledWait
-  id = factor(ids[sIdx], levels = hdrData$ID)
+  id = factor(ids[sIdx], levels = ids)
   simTrialData[[id]] = repFun(paras, cond, scheduledWait)
 }
 hdrData$ID = factor(hdrData$ID, levels = hdrData$ID)

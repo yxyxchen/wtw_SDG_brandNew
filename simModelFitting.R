@@ -29,7 +29,9 @@ expModelFitting = function(modelName){
   
   # load simData
   load("genData/simulation/simTrialData.RData")
-  idList = hdrData$ID
+  idList = hdrData$ID[hdrData$stress == "no stress"]
+  # change levels, since we only have 60 entries in simTrialData
+  idList = factor(idList, levels = idList)
   n = length(idList)
   
   # determine paras
