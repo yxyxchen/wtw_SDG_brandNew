@@ -59,15 +59,14 @@ expModelFitting = function(modelName){
   paraNames = getParaNames(modelName)
   nPara = length(paraNames)
   
-  # load cvPara
-  cvPara = loadCVPara(paraNames, sprintf("genData/expModelFittingCV/%sdb", modelName),
-                      "*_summary.txt")
-  useID = getUseID(cvPara, paraNames)
-  excID = idsCV[!idsCV %in% useID]
-  
   # enter the refit procedure
   nLoop =1 
   while(nLoop < 15){
+    # load cvPara
+    cvPara = loadCVPara(paraNames, sprintf("genData/expModelFittingCV/%sdb", modelName),
+                        "*_summary.txt")
+    useID = getUseID(cvPara, paraNames)
+    excID = idsCV[!idsCV %in% useID]
     # refit the mode
     if(length(excID) > 0){
       text = sprintf("Start to refit %d participants", length(excID))

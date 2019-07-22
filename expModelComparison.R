@@ -17,14 +17,14 @@ n = length(allIDs)
 load("genData/expDataAnalysis/sessionData.RData")
 # select common useID
 idList = hdrData$ID
-modelNames = factor(c("QL1", "QL2", "RL1", "RL2", "BL"),
+modelNames = factor(c("QL1", "QL2", "RL1", "RL2"),
                     levels = c("QL1", "QL2", "RL1", "RL2", "BL"))
 nModel = length(modelNames)
 useID_ = vector(mode = "list", length = nModel)
 source("subFxs/loadFxs.R")
 for(i in 1 : nModel){
   modelName = modelNames[i]
-  paras = getParas(modelName)
+  paras = getParaNames(modelName)
   expPara = loadExpPara(paras, sprintf("genData/expModelFitting/%sdb", modelName))
   useID_[[i]] = getUseID(expPara, paras)
 }
@@ -72,17 +72,19 @@ data.frame(pwaic = as.vector(pWaic_), model = rep(modelNames, each = nUse)) %>%
   group_by(model) %>% 
   summarise(muData = mean(pwaic), seData = sd(pwaic) / sqrt(length(pwaic)),
             minData = muData - seData, maxData = muData + seData) 
+
+
 # extract logEvidence, cross validation
-modelNames = c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma")
+idList = hdrData$ID; nSub = length(idList)
+modelNames = factor(c("QL1", "QL2", "RL1", "RL2"),
+                    levels = c("QL1", "QL2", "RL1", "RL2", "BL"))
 nModel = length(modelNames)
-ids = hdrData$ID[hdrData$stress == "no stress"]
-nSub = length(ids)
 nFold = 10
 logEvidence = matrix(nrow = length(ids), ncol= nModel) 
 logEvidenceTrain = list(length = nModel)
 for(mIdx in 1 : nModel){
   modelName = modelNames[mIdx]
-  paras = getParas(modelName)
+  paras = getParaNames(modelName)
   nPara = length(paras)
   logLikFun = getLogLikFun(modelName)
   thisLogEvidenceTrain = matrix(nrow = nFold, ncol = nSub)

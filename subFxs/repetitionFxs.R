@@ -135,7 +135,7 @@ QL1 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis
+    "Vitis" = Vitis, "condition" = cond
   )
   return(outputs)
 }
@@ -221,14 +221,14 @@ QL2 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis
+    "Vitis" = Vitis, "condition" = cond
   )
   return(outputs)
 }
 
 RL1 = function(paras, cond, scheduledWait){
   # parse para
-  phi = paras[1]; tau = paras[3]; prior = paras[4]; beta = paras[6]
+  phi = paras[1]; tau = paras[2]; prior = paras[3]; beta = paras[4]
   
   # prepare inputs
   nTrial = length(scheduledWait)
@@ -298,7 +298,7 @@ RL1 = function(paras, cond, scheduledWait){
       delta = (returns[1] - reRate * (iti / stepDuration) - Viti)
       Viti = Viti + phi * delta
       # update reRate 
-      reRate = reRate + phi * delta  
+      reRate = reRate + beta * delta  
       # record updated values
       Qwaits[,tIdx + 1] = Qwait
       Vitis[tIdx + 1] = Viti
@@ -311,7 +311,7 @@ RL1 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis, "reRates" = reRates
+    "Vitis" = Vitis, "reRates" = reRates, "condition" = cond
   )
   return(outputs)
 }
@@ -389,7 +389,7 @@ RL2 = function(paras, cond, scheduledWait){
       delta = (returns[1] - reRate * (iti / stepDuration) - Viti)
       Viti = ifelse(nextReward > 0, Viti + phi * delta, Viti + phiP* delta)
       # update reRate 
-      reRate = ifelse(nextReward > 0, reRate + phi * delta, reRate + phiP* delta)   
+      reRate = ifelse(nextReward > 0, reRate + beta * delta, reRate + betaP* delta)   
       # record updated values
       Qwaits[,tIdx + 1] = Qwait
       Vitis[tIdx + 1] = Viti
@@ -402,7 +402,7 @@ RL2 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis, "reRates" = reRates
+    "Vitis" = Vitis, "reRates" = reRates, "condition" = cond
   )
   return(outputs)
 }
@@ -450,7 +450,7 @@ BL = function(paras, cond, scheduledWait){
   # return outputs
   outputs = list( 
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
-    "sellTime" = sellTime, "scheduledWait" = scheduledWait
+    "sellTime" = sellTime, "scheduledWait" = scheduledWait, "condition" = cond
   )
   return(outputs)
 }
