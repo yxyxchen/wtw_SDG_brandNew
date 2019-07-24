@@ -88,13 +88,13 @@ expModelFitting = function(modelName){
     excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
     thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
     # determine partitions 
-    load(sprintf("genData/expModelFittingCV/split/s%d.RData", thisID))
+    load(sprintf("genData/expModelFittingCV/split/s%s.RData", thisID))
     
     # loop
     for(j in 1 : nFold){
       select = as.vector(partTable[-j,])
       thisTrialData = thisTrialData[(1 : nrow(thisTrialData)) %in% select,]
-      fileName = sprintf("genData/expModelFittingCV/%s/s%d_f%d", modelName, thisID, j)
+      fileName = sprintf("genData/expModelFittingCV/%s/s%d_f%s", modelName, thisID, j)
       modelFittingCV(thisTrialData, fileName, paraNames, model, modelName)
     }
   }

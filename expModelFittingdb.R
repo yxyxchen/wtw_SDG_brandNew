@@ -79,10 +79,10 @@ expModelFitting = function(modelName){
       print(text)
       foreach(i = 1 : n) %dopar% {
         thisID = excID[[i]]
-        text = sprintf("refit s%d", thisID)
+        text = sprintf("refit s%s", thisID)
         print(text)
         # update nFits and converge
-        fitFile = sprintf("genData/expModelFitting/%sdb/afit_s%d.RData", modelName, thisID)
+        fitFile = sprintf("genData/expModelFitting/%sdb/afit_s%s.RData", modelName, thisID)
         if(file.exists(fitFile)){
           load(fitFile); nFit = nFit  + 1; save(nFit, file = fitFile)
         }else{
@@ -95,10 +95,10 @@ expModelFitting = function(modelName){
         cIdx = ifelse(cond == "HP", 1, 2)
         excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
         thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
-        fileName = sprintf("genData/expModelFitting/%sdb/s%d", modelName, thisID)
+        fileName = sprintf("genData/expModelFitting/%sdb/s%s", modelName, thisID)
         
         # load upper and lower
-        tempt = read.csv(sprintf("genData/expModelFitting/%sdb/s%d_summary.txt", modelName, thisID),
+        tempt = read.csv(sprintf("genData/expModelFitting/%sdb/s%s_summary.txt", modelName, thisID),
                          header = F)
         low= tempt[1:nPara,4]
         up = tempt[1 : nPara,8]
