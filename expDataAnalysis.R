@@ -184,23 +184,3 @@ data.frame(kmsc = unlist(kmOnGrid_[select]), time = rep(kmGrid, sum(select)),
   geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) + 
   xlab("Elapsed time (s)") + ylab("Survival rate") + scale_color_manual(values = conditionColors)
 ggsave("figures/expDataAnalysis/zTruc_kmsc_timecourse.png", width = 5, height = 4) 
-
-# learning rate
-trialReRareMove_ = lapply(1 : n, function(i){
-  movAve(trialReRate_[[i]], 11)
-})
-timeReRate_ = lapply(1 :  n,
-                     function(i) trial2sec(trialReRareMove_[[i]], trialEndTime_[[i]], tGrid))
-select = (summaryData$stress == "no stress")
-data.frame(value = unlist(timeReRate_[select]), time = rep(tGrid, sum(select)* nBlock),
-           condition = factor(rep(blockData$condition[select], each = length(tGrid)),  levels = conditions)) %>%
-  group_by(condition, time) %>%
-  summarise(mean = mean(value), se = sd(value) / sqrt(length(value)), min = mean - se, max = mean + se) %>% 
-  ggplot(aes(time, mean, color = condition, fill = condition)) + 
-  geom_ribbon(aes(ymin=min, ymax=max), colour=NA, alpha = 0.3)+
-  geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) +
-  xlab("Elapsed time (s)") + ylab(expression(bold("Reward rate","(", "s"^2, ")"))) +
-  scale_color_manual(values = conditionColors)
-ggsave("figures/expDataAnalysis/zTruc_reRate.png", width = 4, height = 3.5) 
-
-  

@@ -3,6 +3,7 @@
 # here I change all my modelFitting function into the risk version
 # while in stan, I have different expMofelfitting and modelFitting scripts for different things 
 splitExpData = function(){
+  nFold = 10
   source('subFxs/loadFxs.R') # for load data
   source("subFxs/helpFxs.R") # for getParas
   load("wtwSettings.RData")
@@ -22,9 +23,10 @@ splitExpData = function(){
     excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
     thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
     # determine partitions 
-    nPart = ceiling(nrow(thisTrialData) / nFold)
-    partTable = sapply(1 : nPart, function(i) sample(1:nFold,replace = FALSE) + (i -1) * nFold)
-    fileName = sprintf("genData/expModelFittingCV/split/s%d.RData",  thisID)
+    nSkip = 5
+    nPart = ceiling((nrow(thisTrialData) - nSkip) / nFold)
+    partTable = sapply(1 : nPart, function(i) sample(1:nFold,replace = FALSE) + (i -1) * nFold + nSkip)
+    fileName = sprintf("genData/expModelFittingCV/split/s%s.RData",  thisID)
     save("partTable", file = fileName)
   }
 }
@@ -80,22 +82,19 @@ expModelFitting = function(modelName){
   registerDoMC(nCore)
   
   set.seed(123)
-  foreach(i = 1 : n) %dopar%  {
-    thisID = idList[[i]]
-    thisTrialData = trialData[[thisID]]
-    cond = unique(thisTrialData$condition)
-    cIdx = ifelse(cond == "HP", 1, 2)
-    excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
-    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
-    # determine partitions 
-    load(sprintf("genData/expModelFittingCV/split/s%d.RData", thisID))
-    
-    # loop
-    for(j in 1 : nFold){
-      select = as.vector(partTable[-j,])
+  foreach(i = 1 : n) %:%
+    foreach(j = 1 : nFold) %dopar% {
+      thisID = idList[[i]]
+      thisTrialData = trialData[[thisID]]
+      cond = unique(thisTrialData$condition)
+      cIdx = ifelse(cond == "HP", 1, 2)
+      excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+      thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
+      # determine partitions 
+      load(sprintf("genData/expModelFittingCV/split/s%s.RData", thisID))
+      select = c(1:5, as.vector(partTable[-j,]))
       thisTrialData = thisTrialData[(1 : nrow(thisTrialData)) %in% select,]
-      fileName = sprintf("genData/expModelFittingCV/%s/s%d_f%d", modelName, thisID, j)
+      fileName = sprintf("genData/expModelFittingCV/%s/s%s_f%d", modelName, thisID, j)
       modelFittingCV(thisTrialData, fileName, paraNames, model, modelName)
     }
-  }
 }

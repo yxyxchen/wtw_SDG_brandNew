@@ -24,6 +24,7 @@ loadAllData = function() {
                         'traitAnxiety', 'Gender', 'BDI', 'posAffect1', 'posAffect2', 
                         'negAffect1', 'negAffect2', 'uncertainty', 'delay',
                         'impulsive', 'postUnpleasant')
+  hdrData$ID = factor(hdrData$ID)
   # count number of subjects 
   nSubjects = nrow(summaryData)
   nBlocks = 3
@@ -41,13 +42,13 @@ loadAllData = function() {
   # loop over individual subjects
   for (sIdx in 1:nSubjects) {
     thisID = hdrData$ID[sIdx]
-    thisCbal = hdrData$Cbal[sIdx]
-    thisCond = hdrData$condition[sIdx]
-    thisStress = hdrData$stress[sIdx]
+    thisCbal = hdrData$Cbal[hdrData$ID == thisID]
+    thisCond = hdrData$condition[hdrData$ID == thisID]
+    thisStress = hdrData$stress[hdrData$ID == thisID]
     # loop over blocks
     junk = vector(nBlocks, mode = 'list')
     for (bkIdx in 1 : nBlocks){
-      thisFile = list.files(path=dataDir, pattern=(sprintf('wtw_stress_SDG%d_bk%d_1.txt',thisID, bkIdx)))
+      thisFile = list.files(path=dataDir, pattern=(sprintf('wtw_stress_SDG%s_bk%d_1.txt',thisID, bkIdx)))
       if (length(thisFile) != 1) {
         cat('Could not identify a single data file for subject',thisID,' block', bkIdx, '\n')
         browser()
