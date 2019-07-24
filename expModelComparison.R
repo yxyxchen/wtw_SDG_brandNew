@@ -12,11 +12,10 @@ load("wtwSettings.RData")
 allData = loadAllData()
 hdrData = allData$hdrData           
 trialData = allData$trialData       
-allIDs = hdrData$ID                   # column of subject IDs
-n = length(allIDs) 
 load("genData/expDataAnalysis/sessionData.RData")
 # select common useID
-idList = hdrData$ID
+ids = hdrData$ID
+n  = length(ids)
 modelNames = factor(c("QL1", "QL2", "RL1", "RL2"),
                     levels = c("QL1", "QL2", "RL1", "RL2", "BL"))
 nModel = length(modelNames)
@@ -24,11 +23,11 @@ useID_ = vector(mode = "list", length = nModel)
 source("subFxs/loadFxs.R")
 for(i in 1 : nModel){
   modelName = modelNames[i]
-  paras = getParaNames(modelName)
-  expPara = loadExpPara(paras, sprintf("genData/expModelFitting/%sdb", modelName))
-  useID_[[i]] = getUseID(expPara, paras)
+  paraNames = getParaNames(modelName)
+  expPara = loadExpPara(paraNames, sprintf("genData/expModelFitting/%sdb", modelName))
+  useID_[[i]] = getUseID(expPara, paraNames)
 }
-useID = idList[apply(sapply(1 : nModel, function(i )idList %in% useID_[[i]]), MARGIN = 1,
+useID = ids[apply(sapply(1 : nModel, function(i )ids %in% useID_[[i]]), MARGIN = 1,
               all)]
 nUse = length(useID)
 
@@ -40,7 +39,7 @@ for(m in 1 : nModel){
   modelName = modelNames[m]
   for(sIdx in 1 : nUse ){
     id = useID[sIdx]
-    fileName = sprintf("genData/expModelFitting/%sdb/s%d_waic.RData", modelName, id)
+    fileName = sprintf("genData/expModelFitting/%sdb/s%s_waic.RData", modelName, id)
     load(fileName)
     logEvidence_[sIdx, m] = WAIC$elpd_waic # here is like loglikelyhood, larger the better 
     logLik_[sIdx, m] = WAIC$elpd_waic  + WAIC$p_waic / 2
@@ -75,8 +74,8 @@ data.frame(pwaic = as.vector(pWaic_), model = rep(modelNames, each = nUse)) %>%
 
 
 # extract logEvidence, cross validation
-idList = hdrData$ID; nSub = length(idList)
-modelNames = factor(c("QL1", "QL2", "RL1", "RL2"),
+ids = hdrData$ID[hdrData$stress == "no stress"]; nSub = length(ids)
+modelNames = factor(c("QL1", "QL2", "RL1", "RL2", "BL"),
                     levels = c("QL1", "QL2", "RL1", "RL2", "BL"))
 nModel = length(modelNames)
 nFold = 10
@@ -84,60 +83,56 @@ logEvidence = matrix(nrow = length(ids), ncol= nModel)
 logEvidenceTrain = list(length = nModel)
 for(mIdx in 1 : nModel){
   modelName = modelNames[mIdx]
-  paras = getParaNames(modelName)
-  nPara = length(paras)
-  logLikFun = getLogLikFun(modelName)
-  thisLogEvidenceTrain = matrix(nrow = nFold, ncol = nSub)
+  paraNames = getParaNames(modelName)
+  nPara = length(paraNames)
+  likFun = getLikFun(modelName)
   for(sIdx in 1 : nSub){
     id = ids[sIdx]
-    load(sprintf("genData/expModelFittingCV/split/s%d.RData", id))
+    load(sprintf("genData/expModelFittingCV/split/s%s.RData", id))
     thisTrialData = trialData[[id]]
     cond = unique(thisTrialData$condition)
     cIdx = ifelse(cond == "HP", 1, 2)
     excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
-    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
     # prepare
     nTrial = length(thisTrialData$trialEarnings)
     tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
     trialEarnings = thisTrialData$trialEarnings
-    timeWaited = pmin(thisTrialData$timeWaited, tMax)
-    Ts = round(ceiling(timeWaited / stepDuration) + 1)
     scheduledWait = thisTrialData$scheduledWait
-    cvPara = loadCVPara(paras,
+    timeWaited = thisTrialData$timeWaited
+    timeWaited[trialEarnings != 0] = scheduledWait[trialEarnings != 0]
+    Ts = round(ceiling(timeWaited / stepDuration) + 1)
+    cvPara = loadCVPara(paraNames,
                       sprintf("genData/expModelFittingCV/%sdb",modelName),
-                      pattern = sprintf("s%d_f[0-9]{1,2}_summary.txt", id))
+                      pattern = sprintf("s%s_f[0-9]{1,2}_summary.txt", id))
     # initialize 
     LL_ = vector(length = nFold)
-    if(length(getUseID(cvPara, paras)) == 10){
+    if(length(getUseID(cvPara, paraNames)) == 10){
       for(f in 1 : nFold){
         # determine training end testing trials
         trials = partTable[f,]
         trials = trials[trials < nTrial]
         junk = 1 : nTrial
-        trialsTrain = junk[!junk %in% trials]
-        
-        thisParas = as.double(cvPara[f,1:nPara])
-        lik_ = logLikFun(thisParas, cond, trialEarnings, timeWaited)$lik_
+        paras = as.double(cvPara[f,1:nPara])
+        lik_ = likFun(paras, cond, trialEarnings, timeWaited)$lik_
         LL_[f] = sum(sapply(1 : length(trials), function(i){
           trial = trials[i]
           if(trialEarnings[trial] > 0){
-            sum(log(lik_[1 : max(Ts[trial]-1, 1), trial]))
+            junk = log(lik_[1 : max(Ts[trial]-1, 1), trial])
+            junk[is.infinite(junk)] = -10000
+            sum(junk)
           }else{
-            sum(log(lik_[1:max(Ts[trial] - 2,1), trial])) + log(1-lik_[Ts[trial] - 1, trial])
+            if(Ts[trial] > 2){
+              junk = c(log(lik_[1:max(Ts[trial] - 2,1), trial]), log(1-lik_[Ts[trial] - 1, trial]))
+              junk[is.infinite(junk)] = -10000
+              sum(junk)
+            }else{
+              junk = log(1-lik_[Ts[trial] - 1, trial])
+              junk
+            }
           }
         }))
-        thisLogEvidenceTrain[f, sIdx] = sum(sapply(1 : length(trialsTrain), function(i){
-          trial = trialsTrain[i]
-          if(trialEarnings[trial] > 0){
-            sum(log(lik_[1 : max(Ts[trial]-1, 1), trial]))
-          }else{
-            sum(log(lik_[1:max(Ts[trial] - 2,1), trial])) + log(1-lik_[Ts[trial] - 1, trial])
-          }
-        }))
-          
+        logEvidence[sIdx, mIdx] = sum(LL_)
       }
-      logEvidence[sIdx, mIdx] = sum(LL_)
-      logEvidenceTrain[[mIdx]] = thisLogEvidenceTrain
     }
   }
 }
@@ -158,3 +153,4 @@ data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=best
   myTheme
 dir.create("figures/expModelComparison")
 ggsave("figures/expModelComparison/CV_nBest.png", width = 5, height = 3.5)
+

@@ -176,7 +176,7 @@ RL1 = function(paras, cond, trialEarnings, timeWaited){
     # calculate likelyhood
     nextReward = trialEarnings[tIdx]
     getReward = ifelse(nextReward == tokenValue, T, F)
-    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp((Viti - reRate)- Qwait[i])* tau))
+    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp((Viti - reRate- Qwait[i])* tau)))
     
     # update values 
     T = Ts[tIdx]
@@ -250,7 +250,7 @@ RL2 = function(paras, cond, trialEarnings, timeWaited){
     # calculate likelyhood
     nextReward = trialEarnings[tIdx]
     getReward = ifelse(nextReward == tokenValue, T, F)
-    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp((Viti - reRate)- Qwait[i])* tau))
+    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp((Viti - reRate- Qwait[i])* tau)))
     
     # update values 
     T = Ts[tIdx]
@@ -288,9 +288,16 @@ RL2 = function(paras, cond, trialEarnings, timeWaited){
   return(outputs)
 }
 
+
 BL = function(paras, cond, trialEarnings, timeWaited){
   # parse para
   pWait = paras[1];
+  
+  # prepare inputs
+  nTrial = length(trialEarnings)
+  tMax= max(tMaxs)
+  nTimeStep = tMax / stepDuration
+  Ts = round(ceiling(timeWaited / stepDuration) + 1)
   # calculate likelyhood
   lik_ = matrix(pWait, nrow = nTimeStep, ncol = nTrial)
   # return outputs
@@ -299,4 +306,5 @@ BL = function(paras, cond, trialEarnings, timeWaited){
   )
   return(outputs)
 }
+
 

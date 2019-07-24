@@ -99,7 +99,7 @@ loadExpPara = function(paraNames, dirName){
     expPara[i, (3 * nE + 1) : (4 * nE)] = junk[,10]
   }
   # transfer expPara to data.frame
-  expPara = data.frame(expPara)
+  expPara = data.frame(expPara, stringsAsFactors = F)
   junk = c(paraNames, "LL_all")
   colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"))
   expPara$id = factor(idList, levels = levels(hdrData$ID)) # ensure the levels are consistent, usually not that problematic though
