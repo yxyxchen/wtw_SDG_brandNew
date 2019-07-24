@@ -1,13 +1,4 @@
 
-# loadData.R
-# varying-magnitude WTW
-
-# each subject has:
-#  header file (*hdr.txt)
-#  main data file (ending both in .mat and .txt)
-#  empty *keytimes.txt file, a vestige of the effort key-pressing version. 
-
-
 loadAllData = function() {
   ##### step 1: organize hdrData
   # load summary data
@@ -24,7 +15,11 @@ loadAllData = function() {
                         'traitAnxiety', 'Gender', 'BDI', 'posAffect1', 'posAffect2', 
                         'negAffect1', 'negAffect2', 'uncertainty', 'delay',
                         'impulsive', 'postUnpleasant')
+<<<<<<< HEAD
   hdrData$ID = factor(hdrData$ID)
+=======
+  hdrData$ID = as.character(hdrData$ID)
+>>>>>>> bffeccc38ee5bb08b40308413b60785630475701
   # count number of subjects 
   nSubjects = nrow(summaryData)
   nBlocks = 3
@@ -76,6 +71,8 @@ loadAllData = function() {
 } 
 
 
+
+
 loadExpPara = function(paraNames, dirName){
   # number of paraNames 
   nE = length(paraNames) + 1
@@ -95,7 +92,7 @@ loadExpPara = function(paraNames, dirName){
     address = sprintf("%s/%s", dirName, fileName)
     junk = read.csv(address, header = F)
     idIndexs = str_locate(fileName, "s[0-9]+")
-    idList[i] = as.double(substr(fileName, idIndexs[1]+1, idIndexs[2]))
+    idList[i] = substr(fileName, idIndexs[1]+1, idIndexs[2])
     # delete the lp__ in the old version
     if(nrow(junk) > nE){
       junk = junk[1:nE,]
@@ -109,7 +106,7 @@ loadExpPara = function(paraNames, dirName){
   expPara = data.frame(expPara)
   junk = c(paraNames, "LL_all")
   colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"))
-  expPara$id = idList
+  expPara$id = factor(idList, levels = levels(hdrData$ID)) # ensure the levels are consistent, usually not that problematic though
   return(expPara)
 }
 
@@ -127,18 +124,16 @@ loadCVPara = function(paraNames, dirName, pattern){
   # initialize the outout variable 
   expPara = matrix(NA, n, nE * 6)
   idList = vector(length = n)
-  fList = vector(length = n)
-  sList = vector(length = n)
   # loop over files
   for(i in 1 : n){
     fileName = fileNames[[i]]
     address = sprintf("%s/%s", dirName, fileName)
     junk = read.csv(address, header = F)
-    sIndexs = str_locate(fileName, "s[0-9]{1,2}")
-    sList[i] = as.double(substr(fileName, sIndexs[1]+1, sIndexs[2]))
-    fIndexs = str_locate(fileName, "f[0-9]{1,2}")
-    fList[i] = as.double(substr(fileName, fIndexs[1]+1, fIndexs[2]))
-    idList[i] = i
+    sIndexs = str_locate(fileName, "s[0-9]+")
+    s = substr(fileName, sIndexs[1]+1, sIndexs[2])
+    fIndexs = str_locate(fileName, "f[0-9]+")
+    f = substr(fileName, fIndexs[1]+1, fIndexs[2])
+    idList[i] = sprintf("s%s_f%s", s, f)
     # delete the lp__ in the old version
     if(nrow(junk) > nE){
       junk = junk[1:nE,]
@@ -155,12 +150,9 @@ loadCVPara = function(paraNames, dirName, pattern){
   junk = c(paraNames, "LL_all")
   colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"),
                         paste0(junk, "2.5"),paste0(junk, "97.5"))
-  expPara$id = idList
-  expPara$sIdx = sList
-  expPara$fIdx = fList
+  expPara$id = factor(idList, levels = idList)
   return(expPara)
 }
-
 
 loadSimPara = function(paraNames, dirName){
   # number of paraNames 
