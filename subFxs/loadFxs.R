@@ -15,11 +15,7 @@ loadAllData = function() {
                         'traitAnxiety', 'Gender', 'BDI', 'posAffect1', 'posAffect2', 
                         'negAffect1', 'negAffect2', 'uncertainty', 'delay',
                         'impulsive', 'postUnpleasant')
-<<<<<<< HEAD
-  hdrData$ID = factor(hdrData$ID)
-=======
   hdrData$ID = as.character(hdrData$ID)
->>>>>>> bffeccc38ee5bb08b40308413b60785630475701
   # count number of subjects 
   nSubjects = nrow(summaryData)
   nBlocks = 3
