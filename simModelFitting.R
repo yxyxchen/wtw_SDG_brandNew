@@ -29,9 +29,7 @@ expModelFitting = function(modelName){
   
   # load simData
   load("genData/simulation/simTrialData.RData")
-  idList = hdrData$ID[hdrData$stress == "no stress"]
-  # change levels, since we only have 60 entries in simTrialData
-  idList = factor(idList, levels = idList)
+  idList = factor(hdrData$ID[hdrData$stress == "no stress"], levels = hdrData$ID)
   n = length(idList)
   
   # determine paras
@@ -53,7 +51,7 @@ expModelFitting = function(modelName){
     thisID = idList[[i]]
     thisTrialData = simTrialData[[thisID]]
     cond = unique(thisTrialData$condition)
-    fileName = sprintf("genData/simModelFitting/%s/s%d", modelName, thisID)
+    fileName = sprintf("genData/simModelFitting/%s/s%s", modelName, thisID)
     modelFitting(thisTrialData, fileName, paraNames, model, modelName)
   }
 }

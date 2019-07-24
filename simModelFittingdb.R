@@ -34,8 +34,11 @@ expModelFitting = function(modelName){
   
   # load simData
   load("genData/simulation/simTrialData.RData")
-  idList = hdrData$ID
-  n = length(idList)                
+  # use the rank in original hdrData$ID as the id here
+  idList = hdrData$ID[hdrData$stress == "no stress"]
+  nSub = length(idList)                
+  # idList = sapply(1 : n, function(i) which(hdrData$ID == idList[i]))
+  # idList = factor(idList)
   
   originalFile = sprintf("genData/simModelFitting/%s", modelName)
   dbFile = sprintf("genData/simModelFitting/%sdb", modelName)
@@ -67,8 +70,8 @@ expModelFitting = function(modelName){
     # determine excID
     expPara = loadExpPara(paraNames,
                           sprintf("genData/simModelFitting/%sdb", modelName))
-    useID = getUseID(expPara, paraNames)
-    excID = ids[!ids %in% useID]
+    useID = factor(getUseID(expPara, paraNames), levels = levels(idList))
+    excID = idList[!idList %in% useID]
     
     # loop over excID
     n = length(excID)
@@ -77,10 +80,10 @@ expModelFitting = function(modelName){
       print(text)
       foreach(i = 1 : n) %dopar% {
         thisID = excID[[i]]
-        text = sprintf("refit s%d", thisID)
+        text = sprintf("refit s%s", thisID)
         print(text)
         # update nFits and converge
-        fitFile = sprintf("genData/simModelFitting/%sdb/afit_s%d.RData", modelName, thisID)
+        fitFile = sprintf("genData/simModelFitting/%sdb/afit_s%s.RData", modelName, thisID)
         if(file.exists(fitFile)){
           load(fitFile); nFit = nFit  + 1; save(nFit, file = fitFile)
         }else{
@@ -88,15 +91,15 @@ expModelFitting = function(modelName){
         }
         
         # prepare
-        thisTrialData = trialData[[thisID]]
+        thisTrialData = simTrialData[[thisID]]
         cond = unique(thisTrialData$condition)
         cIdx = ifelse(cond == "HP", 1, 2)
         excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
-        thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
-        fileName = sprintf("genData/simModelFitting/%sdb/s%d", modelName, thisID)
+        thisTrialData = thisTrialData[!(1 : nrow(thisTrialData$trialEarnings)) %in% excludedTrials,]
+        fileName = sprintf("genData/simModelFitting/%sdb/s%s", modelName, thisID)
         
         # load upper and lower
-        tempt = read.csv(sprintf("genData/simModelFitting/%sdb/s%d_summary.txt", modelName, thisID),
+        tempt = read.csv(sprintf("genData/simModelFitting/%sdb/s%s_summary.txt", modelName, thisID),
                          header = F)
         low= tempt[1:nPara,4]
         up = tempt[1 : nPara,8]
