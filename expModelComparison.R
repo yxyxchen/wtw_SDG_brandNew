@@ -14,7 +14,7 @@ hdrData = allData$hdrData
 trialData = allData$trialData       
 load("genData/expDataAnalysis/sessionData.RData")
 # select common useID
-ids = hdrData$ID
+ids = hdrData$ID[hdrData$stress == "no stress"]
 n  = length(ids)
 modelNames = factor(c("QL1", "QL2", "RL1", "RL2"),
                     levels = c("QL1", "QL2", "RL1", "RL2", "BL"))
@@ -154,3 +154,77 @@ data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=best
 dir.create("figures/expModelComparison")
 ggsave("figures/expModelComparison/CV_nBest.png", width = 5, height = 3.5)
 
+
+# libraries and scripts
+library("stringr")
+library("ggplot2")
+library("dplyr") 
+library("tidyr")
+source("subFxs/helpFxs.R")
+source("subFxs/loadFxs.R")
+source("subFxs/modelComparisonFxs.R")
+source("subFxs/plotThemes.R")
+load("wtwSettings.RData")
+# load model names
+allData = loadAllData()
+hdrData = allData$hdrData           
+trialData = allData$trialData       
+load("genData/expDataAnalysis/sessionData.RData")
+# select common useID
+ids = hdrData$ID[hdrData$stress == "no stress"]
+n  = length(ids)
+modelNames = factor(c("RD1", "RD2", "RD3", "RD4", "RD5", "RD6", "RL2"),
+                    levels = c("RD1", "RD2", "RD3", "RD4", "RD5", "RD6", "RL2"))
+nModel = length(modelNames)
+useID_ = vector(mode = "list", length = nModel)
+source("subFxs/loadFxs.R")
+for(i in 1 : nModel){
+  modelName = modelNames[i]
+  paraNames = getParaNames(modelName)
+  expPara = loadExpPara(paraNames, sprintf("genData/expModelFitting/%sdb", modelName))
+  useID_[[i]] = getUseID(expPara, paraNames)
+}
+useID = ids[apply(sapply(1 : nModel, function(i )ids %in% useID_[[i]]), MARGIN = 1,
+                  all)]
+nUse = length(useID)
+
+# extract logEvidece_ from loo 
+logEvidence_ = matrix(NA, nUse, nModel)
+logLik_ = matrix(NA, nUse, nModel)
+pWaic_ = matrix(NA, nUse, nModel)
+for(m in 1 : nModel){
+  modelName = modelNames[m]
+  for(sIdx in 1 : nUse ){
+    id = useID[sIdx]
+    fileName = sprintf("genData/expModelFitting/%sdb/s%s_waic.RData", modelName, id)
+    load(fileName)
+    logEvidence_[sIdx, m] = WAIC$elpd_waic # here is like loglikelyhood, larger the better 
+    logLik_[sIdx, m] = WAIC$elpd_waic  + WAIC$p_waic / 2
+    pWaic_[sIdx, m] = WAIC$p_waic
+  }
+}
+diffLL = logLik_[, 1 : 6] - logLik_[, 7]
+mu = apply(diffLL, 2, mean)
+median = apply(diffLL, 2, median)
+apply(diffLL, 2, sum)
+data.frame(model = modelNames[1:6], mean = mu, median = median)
+
+
+# participants best desribed by 
+library("ggpubr")
+bestNums = sapply(1 : nModel, function(i) sum(apply(logEvidence_[,1:nModel], MARGIN = 1, FUN = function(x) which.max(x) == i)))
+data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=bestNums, fill=model)) +
+  geom_bar(width = 1, stat = "identity") + 
+  coord_polar("y", start=0) + ylab("") + xlab("") + ggtitle(sprintf("Best described (n = %d)", nUse))+ 
+  myTheme
+dir.create("figures/expModelComparison")
+ggsave("figures/expModelComparison/loo_nBest_reduce.png", width = 5, height =3.5)
+
+data.frame(pwaic = as.vector(pWaic_), model = rep(modelNames, each = nUse)) %>%
+  group_by(model) %>% ggplot(aes(model, pwaic)) + geom_boxplot() + myTheme
+ggsave("figures/expModelComparison/loo_pwaic_reduce.png", width = 5, height =3.5)
+
+data.frame(pwaic = as.vector(pWaic_), model = rep(modelNames, each = nUse)) %>%
+  group_by(model) %>% 
+  summarise(muData = mean(pwaic), seData = sd(pwaic) / sqrt(length(pwaic)),
+            minData = muData - seData, maxData = muData + seData) 

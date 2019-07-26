@@ -5,7 +5,7 @@ library("Hmisc")
 library("coin")
 source("subFxs/plotThemes.R")
 source("subFxs/loadFxs.R") # load blockData and expPara
-source("subFxs/helpFxs.R") # getParas
+source("subFxs/helpFxs.R") # getparaNames
 source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 load("wtwSettings.RData")
 modelName = "RL2"
@@ -21,27 +21,32 @@ load("genData/expDataAnalysis/kmOnGridSess.RData")
 summaryData = sessionData
 
 # load expPara
-paras = getParas(modelName)
-nPara = length(paras)
+paraNames = getParaNames(modelName)
+nPara = length(paraNames)
 parentDir = "genData/expModelFitting"
 dirName = sprintf("%s/%sdb",parentDir, modelName)
-tempt = loadExpPara(paras, dirName)
-useID = getUseID(tempt, paras)
-expPara = merge(x=tempt[,c(paras, "id")],y=summaryData, by="id",all.x=TRUE)
+tempt = loadExpPara(paraNames, dirName)
+useID = getUseID(tempt, paraNames)
+expPara = merge(x=tempt[,c(paraNames, "id")],y=summaryData, by="id",all.x=TRUE)
 
 # plot hist 
 # paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
 # paraNames = c("LR", "LP", expression(tau), "P")
-paraNames = paras
+paraNames = paraNames
 expPara$condition = summaryData$condition[summaryData$id %in% expPara$id]
-expPara %>% filter(id %in% useID) %>% select(c(paras, "condition")) %>%
+expPara %>% filter(id %in% useID) %>% select(c(paraNames, "condition")) %>%
   gather(-c("condition"), key = "para", value = "value") %>%
-  mutate(para = factor(para, levels = paras, labels = paraNames ))%>%
+  mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>%
   ggplot(aes(value)) + geom_histogram(bins = 8) +
   facet_grid(condition ~ para, scales = "free", labeller = label_parsed) + 
   myTheme + xlab(" ") + ylab(" ")
 fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysis", modelName)
 ggsave(fileName, width = 8, height = 4)
+
+expPara %>% filter(id %in% useID) %>% select(c(paraNames)) %>%
+  gather(key = "para", value = "value") %>%
+  mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>% 
+  group_by(para) %>% summarise(mu = mean(value), median = median(value))
 
 
 # load and merge trait data
@@ -57,11 +62,11 @@ names(expPara)[which(names(expPara) %in% traits)] = traitNames
 expPara$deltaPhi = expPara$phiP - expPara$phi
 
 # calculate trait-para correlations
-traitParaCorr = vector(mode = "list", length = (length(paras) + 1) * length(traits))
+traitParaCorr = vector(mode = "list", length = (length(paraNames) + 1) * length(traits))
 corrNo = matrix(1:((nPara + 1) * nTrait), nrow = nPara + 1, ncol = nTrait)
-for(pIdx in 1 : (length(paras) + 1)){
-  if(pIdx <= length(paras)){
-    para = paras[pIdx]
+for(pIdx in 1 : (length(paraNames) + 1)){
+  if(pIdx <= length(paraNames)){
+    para = paraNames[pIdx]
   }else{
     para = "deltaPhi"
   }
@@ -82,7 +87,7 @@ for(pIdx in 1 : (length(paras) + 1)){
   }
 }
 # paraNames = c("LR", "LP", "Tau", "Gamma", "P", "deltaL")
-paraNames = c(paras, "deltaL")
+paraNames = c(paraNames, "deltaL")
 dimNames = list(paraNames, c("DG", "IM", "IU", "AX"))
 rhoTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * (nPara+1)), function(i) traitParaCorr[[i]]$rhos[j]),
                                           nrow = nPara+1, dimnames = dimNames))
@@ -115,10 +120,10 @@ for(i in 1 : 2){
 # look at trait linearly
 for(cIdx in 1 : 2){
   cond = conditions[cIdx]
-  expPara[expPara$condition == cond,c(paras, traitNames)] %>%
-    gather(-c(paras), key = "trait", value = "traitValue") %>%
+  expPara[expPara$condition == cond,c(paraNames, traitNames)] %>%
+    gather(-c(paraNames), key = "trait", value = "traitValue") %>%
     gather(-c("trait", "traitValue"), key = "para", value = "paraValue") %>%
-    mutate(trait = factor(trait, levels = traitNames), para = factor(para, levels = paras, labels = capitalize(paras))) %>%
+    mutate(trait = factor(trait, levels = traitNames), para = factor(para, levels = paraNames, labels = capitalize(paraNames))) %>%
     ggplot(aes(x = traitValue, y = paraValue)) + geom_point() +
     facet_grid(para ~ trait, scales = "free") + theme_linedraw(base_size = 13)+
     xlab("") + ylab("") + ggtitle(cond) + theme(plot.title = element_text(face = "bold", hjust = 0.5))
