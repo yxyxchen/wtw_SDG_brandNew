@@ -17,11 +17,10 @@ transformed data {
 }
 parameters {
   real<lower = 0, upper = 0.3> phi;
-  real<lower = 0, upper = 0.3> phiP; 
+  real<lower = 0, upper = 5> nega; 
   real<lower = 0.1, upper = 22> tau;
   real<lower = 0, upper = 65> prior; 
   real<lower = 0, upper = 0.3> beta;
-  real<lower = 0, upper = 0.3> betaP;   
 }
 transformed parameters{
   // initialize action values 
@@ -62,7 +61,7 @@ transformed parameters{
       if(T > 2){
         for(t in 1 : (T-2)){
           real G =  RT  - reRate * (T - t) + Viti;
-          Qwait[t] = Qwait[t] + phiP * (G - Qwait[t]);    
+          Qwait[t] = Qwait[t] + phi * nega * (G - Qwait[t]);    
         }
       }
     }
@@ -73,14 +72,14 @@ transformed parameters{
     if(RT > 0){
        Viti = Viti + phi * delta;
     }else{
-       Viti = Viti + phiP * delta;
+       Viti = Viti + phi * nega * delta;
     }
    
     // update reRate 
     if(RT > 0){
       reRate = reRate +  beta * delta;
     }else{
-      reRate = reRate + betaP * delta;
+      reRate = reRate + beta * nega * delta;
     }
     
     // save action values
@@ -92,11 +91,10 @@ transformed parameters{
 }
 model {
   phi ~ uniform(0, 0.3);
-  phiP ~ uniform(0, 0.3);
+  nega ~ uniform(0, 5);
   tau ~ uniform(0.1, 22);
   prior ~ uniform(0, 65);
   beta ~ uniform(0, 0.3);
-  betaP ~ uniform(0, 0.3);  
   // calculate the likelihood 
   for(tIdx in 1 : N){
     int action;
@@ -109,7 +107,7 @@ model {
         action = 1; // wait
       }
       values[1] = Qwaits[i, tIdx] * tau;
-      values[2] = (Vitis[tIdx] - reRates[tIdx]) * tau;
+      values[2] = Vitis[tIdx] * tau;
       //action ~ categorical_logit(values);
       target += categorical_logit_lpmf(action | values);
     } 
@@ -132,7 +130,7 @@ generated quantities {
         action = 1; // wait
       }
       values[1] = Qwaits[i, tIdx] * tau;
-      values[2] = (Vitis[tIdx] - reRates[tIdx]) * tau;
+      values[2] = Vitis[tIdx] * tau;
       log_lik[no] =categorical_logit_lpmf(action | values);
       no = no + 1;
     }
