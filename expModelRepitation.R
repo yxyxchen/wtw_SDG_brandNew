@@ -46,7 +46,7 @@ expModelRepitation = function(modelName){
     id = useID[[sIdx]]
     cond = unique(summaryData$condition[summaryData$id == id])
     nTrial = summaryData$nTrial[summaryData$id == id]
-    label = sprintf("sub%d", id)
+    label = sprintf("sub%s", id)
     kmOnGridMatrix = matrix(NA, nrow = length(kmGrid), ncol = nComb)
     for(cIdx in 1 : nComb){
       thisRepTrialData = repTrialData[[repNo[cIdx, which(ids == id)]]]
