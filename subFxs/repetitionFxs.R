@@ -135,7 +135,7 @@ QL1 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis
+    "Vitis" = Vitis, "condition" = cond
   )
   return(outputs)
 }
@@ -221,7 +221,7 @@ QL2 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis
+    "Vitis" = Vitis, "condition" = cond
   )
   return(outputs)
 }
@@ -311,7 +311,7 @@ RL1 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis, "reRates" = reRates
+    "Vitis" = Vitis, "reRates" = reRates, "condition" = cond
   )
   return(outputs)
 }
@@ -402,7 +402,7 @@ RL2 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis, "reRates" = reRates
+    "Vitis" = Vitis, "reRates" = reRates, "condition" = cond
   )
   return(outputs)
 }
@@ -450,7 +450,7 @@ BL = function(paras, cond, scheduledWait){
   # return outputs
   outputs = list( 
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
-    "sellTime" = sellTime, "scheduledWait" = scheduledWait
+    "sellTime" = sellTime, "scheduledWait" = scheduledWait, "condition" = cond
   )
   return(outputs)
 }

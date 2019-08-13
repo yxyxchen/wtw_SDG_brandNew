@@ -2,12 +2,12 @@
 # using Rstan
 # here I change all my modelFitting function into the risk version
 # while in stan, I have different simMofelfitting and modelFitting scripts for different things 
-expModelFitting = function(modelName){
+expModelFitting = function(encodeModel, decodeModel){
   # create outfiles
   nBlock = 3
   dir.create("genData")
   dir.create("genData/simModelFitting")
-  dir.create(sprintf("genData/simModelFitting/%s", modelName))
+  dir.create(sprintf("genData/simModelFitting/%s", decodeModel))
   
   #load libraries
   library('plyr'); library(dplyr); library(ggplot2);library('tidyr');library('rstan')
@@ -25,15 +25,15 @@ expModelFitting = function(modelName){
   rstan_options(auto_write = TRUE) 
   
   # compile the stan model 
-  model = stan_model(file = sprintf("stanModels/%s.stan", modelName))
+  model = stan_model(file = sprintf("stanModels/%s.stan", decodeModel))
   
   # load simData
-  load("genData/simulation/simTrialData.RData")
-  idList = factor(hdrData$ID[hdrData$stress == "no stress"], levels = hdrData$ID)
+  load(sprintf("genData/simulation/%s.RData", encodeModel))
+  idList = hdrData$ID[hdrData$stress == "no stress"]
   n = length(idList)
   
   # determine paras
-  paraNames = getParaNames(modelName)
+  paraNames = getParaNames(decodeModel)
   if(paraNames == "wrong model name"){
     print(paraNames)
     break
@@ -51,7 +51,7 @@ expModelFitting = function(modelName){
     thisID = idList[[i]]
     thisTrialData = simTrialData[[thisID]]
     cond = unique(thisTrialData$condition)
-    fileName = sprintf("genData/simModelFitting/%s/s%s", modelName, thisID)
-    modelFitting(thisTrialData, fileName, paraNames, model, modelName)
+    fileName = sprintf("genData/simModelFitting/%s/%s/s%s", encodeModel, decodeModel, thisID)
+    modelFitting(thisTrialData, fileName, paraNames, model, decodeModel)
   }
 }

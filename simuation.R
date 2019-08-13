@@ -18,7 +18,7 @@ repFun = getRepFun(modelName)
 allData = loadAllData()
 hdrData = allData$hdrData           
 trialData = allData$trialData       
-ids = factor(hdrData$ID[hdrData$stress == "no stress"], levels = levels(hdrData$ID))          
+ids = hdrData$ID[hdrData$stress == "no stress"]  
 nSub = length(ids)      
 
 # load expPara
@@ -39,11 +39,11 @@ for(sIdx in 1 : nSub){
   excluedTrials2 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
                            thisTrialData$condition == conditions[2])
   excluedTrials = c(excluedTrials1, excluedTrials2)
-  thisTrialData = thisTrialData[!(1 : nrow(thisTrialData$trialEarnings)) %in% excluedTrials,]
+  thisTrialData = thisTrialData[!(1 : length(thisTrialData$trialEarnings)) %in% excluedTrials,]
   cond = unique(thisTrialData$condition)
   scheduledWait = thisTrialData$scheduledWait
-  id = factor(ids[sIdx], levels = ids)
+  id = ids[sIdx]
   simTrialData[[id]] = repFun(paras, cond, scheduledWait)
 }
-save(simTrialData, hdrData, file = "genData/simulation/simTrialData.RData")
+save(simTrialData, hdrData, file = sprintf("genData/simulation/%s.RData", modelName))
 
