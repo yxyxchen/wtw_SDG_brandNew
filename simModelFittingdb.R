@@ -3,7 +3,7 @@
 # here I change all my modelFitting function into the risk version
 # while in stan, I have different simMofelfitting and modelFitting scripts for different things 
 # current algorithm might, you know increase nFit yet didn't really refit
-expModelFitting = function(modelName){
+expModelFitting = function(encodeModel, decodeModel){
   #load libraries
   library('plyr'); library(dplyr); library(ggplot2);library('tidyr');
   library("stringr")
@@ -30,18 +30,18 @@ expModelFitting = function(modelName){
   registerDoMC(nCore)
   
   # compile the stan model 
-  model = stan_model(file = sprintf("stanModels/%s.stan", paste(modelName, "db", sep = "")))
+  model = stan_model(file = sprintf("stanModels/%sdb.stan", decodeModel))
   
   # load simData
-  load("genData/simulation/simTrialData.RData")
+  load(sprintf("genData/simulation/%s.RData", encodeModel))
   # use the rank in original hdrData$ID as the id here
   idList = hdrData$ID[hdrData$stress == "no stress"]
   nSub = length(idList)                
   # idList = sapply(1 : n, function(i) which(hdrData$ID == idList[i]))
   # idList = factor(idList)
   
-  originalFile = sprintf("genData/simModelFitting/%s", modelName)
-  dbFile = sprintf("genData/simModelFitting/%sdb", modelName)
+  originalFile = sprintf("genData/simModelFitting/%s/%s", encodeModel, decodeModel)
+  dbFile = sprintf("genData/simModelFitting/%s/%sdb", encodeModel, decodeModel)
   if(!file.exists(dbFile)){
     dir.create(dbFile)
     allFiles = list.files(path = originalFile)
@@ -57,7 +57,7 @@ expModelFitting = function(modelName){
   }
   
   # determine paras
-  paraNames = getParaNames(modelName)
+  paraNames = getParaNames(decodeModel)
   nPara = length(paraNames)
   if(paraNames == "wrong model name"){
     print(paraNames)
@@ -69,8 +69,8 @@ expModelFitting = function(modelName){
   while(nLoop < 15){
     # determine excID
     expPara = loadExpPara(paraNames,
-                          sprintf("genData/simModelFitting/%sdb", modelName))
-    useID = factor(getUseID(expPara, paraNames), levels = levels(idList))
+                          sprintf("genData/simModelFitting/%s/%sdb", encodeModel, decodeModel))
+    useID = getUseID(expPara, paraNames)
     excID = idList[!idList %in% useID]
     
     # loop over excID
@@ -83,7 +83,7 @@ expModelFitting = function(modelName){
         text = sprintf("refit s%s", thisID)
         print(text)
         # update nFits and converge
-        fitFile = sprintf("genData/simModelFitting/%sdb/afit_s%s.RData", modelName, thisID)
+        fitFile = sprintf("genData/simModelFitting/%s/%sdb/afit_s%s.RData", encodeModel, decodeModel, thisID)
         if(file.exists(fitFile)){
           load(fitFile); nFit = nFit  + 1; save(nFit, file = fitFile)
         }else{
@@ -92,32 +92,25 @@ expModelFitting = function(modelName){
         
         # prepare
         thisTrialData = simTrialData[[thisID]]
-        cond = unique(thisTrialData$condition)
-        cIdx = ifelse(cond == "HP", 1, 2)
-        excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
-        thisTrialData = thisTrialData[!(1 : nrow(thisTrialData$trialEarnings)) %in% excludedTrials,]
-        fileName = sprintf("genData/simModelFitting/%sdb/s%s", modelName, thisID)
+        fileName = sprintf("genData/simModelFitting/%s/%sdb/s%s", encodeModel, decodeModel, thisID)
         
         # load upper and lower
-        tempt = read.csv(sprintf("genData/simModelFitting/%sdb/s%s_summary.txt", modelName, thisID),
+        tempt = read.csv(sprintf("genData/simModelFitting/%s/%sdb/s%s_summary.txt", encodeModel, decodeModel, thisID),
                          header = F)
         low= tempt[1:nPara,4]
         up = tempt[1 : nPara,8]
-        converge = modelFittingdb(thisTrialData, fileName, paraNames, model, modelName, nPara, low, up)
+        converge = modelFittingdb(thisTrialData, fileName, paraNames, model, decodeModel, nPara, low, up)
       }
       nLoop = nLoop + 1  
     }else{
-      print("finished!")
-      print(modelName)
-      print(nSub)
       break
     }# loop over participants    
   }
     # evaluate useID again
     expPara = loadExpPara(paraNames,
-                          sprintf("genData/simModelFitting/%sdb", modelName))
+                          sprintf("genData/simModelFitting/%s/%sdb", encodeModel, decodeModel))
     useID = getUseID(expPara, paraNames)
     print("finished!")
-    print(modelName)
+    print(decodeModel)
     print(length(useID))
 }
