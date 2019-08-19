@@ -40,6 +40,7 @@ if(nWindow %% 3 != 0) print("blockSecs should be divisble by window")
 # get session data 
 tGrid = seq(0, blockSecs * nBlock, by = 1)
 AUC = numeric(length = n)
+AUC2 = numeric(length = n)
 totalEarnings =  numeric(length = n)
 nAction = numeric(length = n)
 wtwEarly = numeric(length = n)
@@ -108,6 +109,10 @@ for (sIdx in 1 : n) {
   stdWd[[sIdx]] = kmscResults$stdWd
   cvWd[[sIdx]] =  kmscResults$stdWd / kmscResults$auc
   
+  # survival 
+  kmscResults = kmsc(thisTrialData[thisTrialData$blockNum == 3,], min(tMaxs), label, plotKMSC, kmGrid)
+  AUC2[sIdx] = kmscResults[['auc']]
+  
   # WTW time series
   wtwCeiling = min(tMaxs)
   wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
@@ -168,10 +173,12 @@ sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition[hdrDa
                          cbal = hdrData$cbal[hdrData$stress == "no stress"],AUC = AUC, wtwEarly = wtwEarly,
                          totalEarnings = totalEarnings, nAction = nAction, stdQuitTime = stdQuitTime, cvQuitTime = cvQuitTime,
                          muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial,
-                         stdWd = stdWd, cvWd = cvWd, AUCEarly = AUCEarly, nExclude = nExclude)
+                         stdWd = stdWd, cvWd = cvWd, AUCEarly = AUCEarly, nExclude = nExclude, AUC2 = AUC2)
 save(sessionData, file = 'genData/expDataAnalysis/sessionData.RData')
 save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridSess.RData')
-
+sumData = sessionData
+save('sumData', file = 'genData/expDataAnalysis/sumData.RData')
+save('timeWTW_', file = 'genData/expDataAnalysis/timeWTW.RData')
 
 # plot AUC in two conditions
 library("ggpubr")

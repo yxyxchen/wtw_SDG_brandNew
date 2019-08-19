@@ -8,7 +8,7 @@ source("subFxs/loadFxs.R") # load blockData and expPara
 source("subFxs/helpFxs.R") # getparaNames
 source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 load("wtwSettings.RData")
-modelName = "RL2"
+modelName = "QL2"
 # create output directories
 dir.create("figures/expParaAnalysis")
 saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
@@ -49,6 +49,20 @@ expPara %>% filter(id %in% useID) %>% select(c(paraNames)) %>%
   group_by(para) %>% summarise(mu = mean(value), median = median(value))
 
 
+# optimism bias
+wilcox.test(expPara$nega[expPara$nQuit >= 10] - 1)
+wilcox.test(expPara$nega[expPara$condition == "HP" & expPara$nQuit >= 25] - 1)
+wilcox.test(expPara$nega[expPara$condition == "LP" & expPara$nQuit >= 25] - 1)
+median(expPara$nega[expPara$condition == "HP" & expPara$nQuit >= 25 ])
+median(expPara$nega[expPara$condition == "LP" & expPara$nQuit >= 25])
+expPara %>% filter(nQuit >= 25) %>%ggplot(aes(nega)) + geom_histogram(bins = 10) +
+  geom_vline(xintercept = 1) + myTheme + facet_grid(~condition)
+ 
+
+ggsave(sprintf('figures/expParaAnalysis/optimism_%s.png', modelName),
+       width = 4, height = 4) 
+# load 
+load("genData/expDataAnalysis/sessionData.RData")
 # load and merge trait data
 personality = read.csv("data/SDGdataset.csv")
 personality$id = personality$SubjectID
@@ -59,17 +73,12 @@ traitNames = c("DelayGra", "Impulsive",
 nTrait = length(traits)
 expPara = merge(x= expPara,y=personality[,c(traits, "id")], by="id",all.x=TRUE)
 names(expPara)[which(names(expPara) %in% traits)] = traitNames
-expPara$deltaPhi = expPara$phiP - expPara$phi
 
 # calculate trait-para correlations
 traitParaCorr = vector(mode = "list", length = (length(paraNames) + 1) * length(traits))
-corrNo = matrix(1:((nPara + 1) * nTrait), nrow = nPara + 1, ncol = nTrait)
-for(pIdx in 1 : (length(paraNames) + 1)){
-  if(pIdx <= length(paraNames)){
+corrNo = matrix(1:(nPara * nTrait), nrow = nPara, ncol = nTrait)
+for(pIdx in 1 : (length(paraNames))){
     para = paraNames[pIdx]
-  }else{
-    para = "deltaPhi"
-  }
   
   for(trIdx in 1 : length(traits)){
     trait = traits[trIdx]
@@ -87,7 +96,7 @@ for(pIdx in 1 : (length(paraNames) + 1)){
   }
 }
 # paraNames = c("LR", "LP", "Tau", "Gamma", "P", "deltaL")
-paraNames = c(paraNames, "deltaL")
+paraNames = c(paraNames)
 dimNames = list(paraNames, c("DG", "IM", "IU", "AX"))
 rhoTable = lapply(1:2, function(j) matrix(sapply(1: (nTrait * (nPara+1)), function(i) traitParaCorr[[i]]$rhos[j]),
                                           nrow = nPara+1, dimnames = dimNames))
@@ -100,7 +109,7 @@ library("corrplot")
 col2 <- colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D", "#F4A582",
                            "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
                            "#4393C3", "#2166AC", "#053061")))
-parentDir = ifelse(dataType == "sess", "figures/expParaAnalysisSub", "figures/expParaAnalysis")
+parentDir = "figures/expParaAnalysis"
 for(i in 1 : 2){
   cond = conditions[i]
   fileName = sprintf("%s/%s/traitPara%s.png", "figures/expParaAnalysis/", modelName, cond)
