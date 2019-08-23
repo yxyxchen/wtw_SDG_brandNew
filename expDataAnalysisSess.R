@@ -1,5 +1,6 @@
 # in this dataset, only trials within the 7 mins will be kept. Therefore, we don't need to delete any data
 # determine whether to truncate data
+datasetColors = c('#c53932', '#529D3E', '#3976AF')
 isTrun = T
 # load libraries
 source('subFxs/loadFxs.R') # for loading data 
@@ -27,7 +28,7 @@ allIDs = hdrData$ID[hdrData$stress == "no stress"]                  # column of 
 n = length(allIDs)                    # n
 cat('Analyzing data for',n,'subjects.\n')
 # control which individual-level plots to generate
-plotTrialwiseData =F
+plotTrialwiseData =T
 plotKMSC = F
 plotWTW = F
 
@@ -38,7 +39,7 @@ nWindow = (blockSecs * nBlock - window) / stepLen + 1
 if(nWindow %% 3 != 0) print("blockSecs should be divisble by window")
 
 # get session data 
-tGrid = seq(0, blockSecs * nBlock, by = 1)
+tGrid = seq(0, blockSecs * nBlock, by = 3)
 AUC = numeric(length = n)
 AUC2 = numeric(length = n)
 totalEarnings =  numeric(length = n)
@@ -176,9 +177,6 @@ sessionData = data.frame(id = allIDs, condition = factor(hdrData$condition[hdrDa
                          stdWd = stdWd, cvWd = cvWd, AUCEarly = AUCEarly, nExclude = nExclude, AUC2 = AUC2)
 save(sessionData, file = 'genData/expDataAnalysis/sessionData.RData')
 save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridSess.RData')
-sumData = sessionData
-save('sumData', file = 'genData/expDataAnalysis/sumData.RData')
-save('timeWTW_', file = 'genData/expDataAnalysis/timeWTW.RData')
 
 # plot AUC in two conditions
 library("ggpubr")
@@ -192,7 +190,20 @@ sessionData%>% ggplot(aes(condition, AUC)) + geom_boxplot() +
 dir.create("figures/expDataAnalysisSess")
 ggsave("figures/expDataAnalysisSess/zTruc_AUC.png", width = 4, height = 3)
 
-# plot stdWd in two conditions
+# plot AUC for summary
+sessionData%>% ggplot(aes(condition, AUC)) + geom_boxplot() +
+  geom_dotplot(binaxis='y', stackdir='center', fill = datasetColors[1],
+               binwidth = 1.5) + 
+  xlab("") + ylab("AUC (s)") +
+  stat_compare_means(comparisons = list(c("HP", "LP")),
+                     aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
+                     bracket.size = 1, size = 6, label.y = 22) +
+  sumTheme + ylim(c(0, 25))
+
+dir.create("figures/expDataAnalysisSess")
+ggsave("figures/expDataAnalysisSess/zTruc_AUC_sum.eps", width = 4, height = 2)
+
+                                                                                                                                                                          # plot stdWd in two conditions
 # sessionData %>% ggplot(aes(condition, stdWd)) + geom_boxplot() +
 #   geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
 #   scale_fill_manual(values = conditionColors) + 
@@ -213,8 +224,10 @@ ggsave("figures/expDataAnalysisSess/zTruc_AUC.png", width = 4, height = 3)
 
 # plot wtw 
 plotData = data.frame(wtw = unlist(timeWTW_), time = rep(tGrid, n),
-                      condition = rep(sessionData$condition, each = length(tGrid))) %>% group_by(condition, time) %>%
+                      condition = rep(sessionData$condition, each = length(tGrid))) %>%
+                        group_by(condition, time) %>%
   dplyr::summarise(mean = mean(wtw), se = sd(wtw) / sqrt(length(wtw)), min = mean - se, max = mean + se) 
+plotData$blockNum =  rep(rep(1:3, c(140, 140, 141)), 2)
 
 policy = data.frame(condition = c("HP", "LP"), wt = c(20, 2.2))
 blockEnds = cumsum(c(blockSecs, blockSecs))
@@ -224,11 +237,29 @@ plotData %>% ggplot(aes(time, mean, color = condition)) +
   scale_color_manual(values = conditionColors) + scale_fill_manual(values = conditionColors) + xlab("Cumulative task time (min)") +
   scale_x_continuous(breaks = seq(0, max(tGrid), by = 60*7),
                      labels = seq(0, max(tGrid), by = 60*7) / 60) + 
-  ylab("Willingness to wait (s)") +
+  ylab("WTW (s)") +
   geom_hline(data = policy, aes(yintercept = wt, color = condition), linetype = "dotted", size = 1.5) +
   myTheme + ylim(c(0, 22))  +
-  geom_vline(xintercept = blockEnds, color = "#969696", linetype = 2)
+  geom_vline(xintercept = blockEnds, color = "#969696", linetype = 2) 
 ggsave("figures/expDataAnalysisSess/zTruc_wtw_timecourse.png", width = 6, height = 3)
+
+
+# sumData
+plotData$x1 = rep( c(c(7, 14, 21)-tMaxs[1]/60, c(7, 14, 21) - tMaxs[2]/60), c(140, 140, 141, 140, 140, 141)) * 60
+plotData$x2 = rep(rep(c(7, 14, 21), c(140, 140, 141)), 2) * 60
+plotData$y1 = 0
+plotData$y2 = 22
+plotData$index = rep(1:6, c(140, 140, 141, 140, 140, 141))
+plotData %>% ggplot(aes(time, mean), color = datasetColors[1])  +
+  geom_ribbon(aes(ymin=min, ymax=max), fill = 'pink', color= 'pink') +
+  geom_line(size = 1, color = datasetColors[1]) +
+  facet_wrap(~condition, scales = "free") +
+  xlab("Cumulative task time (min)") +
+  scale_x_continuous(breaks = seq(0, max(tGrid), by = 60*7),
+                     labels = seq(0, max(tGrid), by = 60*7) / 60) + 
+  ylab("WTW (s)") + ylim(c(0, 22)) + sumTheme +
+  geom_vline(xintercept = blockEnds, color = "#969696", linetype = 2) 
+ggsave("figures/expDataAnalysisSess/zTruc_wtw_timecourse_sum.eps", width = 6, height = 2)
 
 # plot survival curve
 select = (sessionData$stress == "no stress")

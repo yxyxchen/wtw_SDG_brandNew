@@ -198,6 +198,8 @@ modelFittingCVdb = function(thisTrialData, fileName, paraNames, model, modelName
                     up = up)
   fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
                  iter = nIter) 
+  write.table(get_elapsed_time(fit), file = sprintf("%s_time.txt", fileName), sep = ",",
+              col.names = F, row.names=FALSE)
   fitSummary <- summary(fit,pars = c(paraNames, "LL_all"), use_cache = F)$summary
   write.table(matrix(fitSummary, nrow = length(paraNames) + 1), file = sprintf("%s_summary.txt", fileName),  sep = ",",
               col.names = F, row.names=FALSE)
