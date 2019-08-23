@@ -1,21 +1,17 @@
-
+# function to loads hdrData and trialData
 loadAllData = function() {
-  ##### step 1: organize hdrData
-  # load summary data
   dataDir = 'data'
-  fileName = sprintf('%s/SDGdataset.csv', dataDir)
-  summaryData= read.csv(fileName)
-  # adjust
-  summaryData$stress = ifelse( summaryData$Condition == 'stress', 'stress', 'no_stress')
-  summaryData$Task..1...unif..2...gp. = ifelse(summaryData$Task..1...unif..2...gp. == 1, 'HP', 'LP')
-  
-  # exclude AUC and totalEarnings from hdrData
-  hdrData = summaryData[,-(4:17)]
+  # load hdrData
+  hdrData = read.csv(file.path(dataDir, 'SDGdataset.csv'))
+  hdrData$stress = ifelse( hdrData$Condition == 'stress', 'stress', 'no_stress')
+  hdrData$Task..1...unif..2...gp. = ifelse(hdrData$Task..1...unif..2...gp. == 1, 'HP', 'LP')
+  hdrData = hdrData[,-(4:17)]
   colnames(hdrData) = c('ID', 'stress', 'condition', 'cbal', 'perceivedStress',
                         'traitAnxiety', 'Gender', 'BDI', 'posAffect1', 'posAffect2', 
                         'negAffect1', 'negAffect2', 'uncertainty', 'delay',
                         'impulsive', 'postUnpleasant')
   hdrData$ID = as.character(hdrData$ID)
+  
   # count number of subjects 
   nSubjects = nrow(summaryData)
   nBlocks = 3
