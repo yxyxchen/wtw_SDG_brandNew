@@ -16,12 +16,17 @@ transformed data {
   int totalSteps = sum(Ts) - N;
 }
 parameters {
-  real<lower = 0, upper = 0.3> phi;
-  real<lower = 0.1, upper = 22> tau;
-  real<lower = 0.5, upper = 1> gamma;
-  real<lower = 0, upper = 65> prior; 
+  real<lower = 0, upper = 1> raw_phi;
+  real<lower = 0, upper = 1> raw_tau;
+  real<lower = 0, upper = 1> raw_gamma;
+  real<lower = 0, upper = 1> raw_prior;
 }
 transformed parameters{
+  // transfor parameters
+  real phi = raw_phi * 0.3;
+  real tau = raw_tau * 21.9 + 0.1;
+  real gamma = raw_gamme * 0.3 + 0.4;
+  real prior = raw_prior * 65;
   // initialize action values 
   real Viti = wIni;
   vector[nTimeSteps] Qwait;
@@ -71,10 +76,10 @@ transformed parameters{
   }// end of the loop
 }
 model {
-  phi ~ uniform(0, 0.3);
-  tau ~ uniform(0.1, 22);
-  gamma ~ uniform(0.5, 1);
-  prior ~ uniform(0, 65);
+  raw_phi ~ uniform(0, 1);
+  raw_tau ~ uniform(0, 1);
+  raw_gamma ~ uniform(0, 1);
+  raw_prior ~ uniform(0, 1);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){

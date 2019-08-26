@@ -20,7 +20,7 @@ expModelFitting = function(modelName){
   source("subFxs/analysisFxs.R")
   
   #  set the environment for Rstan
-  options(warn=-1, message =-1) # run without this for one participant to chec everything
+  options(warn= 1, message =-1) # run without this for one participant to chec everything
   Sys.setenv(USE_CXX14=1) # needed in local computeres
   rstan_options(auto_write = TRUE) 
   
@@ -31,7 +31,7 @@ expModelFitting = function(modelName){
   allData = loadAllData()
   hdrData = allData$hdrData           
   trialData = allData$trialData       
-  idList = hdrData$ID[hdrData$stress == "no stress"]                 
+  idList = hdrData$id[hdrData$stress == "no_stress"]                 
   n = length(idList)                    
   
   # determine paras
@@ -48,15 +48,17 @@ expModelFitting = function(modelName){
   # if(is.na(nCore)) nCore = 1 # needed for cluster
   nCore = parallel::detectCores() -1 # only for the local computer
   registerDoMC(nCore)
-
-  foreach(i = 1 : n) %dopar% {
-    thisID = idList[[i]]
-    thisTrialData = trialData[[thisID]]
-    cond = unique(thisTrialData$condition)
-    cIdx = ifelse(cond == "HP", 1, 2)
-    excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
-    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
-    fileName = sprintf("genData/expModelFitting/%s/s%s", modelName, thisID)
-    modelFitting(thisTrialData, fileName, paraNames, model, modelName)
+  
+  dir.create("outputs")
+  writeLines("", sprintf("outputs/%s_log.txt", modelName))
+  foreach(i = 1 : 2) %dopar% {
+      thisID = idList[[i]]
+      thisTrialData = trialData[[thisID]]
+      cond = unique(thisTrialData$condition)
+      cIdx = ifelse(cond == "HP", 1, 2)
+      excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+      thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
+      fileName = sprintf("genData/expModelFitting/%s/s%s", modelName, thisID)
+      modelFitting(thisTrialData, fileName, paraNames, model, modelName)
   }
 }

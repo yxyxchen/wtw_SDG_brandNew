@@ -1,65 +1,56 @@
-# function to loads hdrData and trialData
 loadAllData = function() {
-  dataDir = 'data'
+  # loads hdrData and trialData
+  
+  # outputs:
+  # hdrData: exp info for each participant, like ID, condition, questionnaire measurements
+  # trialData: a length = nSub list, each element containing trial-wise data for each partcipant. 
+  
+  # each elemant of trialData is formatted similarly to this example:
+  # blockNum : [130x1 int]
+  # trialNum : [130x1 int]
+  # trialStartTime : [130x1 num] # when participant start a trial
+  # sellTime : [130x1 num] # when participants sell a token
+  # nKeyPresses : [130x1 int]
+  # scheduledWait : [130x1 num] # delay durations for rewards
+  # rewardTime : [130x1 num] # actual delay durations (constrainted by the screen update freq), NA for non-rewarded trials
+  # timeWaited : [130x1 num] # persistence durations, namely sellTime - trialStartTime
+  # trialEarnings : [130x1 int] trial-wise payments, either 10 or 0
+  # totalEarnings : [130x1 int] cumulative payments
+ 
   # load hdrData
-  hdrData = read.csv(file.path(dataDir, 'SDGdataset.csv'))
-  hdrData$stress = ifelse( hdrData$Condition == 'stress', 'stress', 'no_stress')
-  hdrData$Task..1...unif..2...gp. = ifelse(hdrData$Task..1...unif..2...gp. == 1, 'HP', 'LP')
-  hdrData = hdrData[,-(4:17)]
-  colnames(hdrData) = c('ID', 'stress', 'condition', 'cbal', 'perceivedStress',
-                        'traitAnxiety', 'Gender', 'BDI', 'posAffect1', 'posAffect2', 
-                        'negAffect1', 'negAffect2', 'uncertainty', 'delay',
-                        'impulsive', 'postUnpleasant')
-  hdrData$ID = as.character(hdrData$ID)
+  hdrData = read.csv(file.path('data', 'hdrData3.csv'), comment = "#")
+  hdrData$stress = ifelse( hdrData$stress == 'stress', 'stress', 'no_stress')
+  hdrData$condition = ifelse(hdrData$condition == 1, 'HP', 'LP')
+  hdrData$id = as.character(hdrData$id)
   
-  # count number of subjects 
-  nSubjects = nrow(summaryData)
-  nBlocks = 3
-
-  ##### step 2: load trialData
-  # define data column names
-  colnames = c('blockNum', 'trialNum', 'trialStartTime', 'nKeyPresses', 'scheduledWait',
-               'rewardTime', 'timeWaited', 'sellTime', 'trialEarnings','totalEarnings')
-  # 'timeWaited' is from trial onset to keypress (includes RT)
-  # 'sellTime' is the keypress time relative to block onset.
-  
-  # initialize
+  # load trialData
   trialData = list()
-
-  # loop over individual subjects
-  for (sIdx in 1:nSubjects) {
-    thisID = hdrData$ID[sIdx]
-    thisCbal = hdrData$Cbal[hdrData$ID == thisID]
-    thisCond = hdrData$condition[hdrData$ID == thisID]
-    thisStress = hdrData$stress[hdrData$ID == thisID]
+  nSub = nrow(hdrData)
+  nBlock = 3
+  trialDataNames = c('blockNum', 'trialNum', 'trialStartTime', 'nKeyPresses', 'scheduledWait',
+                      'rewardTime', 'timeWaited', 'sellTime', 'trialEarnings','totalEarnings')
+  # loop over subjects
+  for (sIdx in 1:nSub) {
+    id = hdrData$id[sIdx]
+    condition = hdrData$condition[hdrData$id == id]
+    stress = hdrData$stress[hdrData$id == id]
+    thisTrialData = vector(nBlock, mode = 'list')
     # loop over blocks
-    junk = vector(nBlocks, mode = 'list')
-    for (bkIdx in 1 : nBlocks){
-      thisFile = list.files(path=dataDir, pattern=(sprintf('wtw_stress_SDG%s_bk%d_1.txt',thisID, bkIdx)))
-      if (length(thisFile) != 1) {
+    for (bkIdx in 1 : nBlock){
+      blockFile = list.files(path="data", pattern=(sprintf('wtw_stress_SDG%s_bk%d_1.txt',id, bkIdx)))
+      if (length(blockFile) != 1) {
         cat('Could not identify a single data file for subject',thisID,' block', bkIdx, '\n')
         browser()
       }
-      junk[[bkIdx]] = read.csv(file.path(dataDir,thisFile), header=FALSE, col.names=colnames)
-      
-      # adjust blockNum
-      junk[[bkIdx]]$blockNum = junk[[bkIdx]]$blockNum * bkIdx
+      thisTrialData[[bkIdx]] = read.csv(file.path("data", blockFile), header = F, col.names = trialDataNames)
+      thisTrialData[[bkIdx]]$blockNum = rep(bkIdx, nrow(thisTrialData[[bkIdx]]))
+      thisTrialData[[bkIdx]]$condition = rep(condition, nrow(thisTrialData[[bkIdx]]))
     }
-    
-    d = rbind(junk[[1]], junk[[2]], junk[[3]])
-    # add info from hdrData
-    d$condition = rep(thisCond, nrow(d))
-    d$stress = rep(thisStress, nrow(d))
-    
-    
-    # add to the list of all subjects' data
-    trialData[[thisID]] = d
+    trialData[[id]] = bind_rows(thisTrialData)
   } # end of loop over subjects
-  
-  # return the 2 data frames in a named list
-  outputData = list(hdrData=hdrData, trialData=trialData)
-  return(outputData)
-  
+  # return outputs
+  outputs = list(hdrData=hdrData, trialData=trialData)
+  return(outputs)
 } 
 
 

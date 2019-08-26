@@ -16,13 +16,19 @@ transformed data {
   int totalSteps = sum(Ts) - N;
 }
 parameters {
-  real<lower = 0, upper = 0.3> phi;
-  real<lower = 0, upper = 0.3> beta;
-  real<lower = 0, upper = min([5, 1 / phi, 1 / beta]')> nega; 
-  real<lower = 0.1, upper = 22> tau;
-  real<lower = 0, upper = 65> prior; 
+  real<lower = 0, upper = 1> raw_phi;
+  real<lower = 0, upper = 1> raw_beta;
+  real<lower = 0, upper = 1> raw_nega;
+  real<lower = 0, upper = 1> raw_tau;
+  real<lower = 0, upper = 1> raw_prior;
 }
 transformed parameters{
+  // transfer paras
+  real phi = raw_phi * 0.3;
+  real beta = raw_beta * 0.3;
+  real nega = min([raw_nega * 5, 1 / beta, 1 / phi]');
+  real tau = raw_tau * 21.9 + 0.1;
+  real prior = raw_prior * 65;
   // initialize action values 
   real Viti = 0;
   real reRate = wIni;// reward rate for each step
@@ -90,11 +96,11 @@ transformed parameters{
   }// end of the loop
 }
 model {
-  phi ~ uniform(0, 0.3);
-  beta ~ uniform(0, 0.3);
-  nega ~ uniform(0, min([5, 1 / phi, 1 / beta]'));
-  tau ~ uniform(0.1, 22);
-  prior ~ uniform(0, 65);
+  raw_phi ~ uniform(0, 1);
+  raw_beta ~ uniform(0, 1);
+  raw_nega ~ uniform(0, 1);
+  raw_tau ~ uniform(0, 1);
+  raw_prior ~ uniform(0, 1);
   // calculate the likelihood 
   for(tIdx in 1 : N){
     int action;

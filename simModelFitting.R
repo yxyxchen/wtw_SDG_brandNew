@@ -20,7 +20,7 @@ expModelFitting = function(encodeModel, decodeModel){
   source("subFxs/analysisFxs.R")
   
   #  set the environment for Rstan
-  options(warn=-1, message =-1) # run without this for one participant to chec everything
+  options(warn= 0, message =-1) # run without this for one participant to chec everything
   Sys.setenv(USE_CXX14=1) # needed in local computeres
   rstan_options(auto_write = TRUE) 
   

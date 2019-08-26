@@ -21,13 +21,20 @@ transformed data {
   int totalSteps = sum(Ts) - N;
 }
 parameters {
-  real<lower = low[1], upper = up[1]> phi;
-  real<lower = low[2], upper = min([up[2], 1 / phi]')> nega; 
-  real<lower = low[3], upper = up[3]> tau;
-  real<lower = low[4], upper = up[4]> gamma;
-  real<lower = low[5], upper = up[5]> prior; 
+  real<lower = low[1], upper = up[1]> raw_phi;
+  real<lower = low[2], upper = up[2])> raw_nega; 
+  real<lower = low[3], upper = up[3]> raw_tau;
+  real<lower = low[4], upper = up[4]> raw_gamma;
+  real<lower = low[5], upper = up[5]> raw_prior; 
 }
 transformed parameters{
+  // transfor parameters
+  real phi = raw_phi * 0.3; // I am confused by this part now
+  real nega = min([raw_nega * 5, 1 / phi]');
+  real tau = raw_tau * 21.9 + 0.1;
+  real gamma = raw_gamme * 0.3 + 0.4;
+  real prior = raw_prior * 65;
+  
   // initialize action values 
   real Viti = wIni;
   vector[nTimeSteps] Qwait;
@@ -82,7 +89,7 @@ transformed parameters{
 }
 model {
   phi ~ uniform(low[1], up[1]);
-  nega ~ uniform(low[2], min([up[2], 1 / phi]'));
+  nega ~ uniform(low[2], up[2]);
   tau ~ uniform(low[3], up[3]);
   gamma ~ uniform(low[4], up[4]);
   prior ~ uniform(low[5], up[5]);

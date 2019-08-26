@@ -11,7 +11,7 @@ splitExpData = function(){
   allData = loadAllData()
   hdrData = allData$hdrData           
   trialData = allData$trialData       
-  idList = hdrData$ID[hdrData$stress == "no stress"]                 
+  idList = hdrData$id[hdrData$stress == "no_stress"]                 
   n = length(idList)                    
   set.seed(123)
   for(i in 1 : n){
@@ -24,7 +24,7 @@ splitExpData = function(){
     # determine partitions 
     nPart = ceiling(nrow(thisTrialData) / nFold)
     partTable = sapply(1 : nPart, function(i) sample(1:nFold,replace = FALSE) + (i -1) * nFold)
-    fileName = sprintf("genData/expModelFittingCV/split/s%d.RData",  thisID)
+    fileName = sprintf("genData/expModelFittingCV/split/s%s.RData",  thisID)
     save("partTable", file = fileName)
   }
 }
@@ -50,7 +50,7 @@ expModelFitting = function(modelName){
   source("subFxs/analysisFxs.R")
   
   #  set the environment for Rstan
-  options(warn=-1, message =-1) # run without this for one participant to chec everything
+  # options(warn=-1, message =-1) # run without this for one participant to chec everything
   Sys.setenv(USE_CXX14=1) # needed in local computeres
   rstan_options(auto_write = TRUE) 
   
@@ -61,7 +61,7 @@ expModelFitting = function(modelName){
   allData = loadAllData()
   hdrData = allData$hdrData           
   trialData = allData$trialData       
-  idList = hdrData$ID[hdrData$stress == "no stress"]                 
+  idList = hdrData$id[hdrData$stress == "no_stress"]                 
   n = length(idList)                    
   
   # determine paras
@@ -94,7 +94,7 @@ expModelFitting = function(modelName){
     for(j in 1 : nFold){
       select = as.vector(partTable[-j,])
       thisTrialData = thisTrialData[(1 : nrow(thisTrialData)) %in% select,]
-      fileName = sprintf("genData/expModelFittingCV/%s/s%d_f%s", modelName, thisID, j)
+      fileName = sprintf("genData/expModelFittingCV/%s/s%s_f%s", modelName, thisID, j)
       modelFittingCV(thisTrialData, fileName, paraNames, model, modelName)
     }
   }

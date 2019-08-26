@@ -7,7 +7,7 @@ modelFitting = function(thisTrialData, fileName, paraNames, model, modelName){
     load("wtwSettings.RData")
     # simulation parameters
     nChain = 4
-    nIter = 100
+    nIter = 5000
     
     # determine wIni
     # since the participants' initial strategies are unlikely optimal
@@ -35,8 +35,17 @@ modelFitting = function(thisTrialData, fileName, paraNames, model, modelName){
                       Ts = Ts,
                       iti = iti,
                       stepDuration = stepDuration)
-    fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
-                 iter = nIter) 
+    # rm(last.warning)
+    withCallingHandlers({
+      fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
+                     iter = nIter,control = list(adapt_delta = 0.99, max_treedepth = 11)) 
+    }, warning = function(w){
+      fileNameShort = str_extract(fileName, pattern = "s[0-9]*")
+      warnText = paste(modelName, fileNameShort, w)
+      write(warnText, sprintf("%s_log.txt", modelName), append = T, sep = "n")
+    })
+            
+    
   # extract parameters
   extractedPara = fit %>%
     rstan::extract(permuted = F, pars = c(paraNames, "LL_all"))
@@ -89,8 +98,14 @@ modelFittingCV = function(thisTrialData, fileName, paraNames, model, modelName){
                     Ts = Ts,
                     iti = iti,
                     stepDuration = stepDuration)
+  rm(last.warning)
   fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
                  iter = nIter) 
+  if(exists("last.warning")){
+    fileNameShort = str_extract(fileName, pattern = "s[0-9]*_f[0-9]*")
+    sapply(1 : length(last.warning), function(i) print(paste(modelName, fileNameShort, paste(as.character(names(last.warning)[i], collapse  = " ")))))
+  }
+
   # save
   fitSummary <- summary(fit,pars = c(paraNames, "LL_all"), use_cache = F)$summary
   write.table(matrix(fitSummary, nrow = length(paraNames) + 1), file = sprintf("%s_summary.txt", fileName),  sep = ",",

@@ -8,7 +8,6 @@ expModelFitting = function(modelName){
   
   #  set the environment for Rstan
   library('rstan')
-  options(warn=-1, message =-1) # run without this for one participant to chec everything
   Sys.setenv(USE_CXX14=1) # needed in local computeres
   rstan_options(auto_write = TRUE) 
   
@@ -28,7 +27,7 @@ expModelFitting = function(modelName){
   hdrData = allData$hdrData           
   trialData = allData$trialData       
   nSub = sum(hdrData$stress == "no stress")
-  ids = hdrData$ID[hdrData$stress == "no stress"] # id encoded in trialData
+  ids = hdrData$id[hdrData$stress == "no stress"] # id encoded in trialData
   # initialize outputs
   
   # for a specific model 
