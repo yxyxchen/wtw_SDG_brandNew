@@ -1,5 +1,4 @@
-# in this dataset, only trials within the 7 mins will be kept. Therefore, we don't need to delete any data
-# determine whether to truncate data
+# 
 datasetColors = c('#c53932', '#529D3E', '#3976AF')
 isTrun = T
 # load libraries
@@ -12,7 +11,7 @@ dir.create("genData")
 dir.create("genData/expDataAnalysis")
 
 # load setting parameters 
-load("wtwSettings.RData")
+
 nBlock = 3
 if(isTrun){
   tGrid = seq(0, blockSecs * nBlock, by = 1) # here I use a truncated tGrid, according to max(sellTime) 
@@ -73,7 +72,10 @@ for (sIdx in 1 : n) {
     thisTrialData = thisTrialData[! (1 : nrow(thisTrialData) %in% excludedTrials),]
     nExclude[sIdx] = length(excludedTrials)
   }
+  
+  # combine 3 blocks into one session
   thisTrialData = block2session(thisTrialData)
+  
   # generate arguments for later analysis 
   label = sprintf('Subject %s, Cond %s',thisID, unique(thisTrialData$condition))
   tMax = ifelse(unique(thisTrialData$condition) == conditions[1], tMaxs[1], tMaxs[2])

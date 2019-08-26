@@ -8,7 +8,7 @@ source("subFxs/loadFxs.R") # load blockData and expPara
 source("subFxs/helpFxs.R") # getparaNames
 source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 load("wtwSettings.RData")
-modelName = "QL2"
+modelName = "RL2"
 # create output directories
 dir.create("figures/expParaAnalysis")
 saveDir = sprintf("figures/expParaAnalysis/%s", modelName)

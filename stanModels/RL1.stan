@@ -16,17 +16,17 @@ transformed data {
   int totalSteps = sum(Ts) - N;
 }
 parameters {
-  real<lower = 0, upper = 1> raw_phi;
-  real<lower = 0, upper = 1> raw_beta;
-  real<lower = 0, upper = 1> raw_tau;
-  real<lower = 0, upper = 1> raw_prior;
+  real<lower = -0.5, upper = 0.5> raw_phi;
+  real<lower = -0.5, upper = 0.5> raw_beta;
+  real<lower = -0.5, upper = 0.5> raw_tau;
+  real<lower = -0.5, upper = 0.5> raw_prior;
 }
 transformed parameters{
   // transfer paras
-  real phi = raw_phi * 0.3;
-  real beta = raw_beta * 0.3;
-  real tau = raw_tau * 21.9 + 0.1;
-  real prior = raw_prior * 65;
+  real phi = (raw_phi + 0.5) * 0.3;
+  real beta = (raw_beta + 0.5) * phi;
+  real tau = (raw_tau + 0.5) * 21.9 + 0.1;
+  real prior = (raw_prior + 0.5) * 65;
   
   // initialize action values 
   real Viti = 0;
@@ -87,10 +87,10 @@ transformed parameters{
   }// end of the loop
 }
 model {
-  raw_phi ~ uniform(0, 1);
-  raw_beta ~ uniform(0, 1);
-  raw_tau ~ uniform(0, 1);
-  raw_prior ~ uniform(0, 1);
+  raw_phi ~ uniform(-0.5, 0.5);
+  raw_beta ~ uniform(-0.5, 0.5);
+  raw_tau ~ uniform(-0.5, 0.5);
+  raw_prior ~ uniform(-0.5, 0.5);
   // calculate the likelihood 
   for(tIdx in 1 : N){
     int action;

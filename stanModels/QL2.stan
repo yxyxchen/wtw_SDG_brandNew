@@ -27,7 +27,7 @@ transformed parameters{
   real phi = raw_phi * 0.3;
   real nega = min([raw_nega * 5, 1 / phi]');
   real tau = raw_tau * 21.9 + 0.1;
-  real gamma = raw_gamme * 0.3 + 0.4;
+  real gamma = raw_gamma * 0.3 + 0.4;
   real prior = raw_prior * 65;
   
   // initialize action values 

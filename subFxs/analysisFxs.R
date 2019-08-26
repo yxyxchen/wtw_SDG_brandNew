@@ -1,35 +1,23 @@
 # this script contains helper analysis functions 
 library(coin)
-# check the distribution of scheduled delays
-# ...as measured in number of key presses (for the instrumental version of the task)
-scheduledDelays <- function(blockData,label) {
-  cat(sprintf('Scheduled delays for %s\n',blockLabel))
-  bkDelays = blockData$scheduledWait
-  print(summary(bkDelays))
-  # empirical cumulative distribution of scheduled delays
-  fn <- ecdf(blockData$scheduledWait)
-  plot(fn, main = sprintf('Scheduled delays: %s',blockLabel), xlab='Scheduled delay (s)',
-       ylab='Cumulative proportion', xlim=c(0,30))
-  # autocorrelation function
-  # acfOutput <- acf(bkDelays, lag.max=20, main = sprintf('Scheduled delays: %s',blockLabel))
-}
-
-
-# plot trialwise responses in detail
-trialPlots <- function(thisTrialData,label = " ") {
+# plots a single subject's trial-by-trial data
+trialPlots <- function(thisTrialData) {
   # change the trialNum to accumulated trialNum if needed
   if(length(unique(thisTrialData$blockNum)) > 1){
     nTrial1 = sum(thisTrialData$blockNum == 1)
     nTrial1n2 = sum(thisTrialData$blockNum == 1 | thisTrialData$blockNum == 2)
   }
   # values to be plotted
-  rwdIdx = thisTrialData$trialEarnings > loseValue
-  quitIdx = thisTrialData$trialEarnings <= loseValue
-  rwdTrialNo = thisTrialData$trialNum[rwdIdx]
-  quitTrialNo = thisTrialData$trialNum[quitIdx]
-  rwdSchedDelay = thisTrialData$scheduledWait[rwdIdx]
-  quitSchedDelay = thisTrialData$scheduledWait[quitIdx]
-  waitDuration = thisTrialData$timeWaited
+  attach(thisTrialData)
+  rwdIdx = trialEarnings != 0
+  quitIdx = trialEarnings == 0
+  rwdTrialNo = trialNum[rwdIdx]
+  quitTrialNo = trialNum[quitIdx]
+  rwdSchedDelay = scheduledWait[rwdIdx]
+  quitSchedDelay = scheduledWait[quitIdx]
+  waitDuration = timeWaited
+  detach(thisTrialData)
+  
   quitTime = waitDuration[quitIdx]
   # other parameters
   nTrials = length(thisTrialData$trialEarnings)
@@ -262,12 +250,22 @@ getPartCorrelation = function(data){
   return(list(rhos = rhos, ps = ps))
 }
 
-# convert data of multiple blocks into one session
-block2session = function(tempt){
-  nBlock = length(unique(tempt$blockNum))
-  nTrials = sapply(1:nBlock, function(i) sum(tempt$blockNum == i))
-  thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:(nBlock - 1)]), time = nTrials);
-  sellTime = sellTime + rep((1:nBlock - 1) * blockSecs, time = nTrials);
+# integrate stacked data from several blocks 
+block2session = function(thisTrialData){
+  nBlock = length(unique(thisTrialData$blockNum))
+  # num of trials in each block
+  nTrial_ = sapply(1:nBlock, function(i) sum(thisTrialData$blockNum == i))
+  # num of completed trials at the beginning of each block
+  nTrial_sofar_ = c(0, cumsum(head(nTrial_, -1)))
+  # elapsed task time at the beginning of each block
+  taskTime_sofar_ = (1:nBlock - 1) * blockSecs 
+  # accumulated totalEarnings at the beginning of each block
+  totalEarnings_sofar_ = c(0, totalEarnings[cumsum(nTrial_)[1:(nBlock - 1)]])
+  
+  # convert variables accumulating within blocks into variables accumulating across blocks
+  thisTrialData = within(thisTrialData, {trialNum = trialNum + rep(nPreTrials, time = nTrials)};
+  # create sellTime, trialStartTime, trialEarnings accumulating across blocks
+  sellTime = sellTime + rep(, time = nTrials);
   trialStartTime = trialStartTime + rep((1:nBlock - 1) * blockSecs, time = nTrials);
   totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:(nBlock - 1)]]),
                                        time = nTrials)
@@ -294,11 +292,11 @@ kmscMoving = function(thisTrialData, tMax, label, plotKMSC, tGrid, window, by){
     startTrial = 1 + by * (i-1)
     endTrial = min(startTrial + window - 1, nTrial)
     # survival analysis
-    trialData = truncateTrials(thisTrialData, startTrial, endTrial)
-    waitDuration = trialData$timeWaited
-    quitIdx = (trialData$trialEarnings == 0)
+    thisTrialData = truncateTrials(thisTrialData, startTrial, endTrial)
+    waitDuration = thisTrialData$timeWaited
+    quitIdx = (thisTrialData$trialEarnings == 0)
     # for rewarded trials, base the duration on the reward delivery time (not the subsequent response)
-    waitDuration[!quitIdx] <- trialData$scheduledWait[!quitIdx]
+    waitDuration[!quitIdx] <- thisTrialData$scheduledWait[!quitIdx]
     tempt = fitSurv(waitDuration, quitIdx)
   }
   winEndTimes = sapply(1 : nWindow, function(i) thisTrialData$sellTime[min(i*by+window-by,

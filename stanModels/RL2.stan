@@ -16,10 +16,10 @@ transformed data {
   int totalSteps = sum(Ts) - N;
 }
 parameters {
-  real<lower = 0, upper = 1> raw_phi;
-  real<lower = 0, upper = 1> raw_beta;
-  real<lower = 0, upper = 1> raw_nega;
-  real<lower = 0, upper = 1> raw_tau;
+  real<lower = -0.5, upper = 0.5> phi_;
+  real<lower = -0.5, upper = 0.5> raw_beta;
+  real<lower = -0.5, upper = 0.5> raw_nega;
+  real<lower = -0.5, upper = 0.5> raw_tau;
   real<lower = 0, upper = 1> raw_prior;
 }
 transformed parameters{

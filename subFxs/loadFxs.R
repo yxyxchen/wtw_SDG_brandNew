@@ -18,7 +18,7 @@ loadAllData = function() {
   # totalEarnings : [130x1 int] cumulative payments
  
   # load hdrData
-  hdrData = read.csv(file.path('data', 'hdrData3.csv'), comment = "#")
+  hdrData = read.csv(file.path('data', 'hdrData.csv'), comment = "#")
   hdrData$stress = ifelse( hdrData$stress == 'stress', 'stress', 'no_stress')
   hdrData$condition = ifelse(hdrData$condition == 1, 'HP', 'LP')
   hdrData$id = as.character(hdrData$id)
@@ -26,7 +26,6 @@ loadAllData = function() {
   # load trialData
   trialData = list()
   nSub = nrow(hdrData)
-  nBlock = 3
   trialDataNames = c('blockNum', 'trialNum', 'trialStartTime', 'nKeyPresses', 'scheduledWait',
                       'rewardTime', 'timeWaited', 'sellTime', 'trialEarnings','totalEarnings')
   # loop over subjects
