@@ -1,67 +1,51 @@
-# this script contains helper analysis functions 
-library(coin)
 # plots a single subject's trial-by-trial data
 trialPlots <- function(thisTrialData) {
-  # change the trialNum to accumulated trialNum if needed
-  if(length(unique(thisTrialData$blockNum)) > 1){
-    nTrial1 = sum(thisTrialData$blockNum == 1)
-    nTrial1n2 = sum(thisTrialData$blockNum == 1 | thisTrialData$blockNum == 2)
-  }
-  # values to be plotted
-  attach(thisTrialData)
-  rwdIdx = trialEarnings != 0
-  quitIdx = trialEarnings == 0
-  rwdTrialNo = trialNum[rwdIdx]
-  quitTrialNo = trialNum[quitIdx]
-  rwdSchedDelay = scheduledWait[rwdIdx]
-  quitSchedDelay = scheduledWait[quitIdx]
-  waitDuration = timeWaited
-  detach(thisTrialData)
-  
-  quitTime = waitDuration[quitIdx]
-  # other parameters
-  nTrials = length(thisTrialData$trialEarnings)
-  # prepare plotData
-  plotData = data.frame("trialNum" = c(rwdTrialNo, quitTrialNo, quitTrialNo),
-                        "trialDuration" = c(rwdSchedDelay, quitTime, quitSchedDelay),
-                        "condition" = rep(c('reward', 'quit', 'quitSchedule'), time = 
-                                        c(length(rwdTrialNo), length(quitTrialNo),
-                                          length(quitTrialNo))))
-  plotData$condition = factor( plotData$condition, levels = c('reward', 'quit', 'quitSchedule'))
-  # plot the main figure
-  p = ggplot(plotData, aes(trialNum, trialDuration, color = condition)) + geom_point() +
-  geom_line(data = plotData[plotData$condition != 'quitSchedule',],
-            aes(trialNum, trialDuration, color = condition)) +
-    scale_color_manual(values = c('blue', 'red', 'black')) + 
-    xlab('Trial') + ylab('Waiting duration (s)') + ggtitle(label) + myTheme
-  # add block lines if we have multiple blocks 
-  if(length(unique(thisTrialData$blockNum)) > 1){
-    p = p + geom_vline(xintercept = c(nTrial1,nTrial1n2),  linetype='dashed',
-                   color = "grey", size = 1)
-  }
+  source('./subFxs/plotThemes.R')
+  nBlock = length(unique(thisTrialData$blockNum))
+  # num of trials in each block
+  nTrials = sapply(1:nBlock, function(i) sum(thisTrialData$blockNum == i))
+  # num of trials accumulated across blocks
+  ac_nTrials = cumsum(nTrials)
+  # ensure timeWaited = scheduledWait on rewarded trials
+  thisTrialData = within(thisTrialData, {timeWaited[trialEarnings!= 0] = scheduledWait[trialEarnings!= 0]})
+  # plot
+  ## blue : timeWaited on rewarded trials
+  ## red : timeWaited on non-rewarded trials
+  ## black : scheduledTime on non-rewarded trials
+  p = thisTrialData %>%
+    ggplot(aes(trialNum, timeWaited,color = factor(trialEarnings))) +
+    geom_point() + geom_line() + scale_color_manual(values = c("red", "blue")) +
+    geom_point(data = thisTrialData[thisTrialData$trialEarnings == 0, ],
+               aes(trialNum, scheduledWait),
+               color = 'black') + 
+    geom_vline(xintercept = head(ac_nTrials, nBlock - 1),
+               color = "grey", linetype = "dashed", size = 2) +
+    xlab("Trial num") + ylab("Time (s)") + 
+    myTheme 
   print(p)
   return(p)
 }
 
 
-# calculate kaplan-meier and area under the curve
-kmsc <- function(thisTrialData,tMax,label='',plotKMSC=FALSE,grid=0) {
+# using kaplan-meier survival analysis to measure:
+# average WTW (area under the curve)
+# std WTW
+kmsc <- function(thisTrialData, tMax, plotKMSC=FALSE, grid) {
   library(survival)
-  waitDuration = thisTrialData$timeWaited
-  quitIdx = (thisTrialData$trialEarnings == 0)
-  # for rewarded trials, base the duration on the reward delivery time (not the subsequent response)
-  waitDuration[!quitIdx] <- thisTrialData$scheduledWait[!quitIdx]
-  # fit the survival function
-  kmfit <- survfit(Surv(waitDuration, quitIdx, type='right') ~ 1, 
-                 type='kaplan-meier', conf.type='none', start.time=0, se.fit=FALSE)
-  # extract elements of the survival curve object (?survfit.object)
-  kmT = kmfit$time
-  kmF = kmfit$surv
+  # ensure timeWaited = scheduledWait on rewarded trials
+  thisTrialData = within(thisTrialData, {timeWaited[trialEarnings!= 0] = scheduledWait[trialEarnings!= 0]})
+  # fit a kaplan-meier survival curve
+  kmfit = with(thisTrialData,{
+    survfit(Surv(timeWaited, (trialEarnings == 0), type='right') ~ 1, 
+            type='kaplan-meier', conf.type='none', start.time=0, se.fit=FALSE)
+  })
+  # extract elements of the survival curve object 
+  kmT = kmfit$time # time value 
+  kmF = kmfit$surv # function value
   # add a point at zero, since "kaplan-meier" starts from the first event
-  kmT = c(0, kmT)
+  kmT = c(0, kmT) 
   kmF = c(1, kmF)
   # keep only points up through tMax 
-  # if you use the same tMax for both condition, otherwise you can skip this
   keepIdx = kmT<=tMax
   kmT <- kmT[keepIdx]
   kmF <- kmF[keepIdx]
@@ -71,29 +55,39 @@ kmsc <- function(thisTrialData,tMax,label='',plotKMSC=FALSE,grid=0) {
   kmF <- c(kmF, tail(kmF,1))
   # calculate auc
   auc <- sum(diff(kmT) * head(kmF,-1))
-  kmFmy = kmF
-  kmFmy[length(kmFmy)] = 0
-  # sum(tail(kmT, -1) * diff((1 - kmFmy)))
-  stdWd = sqrt(sum((tail(kmT, -1) - auc)^2 * diff((1 - kmFmy))))
-  
-  # calculate variance
-  # plot if requested
+  # calculate std WTW
+  ## (1-kmF) gives the cdf of WTW
+  cdf_WTW = 1 - kmF
+  ## by adding 1 at the end, we truncate WTW at tMax
+  cdf_WTW = c(cdf_WTW, 1)
+  # calcualte the pdf of WTW
+  pdf_WTW = diff(cdf_WTW)
+  # calculate the std of WTW 
+  varWTW = sum((kmT - auc) ^2 * pdf_WTW)
+  stdWTW = sqrt(varWTW)
+  # plot the k-m survival curve
   if (plotKMSC) {
-   plotData = data.frame(kmT = kmT, kmF = kmF)
-   p = ggplot(plotData, aes(kmT, kmF)) + geom_line() + xlab('Delay (s)') +
-      ylab('Survival rate') + ylim(c(0,1)) + xlim(c(0,tMax)) +
-        ggtitle(sprintf('KMSC: %s (AUC = %1.1f)',label,auc)) + 
-        displayTheme
+   p = data.frame(kmT = kmT, kmF = kmF) %>%
+     ggplot(aes(kmT, kmF)) + geom_line() + xlab('Delay (s)') +
+     ylab('Survival rate') + ylim(c(0,1)) + xlim(c(0,tMax)) +
+     ggtitle(sprintf('AUC = %1.1f',auc)) + 
+     myTheme
    print(p)
   }
-  # put the survival curve on a standard grid
-  kmOnGrid = vector()
-  for (gIdx in 1:length(grid)) {
-    g = grid[gIdx]
-    # use the last point where t is less than or equal to the current grid value
-    kmOnGrid[gIdx] = kmF[max(which(kmT<=g))]
+  # resample the survival curve for averaging
+  # the original curve (kmT, kmF), rename variables for readability
+  xs = kmT; ys = kmF 
+  # initialize a new curve on the standard grid
+  Xs = grid; Ys = vector(length = length(Xs))
+  for(i in 1 : length(Xs)){
+    # for each X in Xs
+    X = Xs[i]
+    # find the index of cloest x value on the left
+    closest_left_x_idx = max(which(xs<= X))
+    # Y takes the corresonding y value
+    Ys[i] = ys[closest_left_x_idx]
   }
-  return(list(kmT=kmT, kmF=kmF, auc=auc, kmOnGrid=kmOnGrid, stdWd = stdWd))
+  return(list(kmT=kmT, kmF=kmF, auc=auc, kmOnGrid = Ys, stdWTW = stdWTW))
 }
 
 # this function can truncate trials in the simualtion object
@@ -118,7 +112,7 @@ truncateTrials = function(data, startTidx, endTidx){
 }
 
 # willingness to wait time-series
-wtwTS <- function(thisTrialData, tGrid, wtwCeiling, label = "", plotWTW = F) {
+wtwTS <- function(thisTrialData, tGrid, wtwCeiling, plotWTW = F) {
   trialWTW = numeric(length = length(thisTrialData$trialEarnings)) # initialize the per-trial estimate of WTW
   quitIdx = thisTrialData$trialEarnings == 0
   # use either the rewardTime (for reward trials) or time waited (for quit trials)
@@ -151,7 +145,7 @@ wtwTS <- function(thisTrialData, tGrid, wtwCeiling, label = "", plotWTW = F) {
   if(plotWTW){
     # for testing: plot timeWTW
     p = ggplot(data.frame(tGrid, timeWTW), aes(tGrid, timeWTW)) + geom_line() +
-      xlab("Time in block (s)") + ylab("WTW (s)") + ggtitle(sprintf('WTW : %s', label)) +
+      xlab("Time in block (s)") + ylab("WTW (s)")  +
       displayTheme
     print(p)
   }
@@ -253,133 +247,20 @@ getPartCorrelation = function(data){
 # integrate stacked data from several blocks 
 block2session = function(thisTrialData){
   nBlock = length(unique(thisTrialData$blockNum))
-  # num of trials in each block
-  nTrial_ = sapply(1:nBlock, function(i) sum(thisTrialData$blockNum == i))
-  # num of completed trials at the beginning of each block
-  nTrial_sofar_ = c(0, cumsum(head(nTrial_, -1)))
-  # elapsed task time at the beginning of each block
-  taskTime_sofar_ = (1:nBlock - 1) * blockSecs 
-  # accumulated totalEarnings at the beginning of each block
-  totalEarnings_sofar_ = c(0, totalEarnings[cumsum(nTrial_)[1:(nBlock - 1)]])
+  nTrials = sapply(1:nBlock, function(i) sum(thisTrialData$blockNum == i))
+  # accumulated trials 
+  ac_nTrials = c(0, cumsum(head(nTrials, -1)))
+  # accumulated task durations
+  ac_taskTimes = (1:nBlock - 1) * blockSec
+  # accumulated totalEarnings sofar
+  ac_totalEarnings_s = c(0, thisTrialData$totalEarnings[cumsum(nTrials)[1:(nBlock - 1)]])
   
-  # convert variables accumulating within blocks into variables accumulating across blocks
-  thisTrialData = within(thisTrialData, {trialNum = trialNum + rep(nPreTrials, time = nTrials)};
-  # create sellTime, trialStartTime, trialEarnings accumulating across blocks
-  sellTime = sellTime + rep(, time = nTrials);
-  trialStartTime = trialStartTime + rep((1:nBlock - 1) * blockSecs, time = nTrials);
-  totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:(nBlock - 1)]]),
-                                       time = nTrials)
-  })
+  # convert within-block variables to accumualting-across-block variables
+  thisTrialData = within(thisTrialData,
+                         {trialNum = trialNum + rep(ac_nTrials , time = nTrials);
+                         sellTime = sellTime + rep(ac_taskTimes, time = nTrials);
+                         totalEarnings = totalEarnings + rep(ac_totalEarnings_s, time = nTrials)});
   return(thisTrialData)
 }
-
-
-# kmscMoving 
-kmscMoving = function(thisTrialData, tMax, label, plotKMSC, tGrid, window, by){
-  library(survival)
-  # initialize
-  nTrial = length(thisTrialData$scheduledWait)
-  # (nTrial - window + 1) / by is the number of gap, +1 to get nWindow, +2 to make one more
-  nWindow = ceiling(((nTrial - window + 1) / by)) +1  
-  endTimes = numeric(length = nWindow)
-  survFits = vector(mode = "list", length = nWindow)
-  # loop over windows
-  nCore = parallel::detectCores() -1 # only for the local computer
-  library("doMC")
-  library("foreach")
-  registerDoMC(nCore)
-  survFits = foreach(i = 1 : nWindow) %dopar% {
-    startTrial = 1 + by * (i-1)
-    endTrial = min(startTrial + window - 1, nTrial)
-    # survival analysis
-    thisTrialData = truncateTrials(thisTrialData, startTrial, endTrial)
-    waitDuration = thisTrialData$timeWaited
-    quitIdx = (thisTrialData$trialEarnings == 0)
-    # for rewarded trials, base the duration on the reward delivery time (not the subsequent response)
-    waitDuration[!quitIdx] <- thisTrialData$scheduledWait[!quitIdx]
-    tempt = fitSurv(waitDuration, quitIdx)
-  }
-  winEndTimes = sapply(1 : nWindow, function(i) thisTrialData$sellTime[min(i*by+window-by,
-                                                                           nTrial)])
-  winAUCs = sapply(1 : nWindow, function(i) survFits[[i]]$auc)
-  winStdWds = sapply(1 : nWindow, function(i) survFits[[i]]$stdWd)
-  # map to the continous time scale 
-  timeAUCs = trial2sec(winAUCs, winEndTimes, tGrid)
-  timeStdWds =  trial2sec(winStdWds, winEndTimes, tGrid)
-  return(list(timeAUCs = timeAUCs, timeStdWds = timeStdWds,
-              winAUCs = winAUCs, winStdWds = winStdWds))
-}
-
-fitSurv = function(waitDuration, quitIdx){
-  # fit the survival function
-  kmfit <- survfit(Surv(waitDuration, quitIdx, type='right') ~ 1, 
-                   type='kaplan-meier', conf.type='none', start.time=0, se.fit=FALSE)
-  # extract elements of the survival curve object (?survfit.object)
-  kmT = kmfit$time
-  kmF = kmfit$surv
-  # add a point at zero, since "kaplan-meier" starts from the first event
-  kmT = c(0, kmT)
-  kmF = c(1, kmF)
-  # keep only points up through tMax 
-  # if you use the same tMax for both condition, otherwise you can skip this
-  keepIdx = kmT<=tMax
-  kmT <- kmT[keepIdx]
-  kmF <- kmF[keepIdx]
-  # extend the last value to exactly tMax
-  # notice that kmT is not evenly spaced
-  kmT <- c(kmT, tMax)
-  kmF <- c(kmF, tail(kmF,1))
-  # calculate auc
-  auc <- sum(diff(kmT) * head(kmF,-1))
-  kmFmy = kmF
-  kmFmy[length(kmFmy)] = 0
-  # sum(tail(kmT, -1) * diff((1 - kmFmy)))
-  stdWd = sqrt(sum((tail(kmT, -1) - auc)^2 * diff((1 - kmFmy))))
-  # return 
-  return(list(kmT=kmT, kmF=kmF, auc=auc, stdWd = stdWd))
-}
-
-deMean = function(input){
-  output = input - mean(input)
-  return(output)
-}
-
-stand = function(input){
-  output = (input - mean(input)) / sd(input)
-  return(output)
-}
-
-movAve = function(x, windowSize){
-  if(windowSize %% 2 == 0){
-    print("windowSize should be an even number")
-  }
-  halfWin = (windowSize - 1) / 2
-  y = sapply(1 : length(x), function(i){
-    startIdx = max(1, i - halfWin)
-    endIdx = min(length(x), i + halfWin)
-    mean(x[startIdx:endIdx])
-  })
-  return(y)
-}
-
-# lastTrunc = function(thisTrialData){
-#   cond = unique(thisTrialData$condition)
-#   cIdx = ifelse(cond == "HP", 1, 2)
-#   excludedTrials = lapply(1 : nBlock, function(i)
-#     which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]) &
-#             (thisTrialData$blockNum == i)))
-#   includeStart = which(thisTrialData$trialNum == 1)
-#   includeEnd = sapply(1 : nBlock, function(i){
-#     if(length(excludedTrials[[i]] > 0)){
-#       min(excludedTrials[[i]])-1
-#     }else{
-#       max(which(thisTrialData$blockNum ==i))  
-#     }
-#   })
-#   tempt = lapply(1 : nBlock, function(i)
-#     truncateTrials(thisTrialData, includeStart[i], includeEnd[i]))
-#   thisTrialData = do.call("rbind", tempt)
-#   
-# }
 
 

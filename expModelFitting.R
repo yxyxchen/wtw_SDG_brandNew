@@ -3,8 +3,7 @@
 # here I change all my modelFitting function into the risk version
 # while in stan, I have different expMofelfitting and modelFitting scripts for different things 
 expModelFitting = function(modelName){
-  # create outfiles
-  nBlock = 3
+  # output directories
   dir.create("genData")
   dir.create("genData/expModelFitting")
   dir.create(sprintf("genData/expModelFitting/%s", modelName))
@@ -16,7 +15,7 @@ expModelFitting = function(modelName){
   source('subFxs/modelFittingFxs.R') # for fitting each single participant
   source('subFxs/loadFxs.R') # for load data
   source("subFxs/helpFxs.R") # for getParas
-  load("wtwSettings.RData")
+  load("expParas.RData")
   source("subFxs/analysisFxs.R")
   
   #  set the environment for Rstan

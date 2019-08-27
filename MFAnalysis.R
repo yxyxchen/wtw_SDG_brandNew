@@ -12,91 +12,81 @@
 # trialWTW_ : list(nSubx1) # trial-wise WTW, each element is a vector
 # survCurve_ : list(nSubx1) # Kaplan-Meier survival curve, each element is a vector
 
-
-# load libraries
-source('subFxs/loadFxs.R') 
-source('subFxs/analysisFxs.R') 
-library('dplyr')
-
-# create the output directory
-dir.create("genData")
-dir.create("genData/MFAnalysis")
-
-# load experiment parameters
-load("expParas.RData")
-
-# load exp data
-allData = loadAllData()
-hdrData = allData$hdrData           
-trialData = allData$trialData       
-ids = hdrData$id[hdrData$stress == "no_stress"]  
-nSub = length(ids)                    # n
-cat('Analyzing data for',nSub,'subjects.\n')
-
-# analyses parameters
-tGrid = seq(0, blockSec * nBlock, by = 3) # time grid for wtw time courses
-kmGrid = seq(0, min(tMax_), by = 0.1) # time grid for Kaplan-Meier survival curves
-
-# initialize output variables 
-nExcls = numeric(length = nSub)
-muWTWs = numeric(length = nSub) 
-stdWTWs = numeric(length = nSub) 
-totalEarnings_s =  numeric(length = nSub) 
-timeWTW_ = vector(mode = "list", length = nSub) 
-trialWTW_ = vector(mode = "list", length = nSub) 
-survCurve_ = vector(mode = "list", length = nSub) 
-
-# if True, perfom all analyses and plot inividual figures one by one and press any key to proceed
-# if False, perform all analyses without plotting
-plotTrialwiseData = F # plot trial-wise data
-plotKMSC = F # plot Kaplan-Meier survival curves
-plotWTW = F # plot williness to wait (WTW) time courses
-
-# loop over inidviduals
-for (sIdx in 1 : nSub) {
-  # load (and truncate) trialData for this individual
-  id = ids[sIdx]
-  thisTrialData = trialData[[id]]
-  if(isTrct){
-    trctLine = blockSec - max(tMaxs)
-    # truncate trials completed after tractline in each block
-    nExcls[sIdx] = sum(thisTrialData$sellTime > trctLine))
-    thisTrialData = thisTrialData %>% filter(sellTime <=  trctLine )
-  }else{
-    nExcls[sIdx] = 0
-  }
-  # calcualte totalEarnings
-  totalEarnings_s[sIdx] =  sum(thisTrialData$trialEarnings)
+MFAnalysis = function(isTrct){
+  # load libraries
+  source('subFxs/loadFxs.R') 
+  source('subFxs/analysisFxs.R') 
+  library('dplyr')
+  library("tidyr")
   
-  #  
-  plotTitle = sprintf('Subject %s, Cond %s',id, unique(thisTrialData$condition))
-  # in
-  thisTrialData = block2session(thisTrialData) 
-
-  # plot trial-wise data
-  if (plotTrialwiseData) {
-    trialPlots(thisTrialData,label)
-    readline(prompt = paste( plotTitle, '(hit ENTER to continue)'))
-    graphics.off()
-  }
+  # create the output directory
+  dir.create("genData")
+  dir.create("genData/MFAnalysis")
   
-  # survival analysis
-  kmscResults = kmsc(thisTrialData, min(tMaxs), label, plotKMSC, kmGrid)
-  muWTWs[sIdx] = kmscResults[['auc']]
-  survCurves_[[sIdx]] = kmscResults$kmOnGrid
-  if (plotKMSC) {
-    readline(prompt = paste( plotTitle, '(hit ENTER to continue)'))
-    graphics.off()
-  }
-  stdWTWs[[sIdx]] = kmscResults$stdWd
-
+  # load experiment parameters
+  load("expParas.RData")
   
-  # WTW timecourse
-  wtwtsResults = wtwTS(thisTrialData, tGrid, min(tMaxs), label, plotWTW)
-  timeWTW_[[sIdx]] = wtwtsResults$timeWTW
-  trialWTW_[[sIdx]] = wtwtsResults$trialWTW
-  if (plotWTW) {
-    readline(prompt = paste('subject',id, '(hit ENTER to continue)'))
-    graphics.off()
+  # load exp data
+  allData = loadAllData()
+  hdrData = allData$hdrData           
+  trialData = allData$trialData       
+  ids = hdrData$id[hdrData$stress == "no_stress"]  
+  nSub = length(ids)                    # n
+  cat('Analyzing data for',nSub,'subjects.\n')
+  
+  # initialize output variables 
+  nExcls = numeric(length = nSub)
+  muWTWs = numeric(length = nSub) 
+  stdWTWs = numeric(length = nSub) 
+  totalEarnings_s =  numeric(length = nSub) 
+  timeWTW_ = vector(mode = "list", length = nSub) 
+  trialWTW_ = vector(mode = "list", length = nSub) 
+  survCurve_ = vector(mode = "list", length = nSub) 
+  
+  # loop over inidviduals
+  for (sIdx in 1 : nSub) {
+    # load (and truncate) trialData for this individual
+    id = ids[sIdx]
+    thisTrialData = trialData[[id]]
+    if(isTrct){
+      trctLine = blockSec - max(tMaxs)
+      # truncate trials completed after tractline in each block
+      nExcls[sIdx] = sum(thisTrialData$sellTime > trctLine)
+      thisTrialData = thisTrialData %>% filter(sellTime <=  trctLine )
+    }else{
+      nExcls[sIdx] = 0
+    }
+    # calcualte totalEarnings
+    totalEarnings_s[sIdx] =  sum(thisTrialData$trialEarnings)
+    
+    # intergrate data of 3 blocks
+    thisTrialData = block2session(thisTrialData) 
+    
+    # survival analysis
+    kmscResults = kmsc(thisTrialData, min(tMaxs), F, kmGrid)
+
+    muWTWs[sIdx] = kmscResults[['auc']]
+    survCurve_[[sIdx]] = kmscResults$kmOnGrid
+    stdWTWs[[sIdx]] = kmscResults$stdWTW
+    
+    # WTW timecourse
+    wtwtsResults = wtwTS(thisTrialData, tGrid, min(tMaxs), F)
+    timeWTW_[[sIdx]] = wtwtsResults$timeWTW
+    trialWTW_[[sIdx]] = wtwtsResults$trialWTW
   }
+  # return outputs
+  sumStats = data.frame(
+    id = ids,
+    condition = factor(hdrData$condition[hdrData$stress == "no_stress"], levels = c("HP", "LP")),
+    totalEarnings = totalEarnings_s,
+    muWTW = muWTWs,
+    stdWTW = stdWTWs
+  )
+  outputs = list(
+    sumStats = sumStats,
+    survCurve_ = survCurve_,
+    trialWTW_ = trialWTW_,
+    timeWTW_ = timeWTW_ 
+  )
+  return(outputs)
 }

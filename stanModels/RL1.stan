@@ -1,19 +1,19 @@
 data {
   // depending on the task
-  real stepDuration;
+  real stepSec;
   real iti;
   
   // depending on the condition
   real wIni;
-  int nTimeSteps; // nTimeSteps = tMax / stepDuration
+  int nStepMax; // nTimeSteps = tMax / stepDuration
   
   // depending on each subject
   int N; // number of trials
   vector[N] trialEarnings;
-  int Ts[N]; // terminal time step index 
+  int nSteps[N]; // terminal time step index 
 }
 transformed data {
-  int totalSteps = sum(Ts) - N;
+  int totalSteps = sum(nSteps) - N;
 }
 parameters {
   real<lower = -0.5, upper = 0.5> raw_phi;

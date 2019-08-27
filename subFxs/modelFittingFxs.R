@@ -4,48 +4,54 @@
 # we use log_like to calculate WAIC and looStat
 # but we don't save log_like
 modelFitting = function(thisTrialData, fileName, paraNames, model, modelName){
-    load("wtwSettings.RData")
-    # simulation parameters
-    nChain = 4
-    nIter = 5000
+    # rstan parameters 
+    nChain = 4  
+    nIter = 100
+    controlList = list(adapt_delta = 0.99, max_treedepth = 11)
     
-    # determine wIni
-    # since the participants' initial strategies are unlikely optimal
-    # we multiple the optimal opportunity cost by subOptimalRatio
-    subOptimalRatio = 0.9 
-    if(any(paraNames  == "gamma") || modelName == "BL" ){
-      wIni = (5/6 + 0.93) / 2 * stepDuration / (1 - 0.9) * subOptimalRatio
+    # duration of one time step (namely one temporal state) 
+    stepSec = 1
+    
+    # prepare inputs for fitting the model
+    ## maximal number of steps in a trial
+    condition = unique(thisTrialData$condition)
+    nStepMax = ifelse(condition == "HP", tMaxs[1] / stepSec, tMaxs[2] / stepSec)
+    ## ensure timeWaited = scheduledWait on rewarded trials
+    thisTrialData = within(thisTrialData, {timeWaited[trialEarnings!= 0] = scheduledWait[trialEarnings!= 0]})
+    ## number of steps in each trial
+    nSteps = with(thisTrialData, {round(ceiling(timeWaited / stepSec) + 1)}) 
+    ## orgianze inputs into a list
+    inputs <- list(
+      stepSec = stepSec,
+      nStepMax = nStepMax,
+      N = length(thisTrialData$blockNum), # number of trials
+      trialEarnings = thisTrialData$trialEarnings,
+      nSteps = nSteps)
+    if(modelName %in% c("QL1", "QL2")){
+      ## in Q-learning, the initial value of the iti state is proportional to 
+      ## the discounted total rewards averaged across two conditions
+      ## discount factor for one step is 0.85
+      VitiIni = 0.9 * mean(unlist(optimRewardRates) * stepSec / (1 - 0.85))
+      inputs$VitiIni = VitiIni
     }else{
-      wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
+      ## in R-learning, the initial reward rate is proportional to
+      ## the optimal reward rates averaged across two conditions
+      reRateIni = 0.9 * mean(unlist(optimRewardRates)) * stepSec;
+      inputs$reRateIni = reRateIni     
     }
-    
-    # prepare input
-    timeWaited = thisTrialData$timeWaited
-    scheduledWait = thisTrialData$scheduledWait
-    trialEarnings = thisTrialData$trialEarnings
-    timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
-    cond = unique(thisTrialData$condition)
-    tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
-    nTimeSteps = tMax / stepDuration
-    Ts = round(ceiling(timeWaited / stepDuration) + 1)
-    data_list <- list(wIni = wIni,
-                      nTimeSteps = nTimeSteps,
-                      N = length(timeWaited),
-                      trialEarnings = trialEarnings,
-                      Ts = Ts,
-                      iti = iti,
-                      stepDuration = stepDuration)
-    # rm(last.warning)
+   
+   # extract subName from fileName
+    subName = str_extract(fileName, pattern = "s[0-9]*")
+   # fit the model
     withCallingHandlers({
-      fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
-                     iter = nIter,control = list(adapt_delta = 0.99, max_treedepth = 11)) 
+      fit = sampling(object = model, data = inputs, cores = 1, chains = nChain,
+                     iter = nIter, control = control_list) 
+      print(sprintf("Finish %s !", subName))
     }, warning = function(w){
-      fileNameShort = str_extract(fileName, pattern = "s[0-9]*")
-      warnText = paste(modelName, fileNameShort, w)
+      warnText = paste(modelName, subName, w)
       write(warnText, sprintf("%s_log.txt", modelName), append = T, sep = "n")
     })
             
-    
   # extract parameters
   extractedPara = fit %>%
     rstan::extract(permuted = F, pars = c(paraNames, "LL_all"))

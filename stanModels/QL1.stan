@@ -1,13 +1,10 @@
 data {
-  // depending on the task
-  real stepDuration;
-  real iti;
-  
-  // depending on the condition
+  // experiment parameters
   real wIni;
-  int nTimeSteps; // nTimeSteps = tMax / stepDuration
+  real stepSec;
+  int nStepMax; 
   
-  // depending on each subject
+  // experiment data
   int N; // number of trials
   vector[N] trialEarnings;
   int Ts[N]; // terminal time step index 
