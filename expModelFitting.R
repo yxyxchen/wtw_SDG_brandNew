@@ -8,56 +8,50 @@ expModelFitting = function(modelName){
   dir.create("genData/expModelFitting")
   dir.create(sprintf("genData/expModelFitting/%s", modelName))
   
+  # generate the output log file
+  dir.create("outputs")
+  writeLines("", sprintf("outputs/%s_log.txt", modelName))
+  
   #load libraries
-  library('plyr'); library(dplyr); library(ggplot2);library('tidyr');library('rstan')
-  library("loo")
-  library("coda") 
+  library('plyr'); library(dplyr); library(ggplot2);library('tidyr');
+  library('rstan');library("loo");library("coda") 
+  library("doMC");library("foreach")
   source('subFxs/modelFittingFxs.R') # for fitting each single participant
   source('subFxs/loadFxs.R') # for load data
   source("subFxs/helpFxs.R") # for getParas
   load("expParas.RData")
   source("subFxs/analysisFxs.R")
   
-  #  set the environment for Rstan
-  options(warn= 1, message =-1) # run without this for one participant to chec everything
-  Sys.setenv(USE_CXX14=1) # needed in local computeres
+  # compile the Rstan model 
+  options(warn= 0, message =-1) 
+  Sys.setenv(USE_CXX14=1)
   rstan_options(auto_write = TRUE) 
-  
-  # compile the stan model 
   model = stan_model(file = sprintf("stanModels/%s.stan", modelName))
+  
+  # determine parameters 
+  paraNames = getParaNames(modelName)
   
   # load expData
   allData = loadAllData()
   hdrData = allData$hdrData           
   trialData = allData$trialData       
-  idList = hdrData$id[hdrData$stress == "no_stress"]                 
-  n = length(idList)                    
+  ids = hdrData$id[hdrData$stress == "no_stress"]                 
+  nSub = length(ids)                    
   
-  # determine paras
-  paraNames = getParaNames(modelName)
-  if(paraNames == "wrong model name"){
-    print(paraNames)
-    break
-  }
+  # parallel compuation settings
+  nCore = as.numeric(Sys.getenv("NSLOTS")) # needed for cluster
+  if(is.na(nCore)) nCore = 1 # needed for cluster
+  # nCore = parallel::detectCores() -1 
+  # registerDoMC(nCore)
   
   # loop over participants 
-  library("doMC")
-  library("foreach")
-  # nCore = as.numeric(Sys.getenv("NSLOTS")) # needed for cluster
-  # if(is.na(nCore)) nCore = 1 # needed for cluster
-  nCore = parallel::detectCores() -1 # only for the local computer
-  registerDoMC(nCore)
-  
-  dir.create("outputs")
-  writeLines("", sprintf("outputs/%s_log.txt", modelName))
-  foreach(i = 1 : 2) %dopar% {
-      thisID = idList[[i]]
-      thisTrialData = trialData[[thisID]]
-      cond = unique(thisTrialData$condition)
-      cIdx = ifelse(cond == "HP", 1, 2)
-      excludedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+  foreach(i = 1 : nSub) %dopar% {
+      id = ids[[i]]
+      thisTrialData = trialData[[id]]
+      # truncate the last portion in each block 
+      excludedTrials = which(thisTrialData$trialStartTime > (blockSec - max(tMaxs)))
       thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
-      fileName = sprintf("genData/expModelFitting/%s/s%s", modelName, thisID)
+      fileName = sprintf("genData/expModelFitting/%s/s%s", modelName, id)
       modelFitting(thisTrialData, fileName, paraNames, model, modelName)
   }
 }
