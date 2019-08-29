@@ -16,8 +16,8 @@ modelFitting = function(thisTrialData, fileName, paraNames, model, modelName){
     stepSec = 1
     
     # prepare inputs for fitting the model
-    ## maximal number of steps in a trial
     condition = unique(thisTrialData$condition)
+    ## maximal number of steps in a trial
     nStepMax = ifelse(condition == "HP", tMaxs[1] / stepSec, tMaxs[2] / stepSec)
     ## ensure timeWaited = scheduledWait on rewarded trials
     thisTrialData = within(thisTrialData, {timeWaited[trialEarnings!= 0] = scheduledWait[trialEarnings!= 0]})
@@ -55,8 +55,6 @@ modelFitting = function(thisTrialData, fileName, paraNames, model, modelName){
       print(sprintf("Finish %s !", subName))
       write(sprintf("Finish %s !", subName), sprintf("outputs/%s_log.txt", modelName), append = T, sep = "n")
     }, warning = function(w){
-      print(sprintf("Finish %s !", subName))
-      write(sprintf("Finish %s !", subName), sprintf("outputs/%s_log.txt", modelName), append = T, sep = "n")
       warnText = paste(modelName, subName, w)
       write(warnText, sprintf("outputs/%s_log.txt", modelName), append = T, sep = "n")
     })

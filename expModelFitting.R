@@ -23,7 +23,7 @@ expModelFitting = function(modelName){
   source("subFxs/analysisFxs.R")
   
   # compile the Rstan model 
-  options(warn= 0, message =-1) 
+  options(warn= 1) 
   Sys.setenv(USE_CXX14=1)
   rstan_options(auto_write = TRUE) 
   model = stan_model(file = sprintf("stanModels/%s.stan", modelName))

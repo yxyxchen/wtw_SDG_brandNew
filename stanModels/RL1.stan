@@ -37,8 +37,8 @@ parameters {
 transformed parameters{
   // transfer paras
   real phi = (raw_phi + 0.5) * 0.3; // phi ~ unif(0, 0.3)
-  real beta_ratio = (raw_beta_ratio + 0.5) * 5; // beta_ratio ~ unif(0, 5)
-  real beta = min([phi * beta_ratio, 1]'); // convert beta_ratio to beta
+  real beta_ratio = (raw_beta_ratio + 0.5) * 1; // beta_ratio ~ unif(0, 1)
+  real beta = phi * beta_ratio; // convert beta_ratio to beta
   real tau = (raw_tau + 0.5) * 21.9 + 0.1; // tau ~ unif(0.1, 22)
   real prior = (raw_prior + 0.5) * 65; // prior ~ unif(0, 65)
   

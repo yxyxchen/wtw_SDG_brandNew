@@ -67,27 +67,86 @@ kmsc <- function(thisTrialData, tMax, plotKMSC=FALSE, grid) {
   stdWTW = sqrt(varWTW)
   # plot the k-m survival curve
   if (plotKMSC) {
-   p = data.frame(kmT = kmT, kmF = kmF) %>%
-     ggplot(aes(kmT, kmF)) + geom_line() + xlab('Delay (s)') +
-     ylab('Survival rate') + ylim(c(0,1)) + xlim(c(0,tMax)) +
-     ggtitle(sprintf('AUC = %1.1f',auc)) + 
-     myTheme
-   print(p)
+    p = data.frame(kmT = kmT, kmF = kmF) %>%
+      ggplot(aes(kmT, kmF)) + geom_line() + xlab('Delay (s)') +
+      ylab('Survival rate') + ylim(c(0,1)) + xlim(c(0,tMax)) +
+      ggtitle(sprintf('AUC = %1.1f',auc)) + 
+      myTheme
+    print(p)
   }
-  # resample the survival curve for averaging
-  # the original curve (kmT, kmF), rename variables for readability
-  xs = kmT; ys = kmF 
-  # initialize a new curve on the standard grid
-  Xs = grid; Ys = vector(length = length(Xs))
+  # resample the survival curve for averaging 
+  kmOnGrid = resample(kmF, kmT, kmGrid)
+  return(list(kmT=kmT, kmF=kmF, auc=auc, kmOnGrid = kmOnGrid, stdWTW = stdWTW))
+}
+
+# calculate willingness to wait (WTW) time-series
+wtwTS <- function(thisTrialData, tGrid, wtwCeiling, plotWTW = F) {
+  # ensure timeWaited = scheduledWait on rewarded trials
+  thisTrialData = within(thisTrialData, {timeWaited[trialEarnings!= 0] = scheduledWait[trialEarnings!= 0]})
+  
+  # initialize the per-trial estimate of WTW
+  nTrial = length(thisTrialData$trialEarnings)
+  trialWTW = numeric(length = nTrial) 
+  
+  ## find the longest time waited up through the first quit trial
+  ## (or, if there were no quit trials, the longest time waited at all)
+  ## that will be the WTW estimate for all trials up to the first quit
+  quitIdx = thisTrialData$trialEarnings == 0
+  firstQuitTrial = which(quitIdx)[1] 
+  if (is.na(firstQuitTrial)) {firstQuitTrial = nTrial} 
+  currentTrial = firstQuitTrial
+  currentWTW = max(thisTrialData$timeWaited[1 : currentTrial]) 
+  trialWTW[1:currentTrial] = currentWTW 
+  ## iterate through the remaining trials, updating currentWTW
+  ## which is the longest time waited since the recentest quit trial
+  if(currentTrial < nTrial){
+    for(tIdx in (currentTrial + 1) : nTrial){
+      if(quitIdx[tIdx]) {currentWTW = thisTrialData$timeWaited[tIdx]}
+      else {currentWTW = max(currentWTW, thisTrialData$timeWaited[tIdx])}
+      trialWTW[tIdx] = currentWTW 
+    }
+  }
+  
+  # impose a ceiling value, since WTW exceeding some value may be infrequent
+  trialWTW = pmin(trialWTW, wtwCeiling)
+  
+  # convert from per-trial to per-second 
+  timeWTW = resample(trialWTW, thisTrialData$sellTime, tGrid)
+  
+  # plot time WTW
+  if(plotWTW){
+    p = ggplot(data.frame(tGrid, timeWTW), aes(tGrid, timeWTW)) + geom_line() +
+      xlab("Time in block (s)") + ylab("WTW (s)")  + myTheme
+    print(p)
+  }
+  
+  # return outputs 
+  outputs = list(timeWTW = timeWTW,  trialWTW = trialWTW)
+  return(outputs)
+}
+
+# resample pair-wise sequences
+# inputs:
+# ys: y in the original sequence
+# xs: x in the original sequence
+# Xs: x in the new sequence
+# outputs: 
+# Ys : y in the new sequence 
+resample = function(ys, xs, Xs){
+  # initialize Ys
+  Ys = rep(NA, length = length(Xs))
   for(i in 1 : length(Xs)){
     # for each X in Xs
     X = Xs[i]
-    # find the index of cloest x value on the left
-    closest_left_x_idx = max(which(xs<= X))
-    # Y takes the corresonding y value
-    Ys[i] = ys[closest_left_x_idx]
+    # find the index of cloest x value on the right
+    # if closest_right_x_idx exists 
+    if(X <= tail(xs,1)) {
+      # Y takes the corresonding y value
+      closest_right_x_idx = min(which(xs >= X))
+      Ys[i] = ys[closest_right_x_idx]
+    }
   }
-  return(list(kmT=kmT, kmF=kmF, auc=auc, kmOnGrid = Ys, stdWTW = stdWTW))
+  return(Ys)
 }
 
 # this function can truncate trials in the simualtion object
@@ -111,62 +170,7 @@ truncateTrials = function(data, startTidx, endTidx){
   return(outputs)
 }
 
-# willingness to wait time-series
-wtwTS <- function(thisTrialData, tGrid, wtwCeiling, plotWTW = F) {
-  trialWTW = numeric(length = length(thisTrialData$trialEarnings)) # initialize the per-trial estimate of WTW
-  quitIdx = thisTrialData$trialEarnings == 0
-  # use either the rewardTime (for reward trials) or time waited (for quit trials)
-  #   (not using time waited for reward trials because this includes the post-reward RT)
-  timeWaited = thisTrialData$scheduledWait # use rewardtime make more sense but sometime nan
-  timeWaited[quitIdx] = thisTrialData$timeWaited[quitIdx]
-  ### find the longest time waited up through the first quit trial
-  #   (or, if there were no quit trials, the longest time waited at all)
-  #   that will be the WTW estimate for all trials prior to the first quit
-  firstQuit = which(quitIdx)[1]
-  if (is.na(firstQuit)) {firstQuit = length(thisTrialData$trialEarnings)} # if no quit, set to the last trial
-  currentWTW = max(timeWaited[1:firstQuit])
-  # start from the trial before the current quit
-  thisTrialIdx = firstQuit - 1
-  trialWTW[1:thisTrialIdx] = currentWTW
-  ### iterate through the remaining trials, updating currentWTW
-  while (thisTrialIdx < length(thisTrialData$trialEarnings)) {
-    thisTrialIdx = thisTrialIdx + 1
-    if (quitIdx[thisTrialIdx]) {currentWTW = timeWaited[thisTrialIdx]}
-    else {currentWTW = max(currentWTW, timeWaited[thisTrialIdx])}
-    trialWTW[thisTrialIdx] = currentWTW
-  }
-  ### impose a ceiling value, since trial durations exceeding some value may be infrequent
-  trialWTW = pmin(trialWTW, wtwCeiling)
-  ### convert from per-trial to per-second over the course of the block
-  endTimeTrial = thisTrialData$sellTime
-  timeWTW = trial2sec(trialWTW, endTimeTrial, tGrid)
-  ### for testing
-  # for testing: plot trialWTW on top of an individual's trialwise plot
-  if(plotWTW){
-    # for testing: plot timeWTW
-    p = ggplot(data.frame(tGrid, timeWTW), aes(tGrid, timeWTW)) + geom_line() +
-      xlab("Time in block (s)") + ylab("WTW (s)")  +
-      displayTheme
-    print(p)
-  }
-  outputs = list(timeWTW = timeWTW,  trialWTW = trialWTW)
-  return(outputs)
-}
-# this function maps trial-wise data to a continous time scale
-trial2sec = function(dataTrial, endTimeTrial, tGrid){
-  dataTime = numeric(length = length(tGrid))
-  nTrial = length(dataTrial)
-  binStartIdx = 1
-  for(tIdx in 1 : nTrial){
-    binEndTime = endTimeTrial[tIdx] 
-    binEndIdx = max(which(tGrid < binEndTime)) # last grid point that falls within this trial
-    dataTime[binStartIdx:binEndIdx] = dataTrial[tIdx]
-    binStartIdx = binEndIdx + 1
-  }
-  # extend the final value to the end of the vector
-  dataTime[binStartIdx:length(dataTime)] = dataTrial[nTrial]  
-  return(dataTime)
-}
+
 # correlation plot
 # the first col of plotData is x, the second col is y, the third col is the group
 plotCorrelation = function(data, dotColor = "black",isRank){
@@ -197,22 +201,22 @@ plotCorrelation = function(data, dotColor = "black",isRank){
     p0 = ggplot(plotData, aes(x, y)) + geom_point(size = 3, color = dotColor, fill = dotColor)
   }
   p = p0  + geom_text(data = textData,aes(x = -Inf,y = -Inf, label = label),
-              hjust   = -0.2,vjust = -1,color = textColors, size = 5, fontface = 2, color = "#252525") +
+                      hjust   = -0.2,vjust = -1,color = textColors, size = 5, fontface = 2, color = "#252525") +
     facet_grid(~cond)
- return(p)
+  return(p)
 } 
 
 
 getCorrelation = function(data){
   conditions = c("HP", "LP")
   colnames(data) = c("x", "y", "cond")
-
+  
   # calculate correlations
   # since we can't get rho from the later
   corTests = lapply(1:2, function(i) cor.test(data[data$cond == conditions[i], "x"],
                                               data[data$cond == conditions[i], "y"],
                                               method = "kendall") 
-                    )
+  )
   # supposedly, kendall can deal with data with a lot of ties
   # corTestsPerm = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~
   #                                                    data[data$cond == conditions[i], "y"]))
@@ -224,16 +228,16 @@ getCorrelation = function(data){
 
 getPartCorrelation = function(data){
   library("ppcor")
-
+  
   conditions = c("HP", "LP")
   colnames(data) = c("x", "y", "z", "cond")
   
   # calculate correlations
   # since we can't get rho from the later
   corTests = lapply(1:2, function(i) pcor.test(data[data$cond == conditions[i], "x"],
-                                              data[data$cond == conditions[i], "y"],
-                                              data[data$cond == conditions[i], "z"],
-                                              method = "kendall") 
+                                               data[data$cond == conditions[i], "y"],
+                                               data[data$cond == conditions[i], "z"],
+                                               method = "kendall") 
   )
   # supposedly, kendall can deal with data with a lot of ties
   # corTestsPerm = lapply(1:2, function(i) spearman_test(data[data$cond == conditions[i], "x"] ~

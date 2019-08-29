@@ -1,5 +1,5 @@
 library('ggplot2')
-themeColor = '#c53932'
+themeColor = '#529D3E'
 # annotations for p values 
 symnum.args <- list(cutpoints = c(0,0.001, 0.01, 0.05, 1),
                     symbols = c("***", "**", "*", "ns"))

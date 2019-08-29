@@ -19,7 +19,7 @@ data.frame(wtw = unlist(timeWTW_),
            time = rep(tGrid, nSub),
            condition = rep(sumStats$condition, each = length(tGrid))) %>%
   group_by(condition, time) %>%
-  dplyr::summarise(mu = mean(wtw), se = sd(wtw) / sqrt(length(wtw)),
+  dplyr::summarise(mu = mean(wtw, na.rm = T), se = sd(wtw, na.rm = T) / sqrt(sum(!is.na(wtw))),
                    min = mu- se, max = mu + se) %>%
   ggplot(aes(time, mu, linetype = condition)) +
   geom_ribbon(aes(ymin=min, ymax=max), fill = 'pink') +

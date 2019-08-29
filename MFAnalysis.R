@@ -4,10 +4,14 @@
 # isTrct : logical variable determining whether the last portion in each block is truncated 
 
 # outputs:
-# nExcludes : [nSubx1 int] # total number of excluded trials 
-# muWTWs : [nSubx1 num] # average willingness to wait (WTW), measured by area under the Kaplan-Meier survival curve
-# stdWTWs : [nSubx1 num] # standard deviation of WTW, measured in Kaplan-Meier survival analysis
-# totalEarnings_s :  [nSubx1 num] 
+# sumStats = {
+  # id : [nSubx1 id]
+  # condition : [nSubx1 fac]
+  # nExcl : [nSubx1 int] # total number of excluded trials 
+  # muWTWs : [nSubx1 num] # average willingness to wait (WTW), measured by area under the Kaplan-Meier survival curve
+  # stdWTWs : [nSubx1 num] # standard deviation of WTW, measured in Kaplan-Meier survival analysis
+  # totalEarnings_s :  [nSubx1 num] 
+# }
 # timeWTW_ : list(nSubx1) # wtw timecourse, each element is a vector
 # trialWTW_ : list(nSubx1) # trial-wise WTW, each element is a vector
 # survCurve_ : list(nSubx1) # Kaplan-Meier survival curve, each element is a vector
@@ -51,8 +55,8 @@ MFAnalysis = function(isTrct){
     if(isTrct){
       trctLine = blockSec - max(tMaxs)
       # truncate trials completed after tractline in each block
-      nExcls[sIdx] = sum(thisTrialData$sellTime > trctLine)
-      thisTrialData = thisTrialData %>% filter(sellTime <=  trctLine )
+      nExcls[sIdx] = sum(thisTrialData$trialStartTime > trctLine)
+      thisTrialData = thisTrialData %>% filter(trialStartTime <=  trctLine )
     }else{
       nExcls[sIdx] = 0
     }
@@ -78,6 +82,7 @@ MFAnalysis = function(isTrct){
   sumStats = data.frame(
     id = ids,
     condition = factor(hdrData$condition[hdrData$stress == "no_stress"], levels = c("HP", "LP")),
+    nExcl = nExcls,
     totalEarnings = totalEarnings_s,
     muWTW = muWTWs,
     stdWTW = stdWTWs
