@@ -1,14 +1,23 @@
-load("wtwSettings.RData")
-getRepFun = function(modelName){
-  if(modelName == "QL1") repFun = QL1
-  else if(modelName == "QL2") repFun = QL2
-  else if(modelName == "RL1") repFun = RL1
-  else if(modelName == "RL2") repFun = RL2
-  else if(modelName == "BL") repFun = BL
+# simulate behavioral data for a single participant 
+# using the given parameters and the empirical reward delay sequence
+
+# inputs:
+# paras: parameter values 
+# condition: HP or LP
+# scheduledWait : empirical trial-wise reward delay sequences 
+
+# outputs
+
+modelSimSingle = function(modelName, paras, scheduledWait){
+  if(modelName == "QL1") genModel  = QL1
+  else if(modelName == "QL2") genModel = QL2
+  else if(modelName == "RL1") genModel  = RL1
+  else if(modelName == "RL2") genModel  = RL2
+  else if(modelName == "BL") genModel  = BL
   else{
     return("wrong model name!")
   }
-  return(repFun)
+  return(genModel)
 }
 
 # this function replicates the behavioral data using inividual fitted parameters
@@ -54,6 +63,7 @@ modelRepitation = function(modelName, summaryData, trialData,  nComb){
   return(outputs)
 }
 
+# the generative model for QL1
 QL1 = function(paras, cond, scheduledWait){
   # parse paras
   phi = paras[1]; tau = paras[2]; gamma = paras[3]; prior = paras[4]
@@ -140,58 +150,73 @@ QL1 = function(paras, cond, scheduledWait){
   return(outputs)
 }
 
-QL2 = function(paras, cond, scheduledWait){
-  # parse paras
-  phi = paras[1]; nega = paras[2]; tau = paras[3]; gamma = paras[4]; prior = paras[5]
+
+
+ 
+QL2 = function(paras, condition, scheduledWait){
+  # extract parameter values
+  phi_pos = paras[1]; phi_neg = paras[2]; tau = paras[3]; gamma = paras[4]; prior = paras[5]
   
-  # prepare inputs
+  # num of trials 
   nTrial = length(scheduledWait)
-  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
-  nTimeStep = tMax / stepDuration
   
-  # initialize action values
-  subOptimalRatio = 0.9
-  wIni = (5 / 6 + 0.93) / 2 * stepDuration / (1 - 0.9) * subOptimalRatio
-  Viti = wIni 
-  Qwait = prior*0.1 - 0.1*(0 : (nTimeStep - 1)) + Viti
+  # maximal number of steps in a trial
+  stepSec = 1
+  nStepMax = ifelse(condition == "HP", tMaxs[1] / stepSec, tMaxs[2] / stepSec)
+  
+  # initialize action values 
+  ## in Q-learning, the initial value of the iti state is proportional to 
+  ## the discounted total rewards averaged across two conditions
+  ## discount factor for one step is 0.85
+  Viti = 0.9 * mean(unlist(optimRewardRates) * stepSec / (1 - 0.85))
+  ## the initial waiting value delines with elapsed time 
+  ## and the prior parameter determines at which step it falls below Viti
+  Qwaits = (prior - 1 : nStepMax) * 0.1 + Viti
   
   # initialize varibles for recording action values
-  Qwaits = matrix(NA, nTimeStep, nTrial); Qwaits[,1] = Qwait
-  Vitis = vector(length = nTrial); Vitis[1] = Viti
+  Qwaits_ = matrix(NA, nTimeStep, nTrial); Qwaits_[,1] = Qwaits
+  Viti_ = vector(length = nTrial); Viti_[1] = Viti
   
-  # initialize variables for recording targets and deltas in updating Qwait
-  deltas = matrix(NA, nTimeStep, nTrial)
-  targets = matrix(NA, nTimeStep, nTrial)
+  # initialize output variables
+  trialEarnings_s = rep(0, nTrial)
+  timeWaited = rep(0, nTrial)
+  sellTime = rep(0, nTrial)
   
-  # initialize outputs 
-  trialEarnings = rep(0, nTrial); timeWaited = rep(0, nTrial); sellTime = rep(0, nTrial); elapsedTime = 0
-  
+  # track elpased time from the beginning of the task 
+  elapsedTime = 0 
   # loop over trials
   for(tIdx in 1 : nTrial) {
-    # select actions
+    # loop over steps 
     t = 1
-    thisScheduledWait = scheduledWait[tIdx]
-    while(t <= nTimeStep){
-      # determine At
-      pWait =  1 / sum(1  + exp((Viti - Qwait[t])* tau))
+    while(t <= nStepMax){
+      # determine the current action At
+      pWait =  1 / sum(1  + exp((Viti - Qwaits[t])* tau))
       action = ifelse(runif(1) < pWait, 'wait', 'quit')
-      # observe St+1 and Rt+1
-      rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
-      getReward = (action == 'wait' && rewardOccur);
+      # if a reward occurs at t and the agent is still waiting, Rt+1 = 10.
+      # otherwise Rt+1 = 0
+      rewardOccur = scheduledWait[tIdx] <= (t * stepSec) && scheduledWait[tIdx] > ((t-1) * sepSec)
+      getReward = (action == 'wait' && rewardOccur)
       nextReward = ifelse(getReward, tokenValue, 0) 
-      # dertime whether St+1 is the terminal state
-      nextStateTerminal = (getReward || action == "quit")
-      if(nextStateTerminal){
-        T = t+1
-        trialEarnings[tIdx] = ifelse(nextReward == tokenValue, tokenValue, 0);
-        timeWaited[tIdx] = ifelse(getReward, thisScheduledWait, t * stepDuration)
+      
+      # a trial ends if the agent gets a reward or quits
+      isTerminal = (getReward || action == "quit")
+      
+      # if the trial ends, record relavant variables
+      # otherwise, move to the next step 
+      if(isTerminal){
+        # record the terminal state T 
+        T = t + 1 
+        # record output variables 
+        trialEarnings[tIdx] = nextReward
+        timeWaited[tIdx] = ifelse(getReward, scheduledWait[tIdx], t * stepSec)
         sellTime[tIdx] = elapsedTime + timeWaited[tIdx] 
+        # update the elapsed time
         elapsedTime = elapsedTime + timeWaited[tIdx] + iti
         break
       }else{
         t = t + 1
       }
-    }# end of the action selection section
+    }
     
     # update action values 
     if(tIdx < nTrial){

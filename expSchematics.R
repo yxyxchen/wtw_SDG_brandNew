@@ -3,7 +3,8 @@
 # load experiment parameters 
 load("expParas.RData")
 
-# for display purposes, all variables on continous time are discretized into 0.1 secondition time bins
+# for display purposes, all variables on the continous time scale
+# are discretized into 0.1 second time bins
 bin = 0.1 # width of a time bin
 time = list(
   HP = seq(bin, tMaxs[1], by = bin),

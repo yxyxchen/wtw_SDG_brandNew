@@ -5,25 +5,11 @@ getParaNames = function(modelName){
   else if(modelName == "RL1") paraNames = c("phi", "tau", "prior", "beta")
   else if(modelName =="RL2") paraNames = c("phi_pos", "phi_neg", "tau", "prior", "beta")
   else if(modelName == "BL") paraNames = c("pwait")
-  else return("wrong model name")
   return(paraNames)
 }
 
-getUseID = function(expPara, paraNames){
-  paraNames = c(paraNames, "LL_all")
-  idList = expPara$id
-  RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(paraNames)]
-  EffeCols = which(str_detect(colnames(expPara), "Effe"))[1 : length(paraNames)]
-  if(length(RhatCols) == 1){
-    useID = idList[expPara[,RhatCols] < 1.1 & 
-                     expPara[,EffeCols] >100]
-  }else{
-    useID = idList[apply(expPara[,RhatCols] < 1.1, MARGIN = 1, sum) == length(paraNames) & 
-                     apply(expPara[,EffeCols] >100, MARGIN = 1, sum) == length(paraNames)]
-  }
-  return(useID)
-}
-  
+# check R-hat and ESS of parameter estimations
+## 
 getParaComb = function(paraTable){
   paraNames = names(paraTable)
   nPara = length(paraTable)

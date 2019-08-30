@@ -1,16 +1,17 @@
-# be careful to always to use id in code, instead of expTrialData
-# determine if truncated
+# replicate behavioral data by sumulating with individual fitted parameters
 expModelRepitation = function(modelName){
+  # load experiment parameters
+  load('expParas.RData')
+  
+  # load packages and sub functions 
   library("ggplot2") 
   library("dplyr")
   library("tidyr")
   source("subFxs/plotThemes.R")
-  load("wtwSettings.RData") 
-  source("subFxs/helpFxs.R") # getPars
-  source("subFxs/loadFxs.R") # load  expPara
-  source("subFxs/taskFxs.R") # drawSamples
-  source("subFxs/repetitionFxs.R") # getRepFunction
-  source("subFxs/analysisFxs.R") # kmsc, trialPlot
+  source("subFxs/helpFxs.R") 
+  source("subFxs/loadFxs.R") # 
+  source("subFxs/repetitionFxs.R") 
+  source("subFxs/analysisFxs.R") 
   
   # load summaryData
   nBlock = 3

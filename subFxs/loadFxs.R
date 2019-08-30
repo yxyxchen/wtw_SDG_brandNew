@@ -16,7 +16,10 @@ loadAllData = function() {
   # timeWaited : [130x1 num] # persistence durations, namely sellTime - trialStartTime
   # trialEarnings : [130x1 int] trial-wise payments, either 10 or 0
   # totalEarnings : [130x1 int] cumulative payments
- 
+  
+  # load experiment paras
+  load('expParas.RData')
+  
   # load hdrData
   hdrData = read.csv(file.path('data', 'hdrData.csv'), comment = "#")
   hdrData$stress = ifelse( hdrData$stress == 'stress', 'stress', 'no_stress')

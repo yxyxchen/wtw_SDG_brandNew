@@ -1,30 +1,27 @@
-library("ggplot2")
-library("dplyr")
-library("tidyr")
-library("Hmisc")
-library("coin")
+load("expParas.RData")
+library("ggplot2"); library("Hmisc"); library("coin")
+library("dplyr"); library("tidyr")
 source("subFxs/plotThemes.R")
 source("subFxs/loadFxs.R") # load blockData and expPara
 source("subFxs/helpFxs.R") # getparaNames
 source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
-load("wtwSettings.RData")
+source('MFAnalysis.R')
+
+# model Name
 modelName = "QL2"
-# create output directories
+
+# output directories
 dir.create("figures/expParaAnalysis")
 saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
 dir.create(saveDir)
 
-
-# load blockdata data
-load("genData/expDataAnalysis/sessionData.RData")
-load("genData/expDataAnalysis/kmOnGridSess.RData")
-summaryData = sessionData
+# 
 
 # load expPara
 paraNames = getParaNames(modelName)
 nPara = length(paraNames)
 parentDir = "genData/expModelFitting"
-dirName = sprintf("%s/%sdb",parentDir, modelName)
+dirName = sprintf("%s/%s",parentDir, modelName)
 tempt = loadExpPara(paraNames, dirName)
 useID = getUseID(tempt, paraNames)
 expPara = merge(x=tempt[,c(paraNames, "id")],y=summaryData, by="id",all.x=TRUE)

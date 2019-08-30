@@ -1,16 +1,22 @@
-# we don't need lp__ which is a sum loglikelyhood scaled by a constant, something like a dispersion 
-# we don't need lp__ for model comparison 
-# we save LL_all in both the summary and the all samples data since some times out of memory will change it a lot
-# we use log_like to calculate WAIC and looStat
-# but we don't save log_like
-modelFitting = function(thisTrialData, fileName, paraNames, model, modelName){
+# fit a reinforcement learning model for a single participant in Rstan 
+
+# inputs:
+# thisTrialData: behavioral data for this participant
+# fileName: the name of the output file
+# modelName: the name of   the model 
+# paraNames: parameters for the model
+# model: the Bayesian model 
+# config: a list containing the Rstab configuration 
+modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config, outputFile){
     # load experiment paras
     load('expParas.RData')
   
-    # rstan parameters 
-    nChain = 4  
-    nIter = 100
-    controlList = list(adapt_delta = 0.99, max_treedepth = 11)
+    # parse the stan configuration
+    nChain = config[['nChain']] # number of MCMC chains
+    nIter = config[['nIter']] # number of iterations on each chain
+    controlList = list(adapt_delta = config[['adapt_delta']],
+                       max_treedepth = config[['max_treedepth']] )
+    warningFile = config[['warningFile']] # output file for stan warnings and errors
     
     # duration of one time step (namely one temporal state) 
     stepSec = 1
@@ -46,17 +52,15 @@ modelFitting = function(thisTrialData, fileName, paraNames, model, modelName){
       inputs$reRateIni = reRateIni     
     }
    
-   # extract subName from fileName
-    subName = str_extract(fileName, pattern = "s[0-9]*")
    # fit the model
     withCallingHandlers({
       fit = sampling(object = model, data = inputs, cores = 1, chains = nChain,
                      iter = nIter, control = controlList) 
-      print(sprintf("Finish %s !", subName))
-      write(sprintf("Finish %s !", subName), sprintf("outputs/%s_log.txt", modelName), append = T, sep = "n")
+      print(sprintf("Finish %s !",id))
+      write(sprintf("Finish %s !", id), warningFile, append = T, sep = "\n")
     }, warning = function(w){
-      warnText = paste(modelName, subName, w)
-      write(warnText, sprintf("outputs/%s_log.txt", modelName), append = T, sep = "n")
+      warnText = paste(modelName, id, w)
+      write(warnText, warningFile, append = T, sep = "\n")
     })
             
   # extract posterior samples
@@ -64,17 +68,19 @@ modelFitting = function(thisTrialData, fileName, paraNames, model, modelName){
     rstan::extract(permuted = F, pars = c(paraNames, "LL_all"))
   # save posterior samples
   samples = samples %>% adply(2, function(x) x) %>% dplyr::select(-chains) 
-  write.table(matrix(unlist(samples), ncol = length(paraNames) + 1), file = sprintf("%s.txt", fileName), sep = ",",
+  write.table(matrix(unlist(samples), ncol = length(paraNames) + 1), file = sprintf("%s.txt", outputFile), sep = ",",
               col.names = F, row.names=FALSE) 
+  
   # calculate WAIC and Efficient approximate leave-one-out cross-validation (LOO)
   log_lik = extract_log_lik(fit) 
   WAIC = waic(log_lik)
   LOO = loo(log_lik)
-  save("WAIC", "LOO", file = sprintf("%s_waic.RData", fileName))
+  save("WAIC", "LOO", file = sprintf("%s_waic.RData", outputFile))
+  
   # summarise posterior parameters and LL_all
   fitSummary <- summary(fit, pars = c(paraNames, "LL_all"), use_cache = F)$summary
-  write.table(matrix(fitSummary, nrow = length(paraNames) + 1), file = sprintf("%s_summary.txt", fileName),  sep = ",",
-            col.names = F, row.names=FALSE)
+  write.table(matrix(fitSummary, nrow = length(paraNames) + 1), file = sprintf("%s_summary.txt", outputFile), 
+              sep = ",", col.names = F, row.names=FALSE)
 }
 
 modelFittingCV = function(thisTrialData, fileName, paraNames, model, modelName){
