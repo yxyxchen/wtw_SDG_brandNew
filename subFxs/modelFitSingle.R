@@ -62,7 +62,7 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
       warnText = paste(modelName, id, w)
       write(warnText, warningFile, append = T, sep = "\n")
     })
-            
+  
   # extract posterior samples
   samples = fit %>%
     rstan::extract(permuted = F, pars = c(paraNames, "LL_all"))
@@ -81,6 +81,19 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
   fitSummary <- summary(fit, pars = c(paraNames, "LL_all"), use_cache = F)$summary
   write.table(matrix(fitSummary, nrow = length(paraNames) + 1), file = sprintf("%s_summary.txt", outputFile), 
               sep = ",", col.names = F, row.names=FALSE)
+  
+  # check ESS and Rhat
+  # detect participants with low ESSs and high Rhats 
+  ESSCols = which(str_detect(colnames(fitSummary), "Effe")) # columns recording ESSs
+  if(any(fitSummary[,ESSCols] < nChain * 100)){
+    warnText = paste(modelName, id, "Low ESS")
+    write(warnText, warningFile, append = T, sep = "\n")
+  }
+  RhatCols = which(str_detect(colnames(fitSummary), "Rhat")) # columns recording ESSs
+  if(any(fitSummary[,RhatCols] > 1.01)){
+    warnText = paste(modelName, id, "High Rhat")
+    write(warnText, warningFile, append = T, sep = "\n")
+  }  
 }
 
 modelFittingCV = function(thisTrialData, fileName, paraNames, model, modelName){

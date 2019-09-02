@@ -24,7 +24,7 @@ expModelRepitation = function(modelName){
   allData = loadAllData()
   hdrData = allData$hdrData 
   trialData = allData$trialData       
-  ids = hdrData$ID[hdrData$stress == "no stress"]
+  ids = hdrData$id[hdrData$stress == "no_stress"]
   
   # re-simulate data
   dir.create("figures/expModelRepitation/")

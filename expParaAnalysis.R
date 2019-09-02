@@ -20,7 +20,7 @@ dir.create(saveDir)
 # load expPara
 paraNames = getParaNames(modelName)
 nPara = length(paraNames)
-parentDir = "genData/expModelFitting"
+parentDir = "genData/expModelFit"
 dirName = sprintf("%s/%s",parentDir, modelName)
 tempt = loadExpPara(paraNames, dirName)
 useID = getUseID(tempt, paraNames)

@@ -14,8 +14,20 @@ data {
 }
 transformed data {
   // total number of steps in all trials
-  // remmember terminal state - 1 gives the number of steps in a trial
-  int nStepTotal = sum(Ts) - N; 
+  // Notiably, T - 1 gives the number of steps in a trial
+  int nStepTotal = sum(Ts) - N;
+  
+  // the number of waiting steps in each trial
+  int nWait_s[N];
+  for(i in 1 : N){
+    // if R > 0, the agent always chooses to wait.
+    // while if R = 0, the agent quits in the last step
+    if(Rs[i] != 0){
+      nWait_s[i] = Ts[i] - 1;
+    }else{
+      nWait_s[i] = Ts[i] - 2;
+    }
+  }
 }
 parameters {
   // parameters:
@@ -52,7 +64,10 @@ transformed parameters{
   vector[N] Viti_ = rep_vector(0, N); // recording Viti
   vector[N] reRate_ = rep_vector(0, N);// recording reRate
   matrix[nStepMax, N] Qwaits_ = rep_matrix(0, nStepMax, N); // recording Qwaits
-  real delta; // prediction error to update Viti and reRate
+  real rwdSignal;  // // the reward signal for updating action values at the end of each trial 
+  real itiDelta; // prediction error for the iti state
+  real currentPhi; // the learning rate for this trial 
+  
   // initialize variables
   Viti = 0;
   reRate = reRateIni;
@@ -72,32 +87,25 @@ transformed parameters{
     int T = Ts[tIdx]; // current terminal state
     int R = Rs[tIdx]; // current reward
     
-    // update action values for rewarded trials
-    if(R > 0){
-      for(t in 1 : (T - 1)){
-        // calculate the expected return G 
-        real G = R - reRate * (T - t) + Viti;
-        Qwaits[t] = Qwaits[t] + phi_pos * (G - Qwaits[t]);
-      }
-    }else{
-      // if R <=0, Qwait in the last step will not be updated
-      // since the agent proceed to the next ITI on that step
-      if(T > 2){
-        for(t in 1 : (T-2)){
-          real G =  R  - reRate * (T - t) + Viti;
-          Qwaits[t] = Qwaits[t] + phi_neg * (G - Qwaits[t]);    
-        }
-      }
-    }
+    //calculate the reward signal for updating action value 
+    // which equals Rt+1 + V(St+1). Noticably, St+1 is the iti state
+    rwdSignal = R + Viti;
 
-    // update Viti and reRate
-    delta =  (R - reRate * (T - 1 + iti / stepSec) + Viti - Viti);
+    // determine the current learning rate given the outcome valence 
     if(R > 0){
-      Viti = Viti + phi_pos * delta;
+      currentPhi = phi_pos;
     }else{
-      Viti = Viti + phi_neg * delta;
+      currentPhi = phi_neg;
     }
-    reRate = reRate + beta * delta;
+    
+    // update Qwaits, Viti and reRate towards the net reward signals,
+    for(t in 1 : nWait_s[tIdx]) {
+      real netRwdsignal = rwdSignal - reRate * (T - t);
+      Qwaits[t] = Qwaits[t] + currentPhi * (netRwdsignal - Qwaits[t]);
+    }
+    itiDelta = rwdSignal - (T - 1 + iti / stepSec) * reRate - Viti;
+    Viti = Viti + currentPhi * itiDelta;
+    reRate = reRate + beta * itiDelta;
 
     
     // save action values

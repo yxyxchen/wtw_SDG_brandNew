@@ -1,7 +1,7 @@
 expModelFit = function(modelName, isFirstFit){
   # generate output directories
   dir.create("genData")
-  dir.create("genData/expModelFitting")
+  dir.create("genData/expModelFit")
   dir.create("stanWarnings")
   
   # load experiment parameters
@@ -10,6 +10,7 @@ expModelFit = function(modelName, isFirstFit){
   # load sub-functions and packages
   library("dplyr"); library("tidyr")
   source("subFxs/loadFxs.R")
+  source("subFxs/helpFxs.R")
   source('subFxs/modelFitGroup.R')
   
   # prepare inputs
@@ -19,7 +20,7 @@ expModelFit = function(modelName, isFirstFit){
   outputDir = sprintf("genData/expModelFit/%s", modelName)
   config = list(
     nChain = 4,
-    nIter = 8000,
+    nIter = 100,
     adapt_delta = 0.99,
     max_treedepth = 11,
     warningFile = sprintf("stanWarnings/exp_%s.txt", modelName)
@@ -31,7 +32,6 @@ expModelFit = function(modelName, isFirstFit){
   ## Rhat < 1.01 
   ## Effective Sample Size (ESS) > nChain * 100
   if(!isFirstFit){
-    source("subFxs/helpFxs.R")
     ids = names(trialData)
     paraNames = getParaNames(modelName)
     expPara = loadExpPara(paraNames, outputDir)
@@ -58,19 +58,15 @@ expModelFit = function(modelName, isFirstFit){
     trialData = trialData[ids %in% fail_check_ids]
     
     # increase the num of Iterations 
-    
+    config = list(
+      nChain = 4,
+      nIter = 12000,
+      adapt_delta = 0.99,
+      max_treedepth = 11,
+      warningFile = sprintf("stanWarnings/exp_refit_%s.txt", modelName)
+    )
   }
-
   
-  
-  config = list(
-    nChain = 4,
-    nIter = 12000,
-    adapt_delta = 0.99,
-    max_treedepth = 11,
-    warningFile = sprintf("stanWarnings/exp_refit_%s.txt", modelName)
-  )
-    
   # fit the model 
   modelFitGroup(modelName, trialData, config, outputDir)
 }
