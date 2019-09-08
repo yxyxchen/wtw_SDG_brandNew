@@ -43,7 +43,12 @@ expModelFit = function(modelName, isFirstFit){
     dt_warns = warns[sapply(1 : nrow(warns), function(i) grepl('*divergent*',
                                                       warns[i,1])),1]
     ## extract ids associated with divergent transitions
-    dt_ids = sub("s", "", str_extract(dt_warns, "s[0-9]*"))
+    if(modelName %in% c("RL2", "RL1")){
+      dt_ids = sub(sprintf("%s s", modelName), "", str_extract(dt_warns, sprintf("%s s[0-9]*", modelName)))      
+    }else{
+      dt_ids = sub(sprintf("%s ", modelName), "", str_extract(dt_warns, sprintf("%s [0-9]*", modelName)))        
+    }
+
     
     # detect participants with high Rhats 
     RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(paraNames)] # columns recording Rhats

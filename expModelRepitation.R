@@ -1,5 +1,9 @@
 # replicate behavioral data by sumulating with individual fitted parameters
 expModelRepitation = function(modelName){
+  # create output directories
+  dir.create("figures/expModelRep/")
+  dir.create(sprintf("figures/expModelRep/%s",modelName))
+  
   # load experiment parameters
   load('expParas.RData')
   
@@ -10,62 +14,73 @@ expModelRepitation = function(modelName){
   source("subFxs/plotThemes.R")
   source("subFxs/helpFxs.R") 
   source("subFxs/loadFxs.R") # 
-  source("subFxs/repetitionFxs.R") 
   source("subFxs/analysisFxs.R") 
   
-  # load summaryData
-  nBlock = 3
-  nComb = 10
-  load("genData/expDataAnalysis/sessionData.RData")
-  load("genData/expDataAnalysis/kmOnGridSess.RData")
-  summaryData = sessionData
+  # get the generative model 
+  source(sprintf("subFxs/%s.R", modelName))
+  gnrModel = get(modelName)
+  paraNames = getParaNames(modelName)
+  nPara = length(paraNames)
   
-  # load trialData since we need scheduledWait 
+  # num of repetitions 
+  nRep = 10
+  
+  # load empirical data 
   allData = loadAllData()
   hdrData = allData$hdrData 
   trialData = allData$trialData       
   ids = hdrData$id[hdrData$stress == "no_stress"]
+  nSub = length(ids)
   
-  # re-simulate data
-  dir.create("figures/expModelRepitation/")
-  dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-  thisRep = modelRepitation(modelName, summaryData, trialData, nComb) # set seeds indise
-  expPara = thisRep$expPara
-  repTrialData = thisRep$repTrialData
-  paraNames = getParaNames(modelName)
-  useID = getUseID(expPara, paraNames)
-  repNo = thisRep$repNo
-  nSub =(length(useID))
+  # initialize outputs
+  repTrialData = vector(length = nSub * nRep, mode ='list')
+  repNo = matrix(1 : (nSub * nRep), nrow = nRep, ncol = nSub)
   
-  # survival analysis for all valid participants
-  AUCRep_ = matrix(NA, nrow = nComb , ncol = nSub)
-  stdWdRep_ = matrix(NA, nrow = nComb, ncol = nSub)
-  kmOnGridRep_ = vector(mode = "list", length = nSub)
-  plotKMSC = F
+  # loop over participants
   for(sIdx in 1 : nSub){
-    # prepare inputs
-    id = useID[[sIdx]]
-    cond = unique(summaryData$condition[summaryData$id == id])
-    nTrial = summaryData$nTrial[summaryData$id == id]
-    label = sprintf("sub%s", id)
-    kmOnGridMatrix = matrix(NA, nrow = length(kmGrid), ncol = nComb)
-    for(cIdx in 1 : nComb){
-      thisRepTrialData = repTrialData[[repNo[cIdx, which(ids == id)]]]
-      kmscResults = kmsc(thisRepTrialData, min(tMaxs), label ,plotKMSC, kmGrid)
-      AUCRep_[cIdx,sIdx] = kmscResults[['auc']]
-      stdWdRep_[cIdx, sIdx] = kmscResults$stdWd
-      kmOnGridMatrix[,cIdx] = kmscResults$kmOnGrid
+    # prepare empirical data 
+    id = ids[[sIdx]]
+    thisTrialData = trialData[[id]] 
+    # excluded trials at the end of blocks 
+    excluedTrials = which(thisTrialData$trialStartTime > (blockSec - max(tMaxs)))
+    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
+    # load individually fitted paramters 
+    fitSummary = read.table(sprintf("genData/expModelFit/%s/s%s_summary.txt",  modelName, id),sep = ",", row.names = NULL)
+    paras =  fitSummary[1 : nPara,1]
+    # simulate nRep times
+    for(rIdx in 1 : nRep){
+      tempt = gnrModel(paras, thisTrialData$condition, thisTrialData$scheduledWait)
+      repTrialData[[repNo[rIdx, sIdx]]] = tempt
     }
-    kmOnGridRep_[[sIdx]] = kmOnGridMatrix
   }
   
-  # compare emipirical and reproduced AUC
-  muAUCRep = apply(AUCRep_, MARGIN = 2, mean);stdAUCRep = apply(AUCRep_, MARGIN = 2, sd)
-  minAUCRep = muAUCRep - stdAUCRep;maxAUCRep = muAUCRep + stdAUCRep
-  muStdWdRep = apply(stdWdRep_, MARGIN = 2, mean);stdStdWdRep = apply(stdWdRep_, MARGIN = 2, sd)
-  minStdWdRep = muStdWdRep - stdStdWdRep;maxStdWdRep = muStdWdRep + stdStdWdRep
-  
-  data.frame(muAUCRep, minAUCRep, maxAUCRep,muStdWdRep, minStdWdRep, maxStdWdRep,
+  # compare willingness to wait (WTW) from empirical and replicated data
+  ## WTW from empirical data 
+  source("MFAnalysis.R")
+  MFResults = MFAnalysis(isTrct = T)
+  sumStats = MFResults[['sumStats']]
+  muWTWEmp = sumStats$muWTW
+  stdWTWEmp = sumStats$stdWTW
+  ## WTW from empirical data 
+  muWTWRep_ = matrix(NA, nrow = nRep , ncol = nSub)
+  stdWTWRep_ = matrix(NA, nrow = nRep, ncol = nSub)
+  for(sIdx in 1 : nSub){
+    id = ids[[sIdx]]
+    for(rIdx in 1 : nRep){
+      thisRepTrialData = repTrialData[[repNo[rIdx, sIdx]]]
+      kmscResults = kmsc(thisRepTrialData, min(tMaxs), F, kmGrid)
+      muWTWRep_[rIdx,sIdx] = kmscResults$auc
+      stdWTWRep_[rIdx, sIdx] = kmscResults$stdWTW
+    }
+  }
+  ## summarise WTW across simulations for replicated data 
+  muWTWRep_mu = apply(muWTWRep_, MARGIN = 2, mean) # mean of average willingness to wait
+  muWTWRep_std = apply(muWTWRep_, MARGIN = 2, sd) # std of average willingess to wait
+  stdWTWRep_mu = apply(stdWTWRep_, MARGIN = 2, mean) # mean of std willingness to wait
+  stdWTWRep_std = apply(stdWTWRep_, MARGIN = 2, sd) # std of std willingess to wait
+
+  # plot to compare average willingess to wait
+  data.frame(muWTWRep_mu, muWTWRep_std, maxAUCRep,muStdWdRep, minStdWdRep, maxStdWdRep,
              AUC = summaryData$AUC[summaryData$id %in% useID], stdWD = summaryData$stdWd[summaryData$id %in% useID],
              condition = summaryData$condition[summaryData$id %in% useID]) %>%
     ggplot(aes(AUC, muAUCRep)) +  geom_errorbar(aes(ymin = minAUCRep, ymax = maxAUCRep), color = "grey") +

@@ -86,7 +86,8 @@ transformed parameters{
     int R = Rs[tIdx]; // current reward
     
     //calculate the reward signal for updating action value 
-    // which equals Rt+1 + V(St+1). Noticably, St+1 is the iti state
+    // which equals R plus the discounted value of the successor state. Noticably, 
+    // the successor state at the end of trial is always the iti state before the next trial
     rwdSignal = R + Viti;
     
     // update Qwaits, Viti and reRate towards the net reward signals,
