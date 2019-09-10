@@ -79,8 +79,6 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
   
   # summarise posterior parameters and LL_all
   fitSummary <- summary(fit, pars = c(paraNames, "LL_all"), use_cache = F)$summary
-  write.table(matrix(fitSummary, nrow = length(paraNames) + 1), file = sprintf("%s_summary.txt", outputFile), 
-              sep = ",", col.names = F, row.names=FALSE)
   
   # check ESS and Rhat
   # detect participants with low ESSs and high Rhats 
@@ -93,7 +91,19 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
   if(any(fitSummary[,RhatCols] > 1.01)){
     warnText = paste(modelName, id, "High Rhat")
     write(warnText, warningFile, append = T, sep = "\n")
-  }  
+  } 
+  
+  # check divergent transitions
+  sampler_params <- get_sampler_params(fit, inc_warmup=FALSE)
+  divergent <- do.call(rbind, sampler_params)[,'divergent__']
+  nDt = sum(divergent)
+  fitSummary$nDt = rep(nDt, nrow(fitSummary))
+  
+  # write outputs  
+  write.table(matrix(fitSummary, nrow = length(paraNames) + 1), file = sprintf("%s_summary.txt", outputFile), 
+              sep = ",", col.names = F, row.names=FALSE)
+  
+ 
 }
 
 modelFittingCV = function(thisTrialData, fileName, paraNames, model, modelName){

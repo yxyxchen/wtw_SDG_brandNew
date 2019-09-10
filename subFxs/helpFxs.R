@@ -8,6 +8,27 @@ getParaNames = function(modelName){
   return(paraNames)
 }
 
+expPara = loadExpPara(paraNames, "genData/expModelFit/QL1")
+
+checkFit = function(paraNames, expPara){
+  # detect participants with high Rhats 
+  RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(paraNames)] # columns recording Rhats
+  high_Rhat_ids = ids[apply(expPara[,RhatCols] >= 1.01, MARGIN = 1, sum) > 0]
+  
+  # detect participants with low ESSs
+  ESSCols = which(str_detect(colnames(expPara), "Effe"))[1 : length(paraNames)]# columns recording ESSs
+  low_ESS_ids = ids[apply(expPara[,ESSCols] < (4 * 100), MARGIN = 1, sum) > 0]
+  
+  # detect divergent transitions
+  dt_ids = ids[expPara$nDt > 0]
+  
+  # identify participants satisifying all three criteria:
+  passCheck = !ids %in% unique(c(dt_ids, high_Rhat_ids, low_ESS_ids))
+  
+  return(passCheck)
+}
+
+
 # check R-hat and ESS of parameter estimations
 ## 
 getParaComb = function(paraTable){

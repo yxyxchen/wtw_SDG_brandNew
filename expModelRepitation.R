@@ -16,6 +16,7 @@ expModelRepitation = function(modelName){
   source("subFxs/loadFxs.R") # 
   source("subFxs/analysisFxs.R") 
   
+  
   # get the generative model 
   source(sprintf("subFxs/%s.R", modelName))
   gnrModel = get(modelName)
@@ -31,7 +32,7 @@ expModelRepitation = function(modelName){
   trialData = allData$trialData       
   ids = hdrData$id[hdrData$stress == "no_stress"]
   nSub = length(ids)
-  
+
   # initialize outputs
   repTrialData = vector(length = nSub * nRep, mode ='list')
   repNo = matrix(1 : (nSub * nRep), nrow = nRep, ncol = nSub)
@@ -78,83 +79,24 @@ expModelRepitation = function(modelName){
   muWTWRep_std = apply(muWTWRep_, MARGIN = 2, sd) # std of average willingess to wait
   stdWTWRep_mu = apply(stdWTWRep_, MARGIN = 2, mean) # mean of std willingness to wait
   stdWTWRep_std = apply(stdWTWRep_, MARGIN = 2, sd) # std of std willingess to wait
-
-  # plot to compare average willingess to wait
-  data.frame(muWTWRep_mu, muWTWRep_std, maxAUCRep,muStdWdRep, minStdWdRep, maxStdWdRep,
-             AUC = summaryData$AUC[summaryData$id %in% useID], stdWD = summaryData$stdWd[summaryData$id %in% useID],
-             condition = summaryData$condition[summaryData$id %in% useID]) %>%
-    ggplot(aes(AUC, muAUCRep)) +  geom_errorbar(aes(ymin = minAUCRep, ymax = maxAUCRep), color = "grey") +
+  ## check fit
+  expPara = loadExpPara(paraNames, sprintf("genData/expModelFit/%s", modelName))
+  passCheck = checkFit(paraNames, expPara)
+  
+  ## plot to compare average willingess to wait
+  data.frame(mu =  muWTWRep_mu, std = muWTWRep_std,
+             empMu = muWTWEmp, passCheck,
+             condition = sumStats$condition) %>%
+    mutate(min = mu - std, max = mu + std) %>%
+    filter(passCheck == T) %>%
+    ggplot(aes(empMu, mu)) +  geom_errorbar(aes(ymin = min, ymax = max), color = "grey") +
     geom_point(size = 2) + facet_grid(~condition) + 
-    geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(-2, 22)) + ylim(c(-2, 22)) +
-    ylab("Model-generated (s)") + xlab("Observed (s)") + ggtitle(sprintf("Average WTW, n = %d", length(useID))) +
-    myThemeBig + theme(plot.title = element_text(face = "bold", hjust = 0.5))
-  fileName = sprintf("figures/expModelRepitation/%s/AUC_AUCRep.png", modelName)
+    geom_abline(slope = 1, intercept = 0) + xlim(c(-2, 22)) + ylim(c(-2, 22)) +
+    ylab("Model-generated (s)") + xlab("Observed (s)") + ggtitle(sprintf("Average WTW, n = %d", sum(passCheck))) +
+    myTheme + theme(plot.title = element_text(face = "bold", hjust = 0.5))
+  fileName = sprintf("figures/expModelRep/%s/AUC_AUCRep.png", modelName)
   ggsave(filename = fileName,  width = 6, height = 4)
 
-  
-  # I don't know
-  data.frame(muAUCRep, minAUCRep, maxAUCRep,muStdWdRep, minStdWdRep, maxStdWdRep,
-             AUC = summaryData$AUC[summaryData$id %in% useID], stdWd = summaryData$stdWd[summaryData$id %in% useID],
-             condition = summaryData$condition[summaryData$id %in% useID]) %>%
-    ggplot(aes(stdWd, muStdWdRep)) + geom_point() + geom_errorbar(aes(ymin = minStdWdRep, ymax = maxStdWdRep), color = "grey") +
-    geom_point(size = 2) + facet_grid(~condition) + 
-    geom_abline(slope = 1, intercept = 0) + saveTheme  +
-    ylab(expression(bold(paste("Model-generated (s"^2,")")))) +
-    xlab(expression(bold(paste("Observed (s"^2,")")))) +ggtitle(sprintf("Std WTW, n = %d", length(useID)))+
-    myThemeBig + theme(plot.title = element_text(face = "bold", hjust = 0.5))
-  fileName = sprintf("figures/expModelRepitation/%s/std_stdRep.png", modelName)
-  ggsave(filename = fileName,  width = 6, height = 4)
-  
- 
-  # compare emipircal and reproduced trialPlot, for one participant 
-  # id = 9
-  # sIdx = which(useID  == id)
-  # cond = unique(summaryData$condition[summaryData$id == id])
-  # label = sprintf("Sub %d, %s", id, cond)
-  # if(isTrun){
-  #   junk = lastTrunc(expTrialData[[id]])
-  # }
-  # junk = block2session(junk)
-  # trialPlots(junk, "Observed Data") 
-  # ggsave(sprintf("figures/expModelRepitation/%s/actual_data_%d.png", modelName, id),
-  #        width = 5, height = 4)
-  # 
-  # with(thisRep,{
-  # id = 1
-  # sIdx = which(useID  == id)
-  # tempt = repTrialData[[repNo[1,sIdx]]]
-  # tempt$timeWaited =  matrix(unlist(lapply(1:nComb, function(i) repTrialData[[repNo[i,sIdx]]]$timeWaited)), ncol = nComb) %>%
-  #   apply(MARGIN  = 1, FUN = mean) 
-  # tempt = within(tempt, sapply(1 : length(timeWaited), function(i) ifelse(timeWaited[i] >= scheduledWait[i], tokenValue, 0)))
-  # tempt$blockNum = junk$blockNum
-  # trialPlots(tempt,"Model-generated Data")
-  # ggsave(sprintf("figures/expModelRepitation/%s/sim_data__%d.png", modelName, id),
-  #        width = 5, height = 4)
-  # })
-  # 
-  # 
-  # # survival curve prediction
-  # idList = hdrData$ID[hdrData$stress == "no stress"]
-  # for(sIdx in 1 : nSub){
-  #   thisID = idList[sIdx]
-  #   if(thisID %in% useID){
-  #     para = as.double(expPara[sIdx, 1 : length(paras)])
-  #     label = sprintf('Subject %s, %s, %s, LL = %.1f',thisID, hdrData$condition[sIdx], hdrData$stress[sIdx], expPara$LL_all[sIdx])
-  #     label = paste(label, paste(round(para, 3), collapse = "", seq = " "))
-  #     # prepara data 
-  #     cond = hdrData$condition[hdrData$ID == thisID]
-  #     kmOnGrid = kmOnGrid_[[which(hdrData$ID == thisID)]]
-  #     tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
-  #     kmOnGridRep = apply(kmOnGridRep_[[which(useID== thisID)]], MARGIN = 1, mean)
-  #     junk = data.frame(time = kmGrid, exp = kmOnGrid, rep= kmOnGridRep)
-  #     plotData = gather(junk, source, survival_rate, -time)
-  #     p = ggplot(plotData, aes(time, survival_rate, color = source)) + geom_line(size = 2) + ggtitle(label) + displayTheme
-  #     p = p + ylim(c(-0.1,1.1))
-  #     print(p)
-  #     readline("continue")
-  #     fileName = sprintf("%s_s%d.png", modelName, thisID)
-  #     #ggsave(fileName, width = 4, height =4)
-  #   }
-  # }
+
   
 }
