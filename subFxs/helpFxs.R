@@ -8,8 +8,6 @@ getParaNames = function(modelName){
   return(paraNames)
 }
 
-expPara = loadExpPara(paraNames, "genData/expModelFit/QL1")
-
 checkFit = function(paraNames, expPara){
   # detect participants with high Rhats 
   RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(paraNames)] # columns recording Rhats
