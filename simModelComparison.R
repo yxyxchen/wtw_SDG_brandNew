@@ -1,20 +1,19 @@
 # libraries and scripts
-library("stringr")
 library("ggplot2")
 library("dplyr")
 library("tidyr")
 source("subFxs/helpFxs.R")
 source("subFxs/loadFxs.R")
-source("subFxs/modelComparisonFxs.R")
 source("subFxs/plotThemes.R")
-load("wtwSettings.RData")
+load("expParas.RData")
+
 # load model names
 allData = loadAllData()
 hdrData = allData$hdrData           
 trialData = allData$trialData       
-allIDs = hdrData$ID[hdrData$stress == "no stress"]                   # column of subject IDs
-n = length(allIDs) 
-load("genData/expDataAnalysis/blockData.RData")
+ids = hdrData$id[hdrData$stress == "no_stress"]                   # column of subject IDs
+nSub = length(ids) 
+
 # select common useID
 encode = "QL2"
 idList = hdrData$ID
