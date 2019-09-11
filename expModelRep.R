@@ -1,5 +1,5 @@
 # replicate behavioral data by sumulating with individual fitted parameters
-expModelRepitation = function(modelName){
+expModelRep = function(modelName){
   # create output directories
   dir.create("figures/expModelRep/")
   dir.create(sprintf("figures/expModelRep/%s",modelName))

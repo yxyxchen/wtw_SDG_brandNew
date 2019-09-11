@@ -13,7 +13,8 @@
 # max_treedepth: maximal depth of the trees that stan evaluates during each iteration
 # warningFile : file for saving warnings generated Rstan
 
-modelFitGroup = function(modelName, trialData, config, outputDir){
+
+modelFitGroupCV = function(modelName, trialData, config, outputDir){
   # create the output directory 
   dir.create(outputDir)
  
@@ -45,14 +46,22 @@ modelFitGroup = function(modelName, trialData, config, outputDir){
   if(is.na(nCore)) nCore = 1 # needed for cluster
   # nCore = parallel::detectCores() -1 
   # registerDoMC(nCore)
-  
-  foreach(i = 1 : nSub) %dopar% {
-      id = ids[[i]]
-      thisTrialData = trialData[[id]]
-      # truncate the last portion in each block 
-      excludedTrials = which(thisTrialData$trialStartTime > (blockSec - max(tMaxs)))
-      thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
-      outputFile = sprintf("%s/s%s", outputDir, id)
-      modelFitSingle(id, thisTrialData, modelName, paraNames, model, config, outputFile)
-  }
+  foreach(i = 1 : nSub) %:% 
+    foreach(j = 1 : 10) %dopar% {
+        id = ids[[i]]
+        thisTrialData = trialData[[id]]
+        # truncate the last portion in each block 
+        excludedTrials = which(thisTrialData$trialStartTime > (blockSec - max(tMaxs)))
+        thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excludedTrials,]
+        # Use 9 folds out of 10 as the training set. Noticeably, 
+        # we always include the first 5 trials in the training set since 
+        # they include essential info about prior beliefs. 
+        load(sprintf("genData/expModelFitCV/kFold/s%s.RData", id))
+        select = c(1:5, as.vector(trialAllocation[-j,]))
+        thisTrialData = thisTrialData[(1 : nrow(thisTrialData)) %in% select,]
+        # determine the output file
+        outputFile = sprintf("%s/s%s_f%d", outputDir, id, j)
+        # fit the model
+        modelFitSingle(id, thisTrialData, modelName, paraNames, model, config, outputFile)
+    }
 }

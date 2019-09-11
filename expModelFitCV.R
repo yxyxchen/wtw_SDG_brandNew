@@ -1,7 +1,7 @@
-expModelFit = function(modelName, isFirstFit){
+expModelFitCV = function(modelName, isFirstFit){
   # generate output directories
   dir.create("genData")
-  dir.create("genData/expModelFit")
+  dir.create("genData/expModelFitCV")
   dir.create("stanWarnings")
   
   # load experiment parameters
@@ -11,19 +11,19 @@ expModelFit = function(modelName, isFirstFit){
   library("dplyr"); library("tidyr")
   source("subFxs/loadFxs.R")
   source("subFxs/helpFxs.R")
-  source('subFxs/modelFitGroup.R')
+  source('subFxs/modelFitGroupCV.R')
   
   # prepare inputs
   allData = loadAllData()
   hdrData = allData$hdrData
   trialData = allData$trialData[hdrData$stress == "no_stress"]
-  outputDir = sprintf("genData/expModelFit/%s", modelName)
+  outputDir = sprintf("genData/expModelFitCV/%s", modelName)
   config = list(
     nChain = 4,
     nIter = 100,
     adapt_delta = 0.99,
     max_treedepth = 11,
-    warningFile = sprintf("stanWarnings/exp_%s.txt", modelName)
+    warningFile = sprintf("stanWarnings/expCV_%s.txt", modelName)
   )
   
   # if it is the first time to fit the model, fit all participants
@@ -44,11 +44,11 @@ expModelFit = function(modelName, isFirstFit){
       nIter = 12000,
       adapt_delta = 0.99,
       max_treedepth = 11,
-      warningFile = sprintf("stanWarnings/exp_refit_%s.txt", modelName)
+      warningFile = sprintf("stanWarnings/expCV_refit_%s.txt", modelName)
     )
   }
   
   # fit the model for all participants
-  modelFitGroup(modelName, trialData, config, outputDir)
+  modelFitGroupCV(modelName, trialData, config, outputDir)
 }
 
