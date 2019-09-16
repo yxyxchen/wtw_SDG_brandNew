@@ -9,6 +9,7 @@ getParaNames = function(modelName){
 }
 
 checkFit = function(paraNames, expPara){
+  ids = expPara$id
   # detect participants with high Rhats 
   RhatCols = which(str_detect(colnames(expPara), "hat"))[1 : length(paraNames)] # columns recording Rhats
   high_Rhat_ids = ids[apply(expPara[,RhatCols] >= 1.01, MARGIN = 1, sum) > 0]

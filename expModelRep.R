@@ -18,7 +18,7 @@ expModelRep = function(modelName){
   
   
   # get the generative model 
-  source(sprintf("subFxs/%s.R", modelName))
+  source(sprintf("subFxs/gnrModels/%s.R", modelName))
   gnrModel = get(modelName)
   paraNames = getParaNames(modelName)
   nPara = length(paraNames)
