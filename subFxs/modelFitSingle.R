@@ -52,14 +52,18 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
       inputs$reRateIni = reRateIni     
     }
    
+   # strip the path in outputFile
+   outputFile_clean = sub(pattern = sprintf("genData/expModelFit[CV]*/%s/", modelName),
+                      replacement = "", outputFile)
+    
    # fit the model
     withCallingHandlers({
       fit = sampling(object = model, data = inputs, cores = 1, chains = nChain,
                      iter = nIter, control = controlList) 
-      print(sprintf("Finish %s !",id))
-      write(sprintf("Finish %s !", id), warningFile, append = T, sep = "\n")
+      print(sprintf("Finish %s !", outputFile_clean))
+      write(sprintf("Finish %s !", outputFile_clean), warningFile, append = T, sep = "\n")
     }, warning = function(w){
-      warnText = paste(modelName, id, w)
+      warnText = paste(modelName, outputFile_clean, w)
       write(warnText, warningFile, append = T, sep = "\n")
     })
   

@@ -56,8 +56,6 @@ loadAllData = function() {
 } 
 
 
-
-
 loadExpPara = function(paraNames, dirName){
   # number of paraNames 
   nE = length(paraNames) + 1
