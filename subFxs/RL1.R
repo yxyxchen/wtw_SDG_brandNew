@@ -91,7 +91,7 @@ RL1 = function(paras, condition_, scheduledWait_){
       # differential reward signals for step 1 - (T-1) 
       stepRwdSignals = sapply(1 : (T-1), function(t) rwdSignal - reRate * (T-t))
       # differential reward signals for the iti state 
-      itiRwdSignal = rwdSignal - reRate * (T-1 + iti / itiSec)
+      itiRwdSignal = rwdSignal - reRate * (T-1 + iti / iti)
       
       # update Qwaits 
       if(getReward){

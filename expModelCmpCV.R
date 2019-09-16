@@ -22,10 +22,11 @@ expModelCmpCV = function(){
   for(i in 1 : nModel){
     modelName = modelNames[i]
     paraNames = getParaNames(modelName)
-    expPara = loadExpPara(paraNames, sprintf("genData/expModelFit/%s", modelName))
-    passCheck_[,i] = checkFit(paraNames, expPara)
+    cvPara = loadExpPara(paraNames, sprintf("genData/expModelFitCV/%s", modelName))
+    passCheck_[,i] = checkFit(paraNames, cvPara)
   }
   
- # calclute 
+ # calculate 
+  
   
 }

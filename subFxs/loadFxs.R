@@ -95,49 +95,6 @@ loadExpPara = function(paraNames, dirName){
   return(expPara)
 }
 
-# I also need to load 2.5% and 97.5%
-loadCVPara = function(paraNames, dirName, pattern){
-  # number of paraNames 
-  nE = length(paraNames) + 1
-  # number of files
-  fileNames = list.files(path= dirName, pattern= pattern)
-  library("gtools")
-  fileNames = mixedsort(sort(fileNames))
-  n = length(fileNames) 
-  sprintf("load %d files", n)
-  
-  # initialize the outout variable 
-  expPara = matrix(NA, n, nE * 6)
-  idList = vector(length = n)
-  # loop over files
-  for(i in 1 : n){
-    fileName = fileNames[[i]]
-    address = sprintf("%s/%s", dirName, fileName)
-    junk = read.csv(address, header = F)
-    sIndexs = str_locate(fileName, "s[0-9]+")
-    s = substr(fileName, sIndexs[1]+1, sIndexs[2])
-    fIndexs = str_locate(fileName, "f[0-9]+")
-    f = substr(fileName, fIndexs[1]+1, fIndexs[2])
-    idList[i] = sprintf("s%s_f%s", s, f)
-    # delete the lp__ in the old version
-    if(nrow(junk) > nE){
-      junk = junk[1:nE,]
-    }
-    expPara[i, 1:nE] = junk[,1]
-    expPara[i, (nE + 1) : (2 * nE)] = junk[,3]
-    expPara[i, (2*nE + 1) : (3 * nE)] = junk[,9]
-    expPara[i, (3 * nE + 1) : (4 * nE)] = junk[,10]
-    expPara[i, (4*nE + 1) : (5 * nE)] = junk[,4]
-    expPara[i, (5 * nE + 1) : (6 * nE)] = junk[,8]
-  }
-  # transfer expPara to data.frame
-  expPara = data.frame(expPara)
-  junk = c(paraNames, "LL_all")
-  colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"),
-                        paste0(junk, "2.5"),paste0(junk, "97.5"))
-  expPara$id = idList
-  return(expPara)
-}
 
 loadSimPara = function(paraNames, dirName){
   # number of paraNames 
