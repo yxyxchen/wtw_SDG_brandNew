@@ -1,31 +1,34 @@
 # 
-library('ggplot2')
-library('plyr')
 library('dplyr')
 library('tidyr')
-load("wtwSettings.RData")
-source('subFxs/repetitionFxs.R') # called by simulate 
 source("subFxs/helpFxs.R") # getParas
-source("subFxs/plotThemes.R")
 source("subFxs/loadFxs.R") # load scheduledWait from empirical data
-source("subFxs/analysisFxs.R") 
+
+load("expParas.RData")
 
 # modelName 
 modelName = "RL2"
-repFun = getRepFun(modelName)
+source(sprintf("subFxs/gnrModels/%s.R", modelName))
+gnrModel = get(modelName)
 
-# load expData
+# load data
 allData = loadAllData()
 hdrData = allData$hdrData           
 trialData = allData$trialData       
-ids = hdrData$ID[hdrData$stress == "no stress"]  
-nSub = length(ids)      
+ids = hdrData$id[hdrData$stress == "no_stress"]                 
+nSub = length(ids)    
 
 # load expPara
 paraNames = getParaNames(modelName)
-parentDir ="genData/expModelFitting"; dirName = sprintf("%s/%sdb",parentDir, modelName)
+parentDir ="genData/expModelFitting"; dirName = sprintf("%s/%s",parentDir, modelName)
 expPara = loadExpPara(paraNames, dirName)
 
+
+# check fit
+
+
+
+# simulation
 set.seed(123)
 simTrialData = list()
 for(sIdx in 1 : nSub){

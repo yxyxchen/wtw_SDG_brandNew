@@ -1,5 +1,4 @@
-# our reinfocement learning generative models simulate persistence behavior as wait-or-quit choices 
-# on discrete time steps:
+# log likelyhood of paras given choice data 
 # QL1: Q-learning model with a single learning rate
 # QL2: Q-learning model with separate learning rates for rewards and punishments
 # RL1: R-learning model with a single learning rate 
@@ -8,17 +7,14 @@
 # inputs:
 # paras: parameter values 
 # condition_: [nTrialx1 factor] HP or LP
-# scheduledWait_ : [nTrialx1 num] trial-wise reward delays
+# trialEarnings_ : [nTrialx1 num] trial-wise rewards
+# timeWaited_ : [nTrialx1 real] trial-wise waiting durations 
 
 # outputs
-# trialNum : [nTrialx1 int] 1 : nTrial
-# condition : [nTrialx1 factor] from inputs
-# scheduledWait : [nTrialx1 num] from inputs 
-# trialEarnings : [nTrialx1 int] payment for each trial, either 10 or 0
-# timeWaited : [nTrialx1 num] waiting duration for each trial 
-# sellTime : [nTrialx1 num]  when the agent sells then token on each trial 
-# Qwaits_ : [nStepMax x nTrial num] action value of waiting for each time step at each trial
-# Viti_ : [nTrialx1 num] state value of the iti stage at each trial 
+# condition : [nTrialx1 factor] from inputs: 
+# LLTrial_ : [nTrialx1 real] log likelyhood of paras given choice data in each trial
+# pWaits : [nStepMax x nTrial, real] # the probability of waiting at each step  and each trial
+
 
 QL1 = function(paras, condition_, trialEarnings_, timeWaited_){
   # extract parameter values
@@ -42,7 +38,7 @@ QL1 = function(paras, condition_, trialEarnings_, timeWaited_){
   # loop over trials
   for(tIdx in 1 : nTrial) {
     # calculate the probability of waiting at each step 
-    pWaits =  sapply(1 : nStepMax, function(i) 1 / sum(1  + exp((Viti - Qwaits[i])* tau)))
+    pWaits =  sapply(1 : nStepMax, function(i) 1 / (1  + exp((Viti - Qwaits[i])* tau)))
     pWaits_[,tIdx] = pWaits
     
     # number of waiting steps
@@ -60,12 +56,18 @@ QL1 = function(paras, condition_, trialEarnings_, timeWaited_){
     
     # the loglikelyhood of the input parameters in this trial
     if(getReward){
-      LLTrial_[tIdx] = sum(log(pWaits[1 : nWait]))
+      junk = log(pWaits[1 : nWait])
+      junk[is.na(junk)] = -1000
+      LLTrial_[tIdx] = sum(junk)
     }else{
       if(nWait >= 1){
-        LLTrial_[tIdx] = sum(log(pWaits[1 : nWait]) + log(1 - pWaits[nWait + 1]))
+        junk = c(log(pWaits[1 : nWait]), log(1 - pWaits[nWait + 1]))
+        junk[is.na(junk)] = -1000
+        LLTrial_[tIdx] = sum(junk)
       }else{
-        LLTrial_[tIdx] =  log(1 - pWaits[nWait + 1])
+        junk = log(1 - pWaits[nWait + 1])
+        junk[is.na(junk)] = -1000       
+        LLTrial_[tIdx] =  sum(junk)
       }
       
     }

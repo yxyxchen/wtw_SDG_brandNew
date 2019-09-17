@@ -32,7 +32,9 @@ expModelCmpCV = function(){
   for(m in 1 : nModel){
     # name of the current model
     modelName = modelNames[m]
-    
+    paraNames = getParaNames(modelName)
+    nPara = length(paraNames)
+   
     # select the loss function based on the current model
     source(sprintf("subFxs/lossFuns/%s.R", modelName))
     lossFun = get(modelName)
@@ -46,18 +48,27 @@ expModelCmpCV = function(){
       # truncate trials at the end of the block
       excluedTrials = which(thisTrialData$trialStartTime > (blockSec - max(tMaxs)))
       thisTrialData = thisTrialData[! 1 : nrow(thisTrialData) %in%  excluedTrials,]
+      
+      # test whether the loss function is corret
+      expPara = read.csv(sprintf("genData/expModelFit/%s/s%s.txt", modelName, id, fIdx), header = F)
+      paras = as.double(expPara[1,1 : nPara])
+      lossResults = lossFun(paras, thisTrialData$condition,thisTrialData$trialEarnings, thisTrialData$timeWaited)
+      sum(lossResults$LLTrial_)
+      expPara[1,nPara + 1]
+      
       # initialize loglikelihood obtained from 10-fold cross validation
       LLCVs = vector(length = 10)
       # loop over k folds
       for(fIdx in 1 : 10){
         cvPara = read.csv(sprintf("genData/expModelFitCV/%s/s%s_f%d_summary.txt", modelName, id, fIdx), header = F)
-        paras = cvPara[1 : (nrow(cvPara) - 1), 1]
+        paras = cvPara[1 : nPara, 1]
         lossResults = lossFun(paras, thisTrialData$condition,
                               thisTrialData$trialEarnings, thisTrialData$timeWaited)
-        LLCVs[fIdx] = sum(lossResults$LLTrial_[1 : length(lossResults$LLTrial_) %in% trialAllocation[fIdx,]])
+        testSet = trialAllocation[fIdx,]
+        LLCVs[fIdx] = sum(lossResults$LLTrial_[1 : length(lossResults$LLTrial_) %in% testSet])
       }
       # save loglikelihood from cross validation 
-      LLCV_[sIdx, m] = LLCV
+      LLCV_[sIdx, m] = sum(LLCVs)
     }
   }
   
