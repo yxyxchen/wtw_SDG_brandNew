@@ -7,7 +7,7 @@ source("subFxs/loadFxs.R") # load scheduledWait from empirical data
 load("expParas.RData")
 
 # modelName 
-modelName = "RL2"
+modelName = "QL2"
 source(sprintf("subFxs/gnrModels/%s.R", modelName))
 gnrModel = get(modelName)
 
@@ -20,33 +20,27 @@ nSub = length(ids)
 
 # load expPara
 paraNames = getParaNames(modelName)
-parentDir ="genData/expModelFitting"; dirName = sprintf("%s/%s",parentDir, modelName)
+nPara = length(paraNames)
+dirName = sprintf("%s/%s","genData/expModelFit", modelName)
 expPara = loadExpPara(paraNames, dirName)
-
-
-# check fit
-
-
+passCheck = checkFit(paraNames, expPara)
 
 # simulation
 set.seed(123)
 simTrialData = list()
 for(sIdx in 1 : nSub){
-  id = ids[sIdx]
-  paras = as.double(expPara[expPara$id == id, 1 : length(paraNames)])
-  # prepare input
-  thisTrialData = trialData[[id]] # here we id instead of sIdx
-  # excluded some trials
-  excluedTrials1 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
-                           thisTrialData$condition == conditions[1])
-  excluedTrials2 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
-                           thisTrialData$condition == conditions[2])
-  excluedTrials = c(excluedTrials1, excluedTrials2)
-  thisTrialData = thisTrialData[!(1 : length(thisTrialData$trialEarnings)) %in% excluedTrials,]
-  cond = unique(thisTrialData$condition)
-  scheduledWait = thisTrialData$scheduledWait
-  id = ids[sIdx]
-  simTrialData[[id]] = repFun(paras, cond, scheduledWait)
+  if(passCheck[sIdx]){
+    id = ids[sIdx]
+    paras = as.double(expPara[sIdx, 1 : nPara])
+    # prepare input
+    thisTrialData = trialData[[id]] # here we id instead of sIdx
+    # excluded some trials
+    excluedTrials = which(thisTrialData$trialStartTime > (blockSec - max(tMaxs)) &
+                            thisTrialData$condition == conditions[2])
+    thisTrialData = thisTrialData[!(1 : length(thisTrialData$trialEarnings)) %in% excluedTrials,]
+    simTrialData[[id]] = gnrModel(paras, thisTrialData$condition, thisTrialData$scheduledWait)
+  }
 }
-save(simTrialData, hdrData, file = sprintf("genData/simulation/%s.RData", modelName))
+trialData = simTrialData
+save(trialData, file = sprintf("genData/simulation/%s.RData", modelName))
 

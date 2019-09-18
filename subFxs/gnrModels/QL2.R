@@ -90,7 +90,7 @@ QL2 = function(paras, condition_, scheduledWait_){
       # discounted reward signals for step 1 - (T-1)
       stepRwdSignals = sapply(1 : (T-1), function(t) gamma^(T-t-1) * rwdSignal)
       # discounted reward signals for the iti state
-      itiRwdSignal = rwdSignal * gamma^(T-2 + iti / iti)
+      itiRwdSignal = rwdSignal * gamma^(T-2 + iti / stepSec)
       
       # update Qwaits 
       if(getReward){

@@ -36,7 +36,7 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
       iti = iti,
       stepSec = stepSec,
       nStepMax = nStepMax,
-      N = length(thisTrialData$blockNum), # number of trials
+      N = length(thisTrialData$trialEarnings), # number of trials
       Rs = thisTrialData$trialEarnings, # rewards on each trial
       Ts = Ts)
     if(modelName %in% c("QL1", "QL2")){
@@ -53,9 +53,11 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
     }
    
    # strip the path in outputFile
-   outputFile_clean = sub(pattern = sprintf("genData/expModelFit[CV]*/%s/", modelName),
+   outputFile_clean = sub(pattern = sprintf("genData/(exp|sim)*ModelFit(CV)*/[A-Z0-9]*/*%s/", modelName),
                       replacement = "", outputFile)
     
+   grep(pattern = sprintf("genData/simModelFit/QL2/%s/", modelName),
+        outputFile)
    # fit the model
     withCallingHandlers({
       fit = sampling(object = model, data = inputs, cores = 1, chains = nChain,

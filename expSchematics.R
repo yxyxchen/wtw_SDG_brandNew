@@ -63,7 +63,7 @@ data.frame(CDF = c(0,rewardDelayCDFs$HP, 0, rewardDelayCDFs$LP),
   ggplot(aes(time, CDF)) + geom_line(size = 3) + facet_grid(~condition) +
   ylim(c(0,1)) + 
   myTheme + xlab('Delay duration (s)') + ylab('CDF')
-ggsave('figures/expSchematics/CDF.png', width =6, height = 3)
+ggsave('figures/expSchematics/CDF.eps', width =6, height = 3)
 
 # plot reward rates
 optimData = data.frame(condition = c("HP", "LP"), waitThreshold = as.double(optimWaitThresholds))
@@ -75,4 +75,4 @@ data.frame(rewardRate = c(0, rewardRates[[1]], 0, rewardRates[[2]]),
   ylab(expression(bold("Reward rate (cent s"^"-1"*")"))) + xlab("Waiting policy (s)")  +
   geom_vline(data = optimData, aes(xintercept = waitThreshold),
              linetype = "dashed", size = 1.5) + facet_grid(~condition)
-ggsave("figures/expSchematics/reward_rate.png", width = 6, height = 3)
+ggsave("figures/expSchematics/reward_rate.eps", width = 6, height = 3)

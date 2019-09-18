@@ -51,7 +51,7 @@ expModelCmp = function(){
     ggtitle(sprintf("Best described (n = %d)", sum(bestNums)))+ 
     myTheme
   dir.create("figures/expModelCmp")
-  ggsave("figures/expModelCmp/loo_QL1_QL2.png", width = 4, height = 3.5)
+  ggsave("figures/expModelCmp/loo_QL1_QL2.eps", width = 4, height = 3.5)
   
   bestNums = sapply(1 : 2, function(i) sum(apply(
     logEvidence_[passCheck_[,3] & passCheck_[,4],3:4],MARGIN = 1, FUN = function(x) which.max(x) == i)))
@@ -62,7 +62,19 @@ expModelCmp = function(){
     ggtitle(sprintf("Best described (n = %d)", sum(bestNums)))+ 
     myTheme
   dir.create("figures/expModelCmp")
-  ggsave("figures/expModelCmp/loo_RL1_RL2.png", width = 4, height = 3.5)
+  ggsave("figures/expModelCmp/loo_RL1_RL2.eps", width = 4, height = 3.5)
+  
+  # compare RL2 and QL2
+  bestNums = sapply(1 : 2, function(i) sum(apply(
+    logEvidence_[passCheck_[,2] & passCheck_[,4],c(2,4)],MARGIN = 1, FUN = function(x) which.max(x) == i)))
+  data.frame(model = modelNames[1:2], bestNums = bestNums) %>%
+    ggplot(aes(x="", y=bestNums, fill=model)) +
+    geom_bar(width = 1, stat = "identity") + 
+    coord_polar("y", start=0) + ylab("") + xlab("") +
+    ggtitle(sprintf("Best described (n = %d)", sum(bestNums)))+ 
+    myTheme
+  dir.create("figures/expModelCmp")
+  ggsave("figures/expModelCmp/loo_QL2_RL2.eps", width = 4, height = 3.5)
   
   # save outputs 
   outputs = data.frame(

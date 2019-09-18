@@ -89,12 +89,13 @@ expModelRep = function(modelName){
              condition = sumStats$condition) %>%
     mutate(min = mu - std, max = mu + std) %>%
     filter(passCheck == T) %>%
-    ggplot(aes(empMu, mu)) +  geom_errorbar(aes(ymin = min, ymax = max), color = "grey") +
-    geom_point(size = 2) + facet_grid(~condition) + 
+    ggplot(aes(empMu, mu)) +
+    geom_point(size = 2, color = themeColor, fill = "#fdd49e", shape= 21, stroke = 1) +
+    facet_grid(~condition) + 
     geom_abline(slope = 1, intercept = 0) + xlim(c(-2, 22)) + ylim(c(-2, 22)) +
     ylab("Model-generated (s)") + xlab("Observed (s)") + ggtitle(sprintf("Average WTW, n = %d", sum(passCheck))) +
     myTheme + theme(plot.title = element_text(face = "bold", hjust = 0.5))
-  fileName = sprintf("figures/expModelRep/%s/muWTW_muWTWRep.png", modelName)
+  fileName = sprintf("figures/expModelRep/%s/muWTW_muWTWRep.eps", modelName)
   ggsave(filename = fileName,  width = 6, height = 4)
 
   ## plot to compare std willingess to wait
@@ -103,11 +104,12 @@ expModelRep = function(modelName){
              condition = sumStats$condition) %>%
     mutate(min = mu - std, max = mu + std) %>%
     filter(passCheck == T) %>%
-    ggplot(aes(empStd, mu)) +  geom_errorbar(aes(ymin = min, ymax = max), color = "grey") +
-    geom_point(size = 2) + facet_grid(~condition) + 
+    ggplot(aes(empStd, mu)) + 
+    geom_point(size = 2, color = themeColor, fill = "#fdd49e", shape= 21, stroke = 1) +
+    facet_grid(~condition) + 
     geom_abline(slope = 1, intercept = 0) +
     ylab(expression(bold(paste("Model-generated (s"^2,")")))) + xlab(expression(bold(paste("Observed (s"^2,")")))) + ggtitle(sprintf("Std WTW, n = %d", sum(passCheck))) +
     myTheme + theme(plot.title = element_text(face = "bold", hjust = 0.5))
-  fileName = sprintf("figures/expModelRep/%s/stdWTW_stdWTWRep.png", modelName)
+  fileName = sprintf("figures/expModelRep/%s/stdWTW_stdWTWRep.eps", modelName)
   ggsave(filename = fileName,  width = 6, height = 4)
 }

@@ -20,7 +20,7 @@
 # Qwaits_ : [nStepMax x nTrial num] action value of waiting for each time step at each trial
 # Viti_ : [nTrialx1 num] state value of the iti stage at each trial 
 
-RL1 = function(paras, condition_, scheduledWait_){
+RL2 = function(paras, condition_, scheduledWait_){
   # extract parameter values
   phi_pos = paras[1]; phi_neg = paras[2]; tau = paras[3]; prior = paras[4]; beta = paras[5]
   
@@ -91,7 +91,7 @@ RL1 = function(paras, condition_, scheduledWait_){
       # differential reward signals for step 1 - (T-1) 
       stepRwdSignals = sapply(1 : (T-1), function(t) rwdSignal - reRate * (T-t))
       # differential reward signals for the iti state 
-      itiRwdSignal = rwdSignal - reRate * (T-1 + iti / iti)
+      itiRwdSignal = rwdSignal - reRate * (T-1 + iti / stepSec)
       
       # update Qwaits 
       if(getReward){
