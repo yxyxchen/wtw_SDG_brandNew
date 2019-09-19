@@ -16,7 +16,7 @@ expModelFit = function(modelName, isFirstFit){
   # prepare inputs
   allData = loadAllData()
   hdrData = allData$hdrData
-  trialData = allData$trialData[hdrData$stress == "no_stress"]
+  trialData = allData$trialData
   outputDir = sprintf("genData/expModelFit/%s", modelName)
   config = list(
     nChain = 4,
