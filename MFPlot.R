@@ -33,13 +33,13 @@ MFResults = MFAnalysis(isTrct = T)
 sumStats = MFResults[['sumStats']]
 sumStats %>% ggplot(aes(condition, muWTW)) + geom_boxplot() +
   geom_dotplot(binaxis='y', stackdir='center',
-               color = themeColor, fill = "pink",binwidth = 1.5) + 
+               color = themeColor, fill = "pink",
+               binwidth = 1.5, stroke = 6) + 
   stat_compare_means(comparisons = list(c("HP", "LP")),
                      aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
                      bracket.size = 1, size = 6, label.y = 22) +
   xlab("") + ylab("AUC (s)") + ylim(c(0, 25)) + 
   myTheme 
-dir.create("figures/MFPlots")
-ggsave("figures/MFPlot/muWTW_comparison.eps", width = 4, height = 3)
+ggsave("figures/MFPlot/muWTW_comparison.eps", width = 6, height = 6)
 
 
