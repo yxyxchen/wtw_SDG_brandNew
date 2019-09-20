@@ -8,32 +8,28 @@ expModelCmp = function(){
   source("subFxs/plotThemes.R")
   load("expParas.RData")
   
-  # load data
-  allData = loadAllData()
-  hdrData = allData$hdrData           
-  trialData = allData$trialData       
-  ids = hdrData$id[hdrData$stress == "no_stress"]                 
-  nSub = length(ids) 
+  junk = loadExpPara(paraNames, sprintf("genData/simModelFit/QL2/%s", modelName))
+  ids = junk$id
   
   # check fit
-  modelNames = c("QL1", "QL2", "RL1", "RL2", "BL")
+  modelNames = c("QL1", "QL2", "RL1", "RL2")
   nModel = length(modelNames)
-  passCheck_ = matrix(NA, nrow = nSub, ncol = nModel)
+  passCheck_ = matrix(NA, nrow = 59, ncol = nModel)
   for(i in 1 : nModel){
     modelName = modelNames[i]
     paraNames = getParaNames(modelName)
-    expPara = loadExpPara(paraNames, sprintf("genData/expModelFit/%s", modelName))
+    expPara = loadExpPara(paraNames, sprintf("genData/simModelFit/QL2/%s", modelName))
     passCheck_[,i] = checkFit(paraNames, expPara)
   }
   
   # extract leave-one-out results
   logEvidence_ = matrix(NA, nSub, nModel)
-  pWaic_ = matrix(NA, nSub, nModel)
+  pWaic_ = matrix(NA, 59, nModel)
   for(m in 1 : nModel){
     modelName = modelNames[m]
     for(sIdx in 1 : nSub ){
       id = ids[sIdx]
-      fileName = sprintf("genData/expModelFit/%s/s%s_waic.RData", modelName, id)
+      fileName = sprintf("genData/simModelFit/QL2/%s/s%s_waic.RData", modelName, id)
       load(fileName)
       logEvidence_[sIdx, m] = LOO$elpd_loo 
       pWaic_[sIdx, m] = LOO$p_loo

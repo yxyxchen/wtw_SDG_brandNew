@@ -16,21 +16,22 @@ saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
 dir.create(saveDir)
 
 # 
-
+MFResults = MFAnalysis(isTrct = T)
+sumStats = MFResults[['sumStats']]
 # load expPara
 paraNames = getParaNames(modelName)
 nPara = length(paraNames)
 parentDir = "genData/expModelFit"
 dirName = sprintf("%s/%s",parentDir, modelName)
 tempt = loadExpPara(paraNames, dirName)
-useID = getUseID(tempt, paraNames)
-expPara = merge(x=tempt[,c(paraNames, "id")],y=summaryData, by="id",all.x=TRUE)
+useID = tempt$id[checkFit(paraNames, tempt)]
+expPara = merge(x=tempt[,c(paraNames, "id")],y=sumStats, by="id",all.x=TRUE)
 
 # plot hist 
 # paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
 # paraNames = c("LR", "LP", expression(tau), "P")
 paraNames = paraNames
-expPara$condition = summaryData$condition[summaryData$id %in% expPara$id]
+expPara$condition = sumStats$condition[sumStats$id %in% expPara$id]
 expPara %>% filter(id %in% useID) %>% select(c(paraNames, "condition")) %>%
   gather(-c("condition"), key = "para", value = "value") %>%
   mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>%
@@ -47,13 +48,8 @@ expPara %>% filter(id %in% useID) %>% select(c(paraNames)) %>%
 
 
 # optimism bias
-wilcox.test(expPara$nega[expPara$nQuit >= 10] - 1)
-wilcox.test(expPara$nega[expPara$condition == "HP" & expPara$nQuit >= 25] - 1)
-wilcox.test(expPara$nega[expPara$condition == "LP" & expPara$nQuit >= 25] - 1)
-median(expPara$nega[expPara$condition == "HP" & expPara$nQuit >= 25 ])
-median(expPara$nega[expPara$condition == "LP" & expPara$nQuit >= 25])
-expPara %>% filter(nQuit >= 25) %>%ggplot(aes(nega)) + geom_histogram(bins = 10) +
-  geom_vline(xintercept = 1) + myTheme + facet_grid(~condition)
+wilcox.test(expPara$phi_pos[expPara$id %in% useID] - expPara$phi_neg[expPara$id %in% useID])
+
  
 
 ggsave(sprintf('figures/expParaAnalysis/optimism_%s.png', modelName),

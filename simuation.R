@@ -35,8 +35,7 @@ for(sIdx in 1 : nSub){
     # prepare input
     thisTrialData = trialData[[id]] # here we id instead of sIdx
     # excluded some trials
-    excluedTrials = which(thisTrialData$trialStartTime > (blockSec - max(tMaxs)) &
-                            thisTrialData$condition == conditions[2])
+    excluedTrials = which(thisTrialData$trialStartTime > (blockSec - max(tMaxs)))
     thisTrialData = thisTrialData[!(1 : length(thisTrialData$trialEarnings)) %in% excluedTrials,]
     simTrialData[[id]] = gnrModel(paras, thisTrialData$condition, thisTrialData$scheduledWait)
   }
