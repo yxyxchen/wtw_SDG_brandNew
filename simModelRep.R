@@ -30,7 +30,7 @@ tempt = data.frame(rbind(expPara[,c(1:nPara, nPara*4 + 6)], simPara[,c(1:nPara,n
   filter(id %in% passCheckIds) %>% 
   mutate(source = rep(c("exp", "sim"), each = nPassCheck )) %>%
   gather(key = "paraName", value = "paraValue", -source, -id) %>%
-  mutate(paraName = as.factor(paraName, levels = paraNames))
+  mutate(paraName = factor(paraName, levels = paraNames))
 
 
 # reorganize to get paraData

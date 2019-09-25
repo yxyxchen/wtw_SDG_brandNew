@@ -83,33 +83,55 @@ expModelRep = function(modelName){
   expPara = loadExpPara(paraNames, sprintf("genData/expModelFit/%s", modelName))
   passCheck = checkFit(paraNames, expPara)
   
-  ## plot to compare std willingess to wait
-  data.frame(mu =  muWTWRep_mu, std = muWTWRep_std,
-             empMu = muWTWEmp, passCheck,
-             condition = sumStats$condition) %>%
-    mutate(min = mu - std, max = mu + std) %>%
-    filter(passCheck == T) %>%
-    ggplot(aes(empMu, mu)) +
-    geom_point(size = 2, color = themeColor, fill = "#fdd49e", shape= 21, stroke = 1) +
-    facet_grid(~condition) + 
-    geom_abline(slope = 1, intercept = 0) + xlim(c(-2, 22)) + ylim(c(-2, 22)) +
+  ## save Results
+  plotData = data.frame(mu =  muWTWRep_mu, std = stdWTWRep_mu,
+                        empMu = muWTWEmp, empStd = stdWTWEmp,
+                          passCheck = rep(passCheck, each = 2), 
+                        condition = sumStats$condition) %>% filter(passCheck == T)
+  save(plotData, file = "genData/rscRep.RData")
+  
+  ## plot to compare average willingess to wait
+    plotData %>%
+    ggplot(aes(empMu, mu, shape = condition)) + 
+    geom_point(size = 2, color = themeColor, fill = "pink", stroke = 1) + 
+    geom_abline(slope = 1, intercept = 0) +
+    scale_shape_manual(values = c(21, 23)) + 
     ylab("Model-generated (s)") + xlab("Observed (s)") + ggtitle(sprintf("Average WTW, n = %d", sum(passCheck))) +
-    myTheme + theme(plot.title = element_text(face = "bold", hjust = 0.5))
-  fileName = sprintf("figures/expModelRep/%s/muWTW_muWTWRep.eps", modelName)
-  ggsave(filename = fileName,  width = 6, height = 4)
-
+    myTheme + theme(plot.title = element_text(face = "bold", hjust = 0.5)) +
+    scale_x_continuous(breaks = c(0, 20), limits = c(-1, 21)) + 
+    scale_y_continuous(breaks = c(0, 20), limits = c(-1, 21))
+  
+  fileName = sprintf("figures/expModelRep/%s/muWTW_muWTWRep.eps", modelName) 
+  ggsave(filename = fileName,  width = 4, height = 4)
+  
   ## plot to compare std willingess to wait
-  data.frame(mu =  stdWTWRep_mu, std = stdWTWRep_std,
-             empStd = stdWTWEmp, passCheck,
-             condition = sumStats$condition) %>%
-    mutate(min = mu - std, max = mu + std) %>%
-    filter(passCheck == T) %>%
-    ggplot(aes(empStd, mu)) + 
-    geom_point(size = 2, color = themeColor, fill = "#fdd49e", shape= 21, stroke = 1) +
-    facet_grid(~condition) + 
+    plotData %>%
+    ggplot(aes(empStd, std, shape = condition)) + 
+    geom_point(size = 2, color = themeColor, fill = "pink", stroke = 1)  + 
     geom_abline(slope = 1, intercept = 0) +
     ylab(expression(bold(paste("Model-generated (s"^2,")")))) + xlab(expression(bold(paste("Observed (s"^2,")")))) + ggtitle(sprintf("Std WTW, n = %d", sum(passCheck))) +
-    myTheme + theme(plot.title = element_text(face = "bold", hjust = 0.5))
+    myTheme + theme(plot.title = element_text(face = "bold", hjust = 0.5)) +
+    scale_shape_manual(values = c(21, 23)) + 
+    scale_x_continuous(breaks = c(0, 8), limits = c(0, 10)) + 
+    scale_y_continuous(breaks = c(0, 8), limits = c(0, 10))
   fileName = sprintf("figures/expModelRep/%s/stdWTW_stdWTWRep.eps", modelName)
-  ggsave(filename = fileName,  width = 6, height = 4)
+  ggsave(filename = fileName,  width = 4, height = 4)
+  
+  
+  # plot example participants 
+  # model generated 
+  sIdx = 1
+  thisRepTrialData = repTrialData[[repNo[1, sIdx]]]
+  thisRepTrialData$timeWaited = apply(sapply(1 : nRep, FUN = function(i) 
+    repTrialData[[repNo[i, sIdx]]]$timeWaited), MARGIN = 1, FUN = mean)
+  thisRepTrialData = data.frame(thisRepTrialData[1:6])
+  trialPlots(thisRepTrialData) 
+  ggsave("figures/expModelRep/sim1.eps", width = 6, height = 4)
+  
+  # 
+  thisTrialData = trialData[[sIdx]]
+  thisTrialData  = thisTrialData %>% filter(trialStartTime <=  blockSec - max(tMaxs))
+  thisTrialData = block2session(thisTrialData)
+  trialPlots(thisTrialData)
+  ggsave("figures/expModelRep/exp1.eps", width = 6, height = 4)
 }

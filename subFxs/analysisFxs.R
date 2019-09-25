@@ -12,14 +12,22 @@ trialPlots <- function(thisTrialData) {
   ## blue : timeWaited on rewarded trials
   ## red : timeWaited on non-rewarded trials
   ## black : scheduledTime on non-rewarded trials
+  # p = thisTrialData %>%
+  #   ggplot(aes(trialNum, timeWaited,color = factor(trialEarnings))) +
+  #   geom_point() + geom_line() + scale_color_manual(values = c("grey", "#fed976")) +
+  #   geom_point(data = thisTrialData[thisTrialData$trialEarnings == 0, ],
+  #              aes(trialNum, scheduledWait),
+  #              color = 'black') + 
+  #   geom_vline(xintercept = head(ac_nTrials, nBlock - 1),
+  #              color = "grey", linetype = "dashed", size = 2) +
+  #   xlab("Trial num") + ylab("Time (s)") + 
+  #   myTheme 
   p = thisTrialData %>%
     ggplot(aes(trialNum, timeWaited,color = factor(trialEarnings))) +
-    geom_point() + geom_line() + scale_color_manual(values = c("red", "blue")) +
+    geom_point(size = 4) + geom_line(size = 1.5) + scale_color_manual(values = c("#737373", "#fb6a4a")) +
     geom_point(data = thisTrialData[thisTrialData$trialEarnings == 0, ],
                aes(trialNum, scheduledWait),
-               color = 'black') + 
-    geom_vline(xintercept = head(ac_nTrials, nBlock - 1),
-               color = "grey", linetype = "dashed", size = 2) +
+               color = 'black', size = 4) +
     xlab("Trial num") + ylab("Time (s)") + 
     myTheme 
   print(p)

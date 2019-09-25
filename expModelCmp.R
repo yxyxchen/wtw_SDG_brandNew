@@ -16,7 +16,7 @@ expModelCmp = function(){
   nSub = length(ids) 
   
   # check fit
-  modelNames = c("QL1", "QL2", "RL1", "RL2", "BL")
+  modelNames = c("QL1", "QL2", "RL1", "RL2_v2", "BL")
   nModel = length(modelNames)
   passCheck_ = matrix(NA, nrow = nSub, ncol = nModel)
   for(i in 1 : nModel){
@@ -43,8 +43,8 @@ expModelCmp = function(){
   # compare QL2 with BL 
   library("ggpubr")
   bestNums = sapply(1 : 2, function(i) sum(apply(
-    logEvidence_[passCheck_[,1] & passCheck_[,5],c(1,5)],MARGIN = 1, FUN = function(x) which.max(x) == i)))
-  data.frame(model = modelNames[c(1,5)], bestNums = bestNums) %>%
+    logEvidence_[passCheck_[,2] & passCheck_[,5],c(2,5)],MARGIN = 1, FUN = function(x) which.max(x) == i)))
+  data.frame(model = modelNames[c(2,5)], bestNums = bestNums) %>%
     ggplot(aes(x="", y=bestNums, fill=model)) +
     geom_bar(width = 1, stat = "identity") + 
     coord_polar("y", start=0) + ylab("") + xlab("") +
@@ -54,8 +54,9 @@ expModelCmp = function(){
   ggsave("figures/expModelCmp/loo_QL2_BL.eps", width = 4, height = 3.5)
   
   # compare model with one learning rates and two seprate learning rates
-  bestNums = sapply(1 : 2, function(i) sum(apply(
-    logEvidence_[passCheck_[,1] & passCheck_[,2],1:2],MARGIN = 1, FUN = function(x) which.max(x) == i)))
+  tempt =  logEvidence_[passCheck_[,1] & passCheck_[,2],1:2]
+  tempt[37, ] = logEvidence_[37, 1:2]
+  bestNums = sapply(1 : 2, function(i) sum(apply(tempt,MARGIN = 1, FUN = function(x) which.max(x) == i)))
   data.frame(model = modelNames[1:2], bestNums = bestNums) %>%
     ggplot(aes(x="", y=bestNums, fill=model)) +
     geom_bar(width = 1, stat = "identity") + 
@@ -79,7 +80,7 @@ expModelCmp = function(){
   # compare RL2 and QL2
   bestNums = sapply(1 : 2, function(i) sum(apply(
     logEvidence_[passCheck_[,2] & passCheck_[,4],c(2,4)],MARGIN = 1, FUN = function(x) which.max(x) == i)))
-  data.frame(model = modelNames[1:2], bestNums = bestNums) %>%
+  data.frame(model = modelNames[c(2,4)], bestNums = bestNums) %>%
     ggplot(aes(x="", y=bestNums, fill=model)) +
     geom_bar(width = 1, stat = "identity") + 
     coord_polar("y", start=0) + ylab("") + xlab("") +
