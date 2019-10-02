@@ -16,7 +16,7 @@ expModelCmp = function(){
   nSub = length(ids) 
   
   # check fit
-  modelNames = c("QL1", "QL2", "RL1", "RL2_v2", "BL")
+  modelNames = c("QL1", "QL2", "RL1", "RL2", "BL")
   nModel = length(modelNames)
   passCheck_ = matrix(NA, nrow = nSub, ncol = nModel)
   for(i in 1 : nModel){
@@ -39,6 +39,12 @@ expModelCmp = function(){
       pWaic_[sIdx, m] = LOO$p_loo
     }
   }
+  
+  
+  outputTable = cbind(logEvidence_, passCheck_,
+                      ifelse(hdrData$condition[hdrData$stress == "no_stress"] == "HP", 1, 2))
+  outputTable[38, 1:2] = logEvidence_[38, 1:2]
+  write.table(outputTable, "genData/logEvidence.csv", col.names = F, sep = ",")
   
   # compare QL2 with BL 
   library("ggpubr")
