@@ -1,11 +1,10 @@
 library("stringr")
 getParaNames = function(modelName){
-  if(modelName == "QL1") paraNames = c("phi", "tau", "gamma", "prior")
-  else if(modelName == "QL2") paraNames = c("phi_pos", "phi_neg", "tau", "gamma", "prior")
-  else if(modelName == "RL1") paraNames = c("phi", "tau", "prior", "beta")
-  else if(modelName =="RL2") paraNames = c("phi_pos", "phi_neg", "tau", "prior", "beta")
-  else if(modelName == "RL2_v2") paraNames = c("phi_pos", "phi_neg", "tau", "prior", "beta_pos", "beta_neg") 
-  else if(modelName == "BL") paraNames = c("pWait")
+  if(modelName %in% c("QL1", "QL1_prime")) paraNames = c("phi", "tau", "gamma", "prior")
+  else if(modelName %in% c("QL2", "QL2_prime")) paraNames = c("phi_pos", "phi_neg", "tau", "gamma", "prior")
+  else if(modelName %in% c("RL1", "RL1_prime")) paraNames = c("phi", "tau", "prior", "beta")
+  else if(modelName %in% c("RL2", "RL2_prime")) paraNames = c("phi_pos", "phi_neg", "tau", "prior", "beta")
+  else if(modelName %in% c("BL")) paraNames = c("pWait")
   return(paraNames)
 }
 

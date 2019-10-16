@@ -36,7 +36,7 @@ expModelFit = function(modelName, isFirstFit){
     paraNames = getParaNames(modelName)
     expPara = loadExpPara(paraNames, outputDir)
     passCheck = checkFit(paraNames, expPara)
-    trialData = trialData[passCheck]
+    trialData = trialData[!passCheck]
     
     # increase the num of Iterations 
     config = list(
@@ -48,7 +48,6 @@ expModelFit = function(modelName, isFirstFit){
     )
   }
   
-  # fit the model for all participants
-  modelFitGroup(modelName, trialData, config, outputDir)
+a
 }
 
