@@ -48,6 +48,8 @@ expModelFit = function(modelName, isFirstFit){
     )
   }
   
-a
+  # fit the model 
+  modelFitGroup(modelName, trialData, config, outputDir)
+
 }
 

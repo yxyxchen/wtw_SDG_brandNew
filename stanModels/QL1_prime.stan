@@ -80,6 +80,11 @@ transformed parameters{
     int R = Rs[tIdx]; // current reward
     
     //calculate the reward signal for updating action value 
+    // the reward signal at the iti state equals 
+    // the discounted value of the first waiting state 
+    rwdSignal = gamma ^ (iti / stepSec) * Qwaits[1];
+    Viti = Viti + phi * (rwdSignal - Viti);
+    
     for(t in 1 : nWait_s[tIdx]) {
       if(t == nWait_s[tIdx]){
         // at the end of the trial, the reward signal equals R plus
@@ -92,10 +97,6 @@ transformed parameters{
         }
       Qwaits[t] = Qwaits[t] + phi * (rwdSignal - Qwaits[t]);
     }
-    // similarly, the reward signal at the iti state equals 
-    // the discounted value of the first waiting state 
-    rwdSignal = gamma ^ (iti / stepSec) * Qwaits[1];
-    Viti = Viti + phi * (rwdSignal - Viti);
     
     // save action values
     Qwaits_[,tIdx+1] = Qwaits;
