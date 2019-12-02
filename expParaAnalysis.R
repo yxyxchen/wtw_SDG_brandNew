@@ -8,7 +8,7 @@ source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 source('MFAnalysis.R')
 
 # model Name
-modelName = "QL2"
+modelName = "QL1"
 paraNames = getParaNames(modelName)
 nPara = length(paraNames)
 
