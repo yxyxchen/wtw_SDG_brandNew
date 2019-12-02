@@ -47,8 +47,8 @@ expModelFit = function(modelName, isFirstFit){
       warningFile = sprintf("stanWarnings/exp_refit_%s.txt", modelName)
     )
   }
-  
-  # fit the model 
+
+  # fit the model for all participants
   modelFitGroup(modelName, trialData, config, outputDir)
 
 }
