@@ -34,6 +34,11 @@ transformed data {
   tauMedian = 2.44;
   gamma = 0.864;
   prior = 28.1;
+  
+  phiSe = 0.00684;
+  tauSe = 0.478;
+  gammaSe = 0.0124;
+  prior = 3.36;
 }
 parameters {
   // parameters:
@@ -44,23 +49,25 @@ parameters {
   
   // for computational efficiency,we sample raw parameters from unif(-0.5, 0.5)
   // which are later transformed into actual parameters
-  real raw_group_phi;
-  real raw_group_tau;
-  real raw_group_gamma;
-  real raw_group_prior;
+  real<lower = 0, upper = 1> mu_phi;
+  real<lower = 0, upper = 22> mu_tau;
+  real<lower = 0, upper = 1> mu_gamma;
+  real<lower = 0, upper = 65> mu_prior;
   
-  raw_group_phi ~ std_normal;
-  raw_group_tau ~ std_normal;
-  raw_group_gamma ~ std_normal;
-  raw_group_prior ~ std_normal;
+  mu_phi ~ normal(phiMedian, phiSe) T[0,1];
+  mu_tau ~ normal(tauMedian, tauSe) T[0, 22];
+  mu_gamma ~ normal(gammaMedian, gammaSe) T[0,1];
+  mu_prior ~ normal(priorMedian, priorSe) T[0,65];
+  
+  
 
-  group_phi = 0.3 / (1 + exp(-raw_group_phi)) + phiMedian;
-  group_phi = 0.3 / (1 + exp(-raw_group_tau) + phi
+  real<lower = 0, upper = 1> phi;
+  real<lower = 0, upper = 22> tau;
+  real<lower = 0, upper = 1> gamma;
+  real<lower = 0, upper = 65> prior;
   
-  real raw_phi;
-  real raw_tau;
-  real<lower = -0.5, upper = 0.5> raw_gamma;
-  real<lower = -0.5, upper = 0.5> raw_prior;
+  phi ~ normal(mu_phi, mu_phi_sigma) T[0,1];
+  mu_tau ~ beta(tauAlpha, )
 }
 transformed parameters{
   // scale raw parameters into real parameters

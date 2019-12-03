@@ -47,8 +47,36 @@ ggsave(fileName, width = 8, height = 4)
 expPara %>% filter(passCheck) %>% select(c(paraNames)) %>%
   gather(key = "para", value = "value") %>%
   mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>% 
-  group_by(para) %>% summarise(mu = mean(value), median = median(value))
+  group_by(para) %>% summarise(mu = mean(value), median = median(value),
+                               se = sd(value) / sqrt(length(value)))
 
+shape_ = expPara %>% filter(passCheck & condition == "HP") %>% select(c(paraNames)) %>%
+  mutate(phi = phi / max(phi),
+         tau = tau / max(tau),
+         gamma = (gamma - min(gamma)) / (max(gamma) - min(gamma)),
+         prior = (prior - min(prior)) / (max(prior) - min(prior))) %>%
+  gather(key = "para", value = "value") %>%
+  mutate(para = factor(para, levels = paraNames, labels = paraNames )) %>%
+  group_by(para) %>% 
+  summarise(mu = mean(value),
+            var = var(value),
+            alpha = ((1 - mu) / var - 1 / mu) * mu ^ 2,
+            beta = alpha * (1 / mu - 1)) 
+
+scale_ = expPara %>% filter(passCheck & condition == "HP") %>% select(c(paraNames)) %>%
+  gather(key = "para", value = "value") %>%
+  mutate(para = factor(para, levels = paraNames, labels = paraNames )) %>%
+  group_by(para) %>% summarise(a = min(value), c = max(value))
+i = 4
+paraName = paraNames[i]
+values = expPara[passCheck & expPara$condition == "HP", paraName]
+x = seq(0, 1, length.out = 10)
+cdf = pbeta(x, shape_$alpha[1], shape_$beta[i])
+pdf = c(0, diff(cdf))
+length(pdf)
+xPrime = x*(scale_$c[i] - scale_$a[i]) + scale_$a[i]
+hist(values, breaks = xPrime)
+lines(xPrime, pdf * length(values))
 
 # optimism bias
 wilcoxResults = wilcox.test(expPara$phi_pos[passCheck] - expPara$phi_neg[passCheck])
