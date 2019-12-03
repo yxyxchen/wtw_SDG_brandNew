@@ -35,7 +35,6 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
     inputs <- list(
       iti = iti,
       stepSec = stepSec,
-      nStepMax = nStepMax,
       N = length(thisTrialData$trialEarnings), # number of trials
       Rs = thisTrialData$trialEarnings, # rewards on each trial
       Ts = Ts)
@@ -104,7 +103,7 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
   divergent <- do.call(rbind, sampler_params)[,'divergent__']
   nDt = sum(divergent)
   fitSummary = cbind(fitSummary, nDt = rep(nDt, nrow(fitSummary)))
-  
+
   # write outputs  
   write.table(fitSummary, file = sprintf("%s_summary.txt", outputFile), 
               sep = ",", col.names = F, row.names=FALSE)

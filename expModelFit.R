@@ -50,6 +50,6 @@ expModelFit = function(modelName, isFirstFit){
 
   # fit the model for all participants
   modelFitGroup(modelName, trialData, config, outputDir)
-
+  
 }
 

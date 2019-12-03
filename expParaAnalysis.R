@@ -20,6 +20,7 @@ dir.create(saveDir)
 # 
 MFResults = MFAnalysis(isTrct = T)
 sumStats = MFResults[['sumStats']]
+
 # load expPara
 paraNames = getParaNames(modelName)
 nPara = length(paraNames)
@@ -45,6 +46,7 @@ ggsave(fileName, width = 8, height = 4)
 
 # summary stats for expPara
 expPara %>% filter(passCheck) %>% select(c(paraNames)) %>%
+  filter(passCheck & condition == "HP") %>%
   gather(key = "para", value = "value") %>%
   mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>% 
   group_by(para) %>% summarise(mu = mean(value), median = median(value),
