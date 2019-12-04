@@ -15,19 +15,21 @@ data {
   int T_[nTrialMax, nSub]; // terminal state in each trial
   int nWait_s_[nTrialMax, nSub]; // the number of waiting steps in each trial
   int nStepTotal;
-  
+  int nPara;
+  real mus[nPara];
+  real ses[nPara];
 }
 transformed data {
   // median of the individually fitted parameters 
-  real phiMu = 0.0220;
-  real tauMu = 3.26;
-  real gammaMu = 0.885;
-  real priorMu = 25.8;
+  real phiMu = mus[1];
+  real tauMu = mus[2];
+  real gammaMu = mus[3];
+  real priorMu = mus[4];
   
-  real phiSe = 0.00684;
-  real tauSe = 0.478;
-  real gammaSe = 0.0124;
-  real priorSe = 3.36;
+  real phiSe = ses[1];
+  real tauSe = ses[2];
+  real gammaSe = ses[3];
+  real priorSe = ses[4];
 }
 parameters {
   // parameters:

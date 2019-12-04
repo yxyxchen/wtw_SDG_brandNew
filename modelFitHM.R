@@ -14,30 +14,38 @@
 # warningFile : file for saving warnings generated Rstan
 
 modelFitHM = function(modelName){
-  # determine parameters 
-  paraNameStems = getParaNames(modelName)
-    
+  
   # load sub-functions and packages
+  library("plyr")
   library("dplyr"); library("tidyr")
   source("subFxs/loadFxs.R")
   source("subFxs/helpFxs.R")
   library('rstan');library("loo");library("coda") 
   load("expParas.RData")
   stepSec = 1 # duration of one time step (namely one temporal state) 
+  nStepMax = max(tMaxs) / stepSec
   nTrialMax =  350 # use the max possible value 
+  
+  # load individual fitted parameters
+  paraNameStems = getParaNames(modelName)
+  nPara = length(paraNameStems)
+  load(sprintf("genData/expParaAnalysis/%s/expParaInfo.RData", sub("_HM", "", modelName)))
+  mus = expParaInfo$mu
+  ses = expParaInfo$se
   
   # generate output directories
   dir.create("genData")
   dir.create("genData/expModelFit")
+  dir.create(sprintf("genData/expModelFit/%s", modelName))
   dir.create("stanWarnings")
+  outputFile = sprintf("genData/expModelFit/%s/summary", modelName)
 
   # load expData
   allData = loadAllData()
   hdrData = allData$hdrData
   trialData = allData$trialData
   ids = names(trialData)
-  # nSub = length(ids)   
-  nSub = 2
+  nSub = length(ids)   
   paraNames = c(
     paste0("raw_group_", paraNameStems),
     unlist(lapply(1 : nSub, function(sIdx) paste0(paraNameStems, "s[", sIdx, "]")))
@@ -48,7 +56,7 @@ modelFitHM = function(modelName){
   dir.create(outputDir)
   config = list(
     nChain = 4,
-    nIter = 100,
+    nIter = 5000,
     adapt_delta = 0.99,
     max_treedepth = 11,
     warningFile = sprintf("stanWarnings/exp_%s.txt", modelName)
@@ -111,6 +119,9 @@ modelFitHM = function(modelName){
     stepSec = stepSec,
     nStepMax = nStepMax,
     nTrialMax = nTrialMax,
+    nPara = nPara,
+    mus = mus,
+    ses = ses,
     nWait_s_ = nWait_s_,
     nStepTotal = sum(T_) - sum(Ns),
     nSub = nSub,
@@ -143,10 +154,39 @@ modelFitHM = function(modelName){
   })
   
   samples = fit %>%
-    rstan::extract(permuted = F, pars = c("raw_group_phi", "phis[1]"))
+    rstan::extract(permuted = F, pars = c(paraNames, "LL_all"))
   
   # save posterior samples
   samples = samples %>% adply(2, function(x) x) %>% dplyr::select(-chains) 
-  fitSummary <- summary(fit, pars = c(paraNames, "LL_all"), use_cache = F)$summary
+  samples[names(samples) %in% paste0("raw_group_", paraNameStems)] = 
+    samples[names(samples) %in% paste0("raw_group_", paraNameStems)] *
+    matrix(rep(ses, each = nrow(samples)), nrow = nrow(samples)) * 2 +
+    matrix(rep(mus, each = nrow(samples)), nrow = nrow(samples))
+  names(samples)[1 : nPara] = paste0("group_", paraNameStems)
+  fitSummary <- as.data.frame(summary(fit, pars = c(paraNames, "LL_all"), use_cache = F)$summary)
+  
+  
+  # check ESS and Rhat
+  # detect participants with low ESSs and high Rhats 
+  ESSCols = which(str_detect(colnames(fitSummary), "n_eff")) # columns recording ESSs
+  if(any(fitSummary[,ESSCols] < nChain * 100)){
+    warnText = paste(modelName, id, "Low ESS")
+    write(warnText, warningFile, append = T, sep = "\n")
+  }
+  RhatCols = which(str_detect(colnames(fitSummary), "Rhat")) # columns recording ESSs
+  if(any(fitSummary[,RhatCols] > 1.01)){
+    warnText = paste(modelName, id, "High Rhat")
+    write(warnText, warningFile, append = T, sep = "\n")
+  } 
+  
+  # check divergent transitions
+  sampler_params <- get_sampler_params(fit, inc_warmup=FALSE)
+  divergent <- do.call(rbind, sampler_params)[,'divergent__']
+  nDt = sum(divergent)
+  fitSummary = cbind(fitSummary, nDt = rep(nDt, nrow(fitSummary)))
+  
+  # write outputs  
+  write.table(fitSummary, file = sprintf("%s_summary.txt", outputFile), 
+              sep = ",", col.names = F, row.names=FALSE)
   
 }
