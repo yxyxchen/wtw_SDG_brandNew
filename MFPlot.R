@@ -42,4 +42,3 @@ sumStats %>% ggplot(aes(condition, muWTW)) + geom_boxplot() +
   myTheme 
 ggsave("figures/MFPlot/muWTW_comparison.eps", width = 6, height = 6)
 
-

@@ -83,6 +83,7 @@ expModelRep = function(modelName){
   expPara = loadExpPara(paraNames, sprintf("genData/expModelFit/%s", modelName))
   passCheck = checkFit(paraNames, expPara)
   
+  
   ## save Results
   plotData = data.frame(mu =  muWTWRep_mu, std = stdWTWRep_mu,
                         empMu = muWTWEmp, empStd = stdWTWEmp,
@@ -90,6 +91,7 @@ expModelRep = function(modelName){
                         condition = sumStats$condition) %>% filter(passCheck == T)
   save(plotData, file = "genData/rscRep.RData")
   
+  cor.test(plotData$mu, plotData$empMu, methods = "spearman")
   ## plot to compare average willingess to wait
     plotData %>%
     ggplot(aes(empMu, mu, shape = condition)) + 

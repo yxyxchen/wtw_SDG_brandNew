@@ -8,7 +8,7 @@ source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 source('MFAnalysis.R')
 
 # model Name
-modelName = "QL1"
+modelName = "QL2"
 paraNames = getParaNames(modelName)
 nPara = length(paraNames)
 
@@ -16,6 +16,21 @@ nPara = length(paraNames)
 dir.create("figures/expParaAnalysis")
 saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
 dir.create(saveDir)
+
+# read data 
+post = read.csv("genData/expModelFit/QL2/s1.txt", header = F)
+mus = apply(post[,1 : nPara], MARGIN = 2, FUN = mean)
+muData = data.frame(para = paraNames, mu = mus)
+plotData = data.frame(post) 
+names(plotData) =  c("LR", "LP", "tau", "gamma", "P", "LL")
+plotData %>% gather(key = "para", value = "value", -LL) %>%
+  mutate(para = factor(para, levels =  c("LR", "LP", "tau", "gamma", "P")),
+         mu = rep(mus, each = 16000)) %>%
+  ggplot(aes(value)) + geom_histogram() + 
+  facet_wrap(~para, scales = "free", labeller = label_parsed) +
+  myTheme + xlab("") + ylab("") + geom_vline(aes(xintercept = mu), color = "red")
+ggsave("figures/post.png", width = 10, height = 5)
+  
 
 # 
 MFResults = MFAnalysis(isTrct = T)
@@ -118,6 +133,10 @@ traits = c("BDI","IUS","DoG","BIS.11") #BIS_11 trait anxiety
 nTrait = length(traits)
 expPara = merge(x= expPara,y = personality[,c(traits, "id")], by="id",all.x=TRUE)
 expPara$optimism = expPara$phi_pos /  expPara$phi_neg
+
+# 
+plot(log(expPara$tau), expPara$stdWTW)
+
 # calculate trait-para correlations
 rhoHP_ = matrix(NA, nrow = 1 + nPara, ncol = nTrait)
 rhoLP_ = matrix(NA, nrow = 1 + nPara, ncol = nTrait)
