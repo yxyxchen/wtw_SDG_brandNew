@@ -8,7 +8,7 @@ source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 source('MFAnalysis.R')
 
 # model Name
-modelName = "QL2"
+modelName = "QL1"
 paraNames = getParaNames(modelName)
 nPara = length(paraNames)
 
@@ -53,11 +53,35 @@ expPara$condition = sumStats$condition[sumStats$id %in% expPara$id]
 expPara %>% filter(passCheck ) %>% select(c(paraNames, "condition")) %>%
   gather(-c("condition"), key = "para", value = "value") %>%
   mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>%
-  ggplot(aes(value)) + geom_histogram(bins = 8) +
-  facet_grid(condition ~ para, scales = "free", labeller = label_parsed) + 
+  ggplot(aes(value)) + geom_histogram(bins = 12) +
+  facet_grid(~ para, scales = "free", labeller = label_parsed) + 
   myTheme + xlab(" ") + ylab(" ")
 fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysis", modelName)
 ggsave(fileName, width = 8, height = 4)
+
+# try model fit tau
+x = expPara$gamma
+up = 0.7
+low = 1
+breaks = seq(up, low, length.out = 10)
+sampleQts = quantile(log(x), seq(0.001, 0.999, length.out = 10))
+theoryQts = qnorm(seq(0.001, 0.999, length.out = 10), mean(log(x)), sd(log(x)))
+plot(theoryQts, sampleQts)
+abline(coef = c(0,1))
+
+breaks = seq(up, low, length.out = 10)
+hts = hist(x, breaks = breaks)
+cumprobs = plnorm(breaks, meanlog = mean(log(x)), sdlog = sd(log(x)))
+lines(hts$mids, diff(cumprobs) * nrow(expPara), color = "green")
+
+
+
+breaks = seq(log(up), log(low), length.out = 10)
+hts = hist(log(x), breaks = breaks)
+cumprobs = pnorm(breaks,  mean(log(x)), sd(log(x)))
+lines(hts$mids, diff(cumprobs) * nrow(expPara))
+
+# try model fit 
 
 # summary stats for expPara
 expParaInfo = expPara %>% filter(passCheck) %>% select(c(paraNames)) %>%

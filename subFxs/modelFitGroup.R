@@ -29,7 +29,7 @@ modelFitGroup = function(modelName, trialData, config, outputDir){
   
   # compile the Rstan model 
   options(warn= 1) 
-  Sys.setenv(USE_CXX14=1)
+  #Sys.setenv(USE_CXX14=1)
   rstan_options(auto_write = TRUE) 
   model = stan_model(file = sprintf("stanModels/%s.stan", modelName))
   
