@@ -60,8 +60,8 @@ fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysis", modelName)
 ggsave(fileName, width = 8, height = 4)
 
 # try model fit tau
-x = expPara$gamma
-up = 0.7
+x = expPara$phi
+up = 0
 low = 1
 breaks = seq(up, low, length.out = 10)
 sampleQts = quantile(log(x), seq(0.001, 0.999, length.out = 10))
@@ -69,11 +69,12 @@ theoryQts = qnorm(seq(0.001, 0.999, length.out = 10), mean(log(x)), sd(log(x)))
 plot(theoryQts, sampleQts)
 abline(coef = c(0,1))
 
-breaks = seq(up, low, length.out = 10)
+breaks = seq(up, low, length.out = 15)
 hts = hist(x, breaks = breaks)
 cumprobs = plnorm(breaks, meanlog = mean(log(x)), sdlog = sd(log(x)))
-lines(hts$mids, diff(cumprobs) * nrow(expPara), color = "green")
-
+lines(hts$mids, diff(cumprobs) * nrow(expPara), col = "green")
+cumprobs = pnorm(breaks, mean(x), sd(x))
+lines(hts$mids, diff(cumprobs) * nrow(expPara), col = "red")
 
 
 breaks = seq(log(up), log(low), length.out = 10)
