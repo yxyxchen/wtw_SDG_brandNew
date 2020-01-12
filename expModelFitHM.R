@@ -13,7 +13,7 @@
 # max_treedepth: maximal depth of the trees that stan evaluates during each iteration
 # warningFile : file for saving warnings generated Rstan
 
-modelFitHM = function(modelName){
+expModelFitHM = function(modelName){
   
   # load sub-functions and packages
   library("plyr")
@@ -40,17 +40,17 @@ modelFitHM = function(modelName){
   dir.create("genData/expModelFit")
   dir.create(sprintf("genData/expModelFit/%s", modelName))
   dir.create("stanWarnings")
-  outputFile = sprintf("genData/expModelFit/%s/summary", modelName)
+  outputFile = sprintf("genData/expModelFit/%s/summary_simple", modelName)
 
   # load expData
   allData = loadAllData()
   hdrData = allData$hdrData
   trialData = allData$trialData
   ids = names(trialData)
-  # nSub = length(ids)  
+  # nSub = length(ids)
   nSub = 2
   paraNames = c(
-    paste0("raw_group_", paraNameStems),
+    paste0("group_", paraNameStems[1 : (nPara - 2)]),
     unlist(lapply(1 : nSub, function(sIdx) paste0(paraNameStems, "s[", sIdx, "]")))
   )
   
@@ -59,10 +59,10 @@ modelFitHM = function(modelName){
   dir.create(outputDir)
   config = list(
     nChain = 4,
-    nIter = 100,
+    nIter  = 100,
     adapt_delta = 0.99,
     max_treedepth = 11,
-    warningFile = sprintf("stanWarnings/exp_%s.txt", modelName)
+    warningFile = sprintf("stanWarnings/exp_%s_simple.txt", modelName)
   )
    # create the file for Rstan warnings and erros
   writeLines("", config[['warningFile']])
@@ -75,9 +75,7 @@ modelFitHM = function(modelName){
         
   
   # parallel compuation settings
-  nCore = as.numeric(Sys.getenv("NSLOTS")) # needed for cluster
-  if(is.na(nCore)) nCore = 1 # needed for cluster
-  # nCore = parallel::detectCores() -1 
+  nCore = config[['nChain']] # needed for cluster
   nChain = config[['nChain']] # number of MCMC chains
   nIter = config[['nIter']] # number of iterations on each chain
   controlList = list(adapt_delta = config[['adapt_delta']],
@@ -157,16 +155,10 @@ modelFitHM = function(modelName){
     write(warnText, warningFile, append = T, sep = "\n")
   })
   
-  samples = fit %>%
-    rstan::extract(permuted = F, pars = c(paraNames, "LL_all"))
-  
-  # save posterior samples
-  samples = samples %>% adply(2, function(x) x) %>% dplyr::select(-chains) 
-  samples[names(samples) %in% paste0("raw_group_", paraNameStems)] = 
-    samples[names(samples) %in% paste0("raw_group_", paraNameStems)] *
-    matrix(rep(ses, each = nrow(samples)), nrow = nrow(samples)) * 2 +
-    matrix(rep(mus, each = nrow(samples)), nrow = nrow(samples))
-  names(samples)[1 : nPara] = paste0("group_", paraNameStems)
+  # samples %>% gather(key = "var", value = "value") %>% group_by(var) %>%
+  # summarise(mean = mean(value), se_mean = sd(value) / sqrt(length(value)), sd = sd(value),
+	    # q2.5 = quantile(value, 0.025), q25 = quantile(value, 0.25), q50 = quantile(value, 0.50),
+	    # q75 = quantile(value, 0.75), q97.5 = quantile(value, 0.975))
   fitSummary <- as.data.frame(summary(fit, pars = c(paraNames, "LL_all"), use_cache = F)$summary)
   
   

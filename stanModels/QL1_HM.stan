@@ -18,18 +18,21 @@ data {
   int nPara;
   real mus[nPara];
   real ses[nPara];
+  real logmus[nPara];
+  real logsds[nPara]; 
 }
 transformed data {
-  // median of the individually fitted parameters 
+  // priors for hyper parameters 
   real phiMu = mus[1];
   real tauMu = mus[2];
-  real gammaMu = mus[3];
-  real priorMu = mus[4];
-  
   real phiSe = ses[1];
   real tauSe = ses[2];
-  real gammaSe = ses[3];
-  real priorSe = ses[4];
+  
+  // priors for parameters
+  real phiLogMu = logmus[1];
+  real tauLogMu = logmus[2];
+  real phiLogSd = logsds[1];
+  real tauLogSd = logsds[2];
 }
 parameters {
   // parameters:
@@ -42,13 +45,11 @@ parameters {
   // which are later transformed into actual parameters
   real raw_group_phi;
   real raw_group_tau;
-  real raw_group_gamma;
-  real raw_group_prior;
   
-  real<lower = 0, upper = 1> phis[nSub];
-  real<lower = 0, upper = 22> taus[nSub];
-  real<lower = 0, upper = 1> gammas[nSub];
-  real<lower = 0, upper = 65> priors[nSub];
+  real raw_phis[nSub];
+  real raw_taus[nSub];
+  real<lower = -0.5, upper = 0.5> raw_gammas[nSub];
+  real<lower = -0.5, upper = 0.5> raw_priors[nSub];
 }
 transformed parameters{
   // declare variables 
@@ -63,6 +64,32 @@ transformed parameters{
   real Viti_[nTrialMax] = rep_array(0.0, nTrialMax);
   real QwaitArray[nStepMax, nTrialMax, nSub] = rep_array(0.0, nStepMax, nTrialMax, nSub);
   real VitiArray[nTrialMax, nSub] = rep_array(0.0, nTrialMax, nSub);
+  
+  # transfer parameters
+  real group_phi;
+  real group_tau;
+  real phis[nSub];
+  real taus[nSub];
+  real gammas[nSub];
+  real priors[nSub];
+  
+  group_phi = raw_group_phi * phiSe + phiMu;
+  group_tau = raw_group_tau * tauSe + tauMu; 
+  for(sIdx in 1 : nSub){
+    phis[sIdx]  = exp(raw_phis[sIdx] * phiLogSd + phiLogMu);
+    if (phis[sIdx] > 0.3)
+      phis[sIdx] = 0.3;
+
+    taus[sIdx] = exp(raw_phis[sIdx] * tauLogSd + tauLogMu);
+    if (taus[sIdx] > 22)
+      taus[sIdx] = 22;
+    else if(taus[sIdx] < 0.1)
+      taus[sIdx] = 0.1;
+      
+    gammas[sIdx] = (raw_gammas[sIdx] + 0.5) * 0.3 + 0.7;
+    priors[sIdx]  =  (raw_priors[sIdx] + 0.5) * 65; 
+  }
+
   
   for(sIdx in 1 : nSub){
     real phi = phis[sIdx];
@@ -115,28 +142,17 @@ model {
   // delcare variables 
   int action; 
   vector[2] actionValues; 
-  real group_phi;
-  real group_tau;
-  real group_gamma;
-  real group_prior;
-  
   // distributions for raw parameters
   // scale raw parameters into real parameters
   raw_group_phi ~ std_normal();
   raw_group_tau ~ std_normal();
-  raw_group_gamma ~ std_normal();
-  raw_group_prior ~ std_normal();
   
-  group_phi = raw_group_phi * phiSe * 2 + phiMu;
-  group_tau = raw_group_tau * tauSe * 2 + tauMu; 
-  group_gamma = raw_group_gamma * gammaSe * 2 + gammaMu;
-  group_prior = raw_group_prior * priorSe * 2 + priorMu;
-  
+
   for(sIdx in 1 : nSub){
-    phis[sIdx] ~ normal(group_phi, phiSe * 5) T[0,1];
-    taus[sIdx] ~ normal(group_tau, tauSe * 5) T[0,22];
-    gammas[sIdx] ~ normal(group_gamma, gammaSe * 5) T[0,1];
-    priors[sIdx] ~ normal(group_prior, priorSe * 5) T[0,65];
+    raw_phis[sIdx] ~ std_normal();
+    raw_taus[sIdx] ~ std_normal();
+    raw_gammas[sIdx] ~ uniform(-0.5, 0.5);
+    raw_priors[sIdx] ~ uniform(-0.5, 0.5);
   }
   
   // loop over participants 

@@ -6,6 +6,7 @@ source("subFxs/loadFxs.R") # load blockData and expPara
 source("subFxs/helpFxs.R") # getparaNames
 source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 source('MFAnalysis.R')
+library("EnvStats")
 
 # model Name
 modelName = "QL1"
@@ -54,14 +55,14 @@ expPara %>% filter(passCheck ) %>% select(c(paraNames, "condition")) %>%
   gather(-c("condition"), key = "para", value = "value") %>%
   mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>%
   ggplot(aes(value)) + geom_histogram(bins = 12) +
-  facet_grid(~ para, scales = "free", labeller = label_parsed) + 
+  facet_grid( ~ para, scales = "free", labeller = label_parsed) + 
   myTheme + xlab(" ") + ylab(" ")
 fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysis", modelName)
 ggsave(fileName, width = 8, height = 4)
 
 # try model fit tau
-x = expPara$phi
-up = 0
+x = expPara$gamma
+up = 0.7
 low = 1
 breaks = seq(up, low, length.out = 10)
 sampleQts = quantile(log(x), seq(0.001, 0.999, length.out = 10))
@@ -69,59 +70,39 @@ theoryQts = qnorm(seq(0.001, 0.999, length.out = 10), mean(log(x)), sd(log(x)))
 plot(theoryQts, sampleQts)
 abline(coef = c(0,1))
 
-breaks = seq(up, low, length.out = 15)
+breaks = seq(up, low, length.out = 20)
 hts = hist(x, breaks = breaks)
 cumprobs = plnorm(breaks, meanlog = mean(log(x)), sdlog = sd(log(x)))
 lines(hts$mids, diff(cumprobs) * nrow(expPara), col = "green")
 cumprobs = pnorm(breaks, mean(x), sd(x))
 lines(hts$mids, diff(cumprobs) * nrow(expPara), col = "red")
-
-
-breaks = seq(log(up), log(low), length.out = 10)
-hts = hist(log(x), breaks = breaks)
-cumprobs = pnorm(breaks,  mean(log(x)), sd(log(x)))
-lines(hts$mids, diff(cumprobs) * nrow(expPara))
-
+# pareto distribution 
+n = nrow(expPara)
+m = min(x)
+alpha = n / sum(log(x) - log(m))
+cumprobs = ppareto(breaks, m, alpha)
+lines(hts$mids, diff(cumprobs) * nrow(expPara), col = "blue")
+# gamma distribution
+theta = var(x) / mean(x)
+k = mean(x) / theta
+cumprobs = pgamma(breaks, shape =  k, scale = theta)
+lines(hts$mids, diff(cumprobs) * nrow(expPara), col = "pink")
 # try model fit 
 
 # summary stats for expPara
 expParaInfo = expPara %>% filter(passCheck) %>% select(c(paraNames)) %>%
   gather(key = "para", value = "value") %>%
   mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>% 
-  group_by(para) %>% summarise(mu = mean(value), median = median(value),
-                               se = sd(value) / sqrt(length(value)))
+  group_by(para) %>% dplyr::summarise(mu = mean(value), median = median(value),
+                               se = sd(value) / sqrt(length(value)),
+                               log.mu = mean(log(value)), log.sd = sd(log(value)))
+
 
 dir.create("genData/expParaAnalysis")
 dir.create(sprintf("genData/expParaAnalysis/%s", modelName))
 save(expParaInfo, file = sprintf("genData/expParaAnalysis/%s/expParaInfo.RData", modelName))
 
-shape_ = expPara %>% filter(passCheck & condition == "HP") %>% select(c(paraNames)) %>%
-  mutate(phi = phi / max(phi),
-         tau = tau / max(tau),
-         gamma = (gamma - min(gamma)) / (max(gamma) - min(gamma)),
-         prior = (prior - min(prior)) / (max(prior) - min(prior))) %>%
-  gather(key = "para", value = "value") %>%
-  mutate(para = factor(para, levels = paraNames, labels = paraNames )) %>%
-  group_by(para) %>% 
-  summarise(mu = mean(value),
-            var = var(value),
-            alpha = ((1 - mu) / var - 1 / mu) * mu ^ 2,
-            beta = alpha * (1 / mu - 1)) 
 
-scale_ = expPara %>% filter(passCheck & condition == "HP") %>% select(c(paraNames)) %>%
-  gather(key = "para", value = "value") %>%
-  mutate(para = factor(para, levels = paraNames, labels = paraNames )) %>%
-  group_by(para) %>% summarise(a = min(value), c = max(value))
-i = 4
-paraName = paraNames[i]
-values = expPara[passCheck & expPara$condition == "HP", paraName]
-x = seq(0, 1, length.out = 10)
-cdf = pbeta(x, shape_$alpha[1], shape_$beta[i])
-pdf = c(0, diff(cdf))
-length(pdf)
-xPrime = x*(scale_$c[i] - scale_$a[i]) + scale_$a[i]
-hist(values, breaks = xPrime)
-lines(xPrime, pdf * length(values))
 
 # optimism bias
 wilcoxResults = wilcox.test(expPara$phi_pos[passCheck] - expPara$phi_neg[passCheck])
