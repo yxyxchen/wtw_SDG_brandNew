@@ -38,6 +38,9 @@ MFAnalysis = function(isTrct){
   nSub = length(ids)                    # n
   cat('Analyzing data for',nSub,'subjects.\n')
   
+  # calculate demographic stats 
+  nFemale = sum(hdrData$gender[hdrData$stress == "no_stress"] == "Female")
+
   # initialize output variables 
   nExcl = numeric(length = nSub)
   muWTW = numeric(length = nSub) 

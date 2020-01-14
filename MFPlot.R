@@ -25,8 +25,28 @@ data.frame(wtw = unlist(timeWTW_),
   geom_ribbon(aes(ymin=min, ymax=max), fill = 'pink') +
   geom_line(color = themeColor, size = 1) +
   xlab("Elapsed time (s)") + ylab("WTW (s)") + 
-  myTheme
+  myTheme + ylim(0, 16)
 ggsave("figures/MFPlot/wtw_timecourse.eps", width = 5, height = 4) 
+
+# plot WTW timecourses in two environments
+MFResults = MFAnalysis(isTrct = T)
+sumStats = MFResults[['sumStats']]
+timeWTW_ = MFResults[['timeWTW_']]
+nSub = nrow(sumStats)
+data.frame(wtw = unlist(timeWTW_),
+           time = rep(tGrid, nSub),
+           condition = rep(sumStats$condition, each = length(tGrid))) %>%
+  group_by(condition, time) %>%
+  dplyr::summarise(mu = mean(wtw, na.rm = T), se = sd(wtw, na.rm = T) / sqrt(sum(!is.na(wtw))),
+                   min = mu- se, max = mu + se) %>%
+  ggplot(aes(time, mu, linetype = condition)) +
+  geom_ribbon(aes(ymin=min, ymax=max), fill = 'pink') +
+  geom_line(color = themeColor, size = 1) +
+  xlab("Elapsed time (s)") + ylab("WTW (s)") + 
+  myTheme + ylim(0, 16)
+ggsave("figures/MFPlot/wtw_timecourse_trct.eps", width = 5, height = 4) 
+
+
 
 # plot average WTWs in two environments
 MFResults = MFAnalysis(isTrct = T)
