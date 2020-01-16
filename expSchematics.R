@@ -57,15 +57,18 @@ library('ggplot2')
 source('subFxs/plotThemes.R')
 library("tidyr"); library('dplyr')
 dir.create('figures/expSchematics')
-data.frame(CDF = c(0,rewardDelayCDFs$HP, 0, rewardDelayCDFs$LP),
-           time = c(0, time$HP, 0, time$LP),
-           condition =  rep(c('HP', 'LP'), c(length(time$HP) + 1, length(time$LP) + 1))) %>%
+data.frame(CDF = c(0,c(rewardDelayCDFs$HP, rep(1, length(time$LP) - length(time$HP))), 0, rewardDelayCDFs$LP),
+           time = c(0, time$LP, 0, time$LP),
+           condition =  rep(c('HP', 'LP'), c(length(time$LP) + 1, length(time$LP) + 1))) %>%
   ggplot(aes(time, CDF)) + geom_line(size = 3, color = themeColor) + facet_grid(~condition) +
   ylim(c(0,1)) + scale_y_continuous(breaks = c(0,0.5,1)) + 
-  scale_x_continuous(breaks = c(0, max(tMaxs)), labels = c("0", "tMax"),
+  scale_x_continuous(breaks = c(0, max(tMaxs)/ 2, max(tMaxs)), labels = c("0", max(tMaxs)/2, max(tMaxs)),
                      limits = c(0, max(tMaxs) * 1.1)) + 
-  myTheme + xlab('Delay duration (s)') + ylab('CDF')
-ggsave('figures/expSchematics/CDF.eps', width =6, height = 3)
+  myTheme + xlab('Delay duration (s)') + ylab('CDF') + ggtitle(expName) + 
+  theme(plot.title = element_text(hjust = 0.5, color = themeColor)) + 
+  annotate("text", x = max(tMaxs)/ 2, y = 0.4, label = "+30¢", size = 6)
+ggsave('figures/expSchematics/CDF.eps', width =4, height = 3)
+ggsave('figures/expSchematics/CDF.png', width =4, height = 3)
 
 # plot reward rates
 optimData = data.frame(condition = c("HP", "LP"), waitThreshold = as.double(optimWaitThresholds))
@@ -74,6 +77,11 @@ data.frame(rewardRate = c(0, rewardRates[[1]], 0, rewardRates[[2]]),
            condition = rep(c("HP", "LP"), c(length(time$HP) + 1, length(time$LP) + 1))) %>%
   ggplot(aes(time, rewardRate)) +
   geom_line(size = 3, color = themeColor)  + myTheme + 
-  ylab(expression(bold("Reward rate (cent s"^"-1"*")"))) + xlab("Waiting policy (s)") +
-  facet_grid(~condition)
-ggsave("figures/expSchematics/reward_rate.eps", width = 6, height = 3)
+  ylab(expression(bold("Reward rate (¢ s"^"-1"*")"))) + xlab("Waiting policy (s)") +
+  facet_grid(~condition) + ggtitle(expName) + 
+  theme(plot.title = element_text(hjust = 0.5, color = themeColor)) + 
+  scale_y_continuous(breaks = c(0, 0.4, 0.8, 1.2), limits = c(0, 1.3)) +
+  scale_x_continuous(breaks = c(0, max(tMaxs)/ 2, max(tMaxs)),
+                    limits = c(0, max(tMaxs) * 1.1)) 
+ggsave("figures/expSchematics/reward_rate.eps", width = 4, height = 3)
+ggsave("figures/expSchematics/reward_rate.png", width = 4, height = 3)
