@@ -11,9 +11,9 @@ time = list(
   LP = seq(bin, tMaxs[2], by = bin)
 ) 
 
+# delay CDFS
 ### delays in HP follow unif(0, 20)
 ### delays in LP follow pareto(mu = 0, k =4, sigma = 2), truncated at 40
-# delay CDFS
 HP = 1 / length(time[['HP']]) * (1 : length(time[['HP']]))
 mu = 0; k = 4; sigma = 2; # parameters for the pareto distribution
 LP = 1 - (1 + k * (time[['LP']]- mu) / sigma) ^ (-1 / k)
@@ -22,6 +22,7 @@ rewardDelayCDFs = list(
   HP = HP,
   LP = LP
 )
+
 # delay PDFs
 HP = diff(c(0, rewardDelayCDFs$HP))
 LP = diff(c(0, rewardDelayCDFs$LP))
@@ -37,6 +38,8 @@ LP = cumsum((time[['LP']] - 0.5 * bin) * rewardDelayPDFs$LP) / cumsum(rewardDela
 meanRewardDelays = list('HP' = HP, 'LP' = LP)
 
 # rewardRates given different policies
+## might be different from the values used in expParas.R, 
+## which are calcuated with a higher temporal resoluation
 HP = tokenValue * rewardDelayCDFs$HP /
   ((meanRewardDelays$HP * rewardDelayCDFs$HP + time[['HP']] * (1 - rewardDelayCDFs$HP)) + iti)
 LP = tokenValue * rewardDelayCDFs$LP /
@@ -57,6 +60,7 @@ library('ggplot2')
 source('subFxs/plotThemes.R')
 library("tidyr"); library('dplyr')
 dir.create('figures/expSchematics')
+## here we extend the HP CDF to 32s for display purposes
 data.frame(CDF = c(0,c(rewardDelayCDFs$HP, rep(1, length(time$LP) - length(time$HP))), 0, rewardDelayCDFs$LP),
            time = c(0, time$LP, 0, time$LP),
            condition =  rep(c('HP', 'LP'), c(length(time$LP) + 1, length(time$LP) + 1))) %>%

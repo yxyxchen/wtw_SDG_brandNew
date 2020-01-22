@@ -11,7 +11,6 @@ myTheme = theme( panel.grid.major = element_blank(),
         axis.line = element_line(size = 1),
         panel.background = element_rect(fill = "white"),
         strip.background = element_blank(),
-        plot.title = element_text(hjust = 0.5),
         # adjust X-axis labels; also adjust their position using margin (acts like a bounding box)
         # using margin was needed because of the inwards placement of ticks
         axis.text.x = element_text(margin = unit(c(t = 2.5, r = 0, b = 0, l = 0), "mm")),
