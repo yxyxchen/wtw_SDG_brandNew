@@ -1,5 +1,10 @@
 # this script plots delay distributions and reward rates in two environments
 
+# load libararies
+library("ggplot2")
+library("tidyr")
+library("dplyr")
+
 # load experiment parameters 
 load("expParas.RData")
 
@@ -70,7 +75,7 @@ data.frame(CDF = c(0,c(rewardDelayCDFs$HP, rep(1, length(time$LP) - length(time$
                      limits = c(0, max(tMaxs) * 1.1)) + 
   myTheme + xlab('Delay duration (s)') + ylab('CDF') + ggtitle(expName) + 
   theme(plot.title = element_text(hjust = 0.5, color = themeColor)) + 
-  annotate("text", x = max(tMaxs)/ 2, y = 0.4, label = "+30¢", size = 6)
+  annotate("text", x = max(tMaxs)/ 2, y = 0.4, label = "+10¢", size = 6)
 ggsave('figures/expSchematics/CDF.eps', width =4, height = 3)
 ggsave('figures/expSchematics/CDF.png', width =4, height = 3)
 
@@ -89,3 +94,29 @@ data.frame(rewardRate = c(0, rewardRates[[1]], 0, rewardRates[[2]]),
                     limits = c(0, max(tMaxs) * 1.1)) 
 ggsave("figures/expSchematics/reward_rate.eps", width = 4, height = 3)
 ggsave("figures/expSchematics/reward_rate.png", width = 4, height = 3)
+
+# plot prior belief
+eta = 20
+gamma = 0.6
+V0 = (optimRewardRates$HP + optimRewardRates$LP) * 0.5 / (1/6) 
+Qquit = V0 * gamma
+ts = seq(0, max(tMaxs), by = 0.5)
+Qwaits = (eta - ts) * 0.1 + Qquit
+data = data.frame(x = ts, y = Qwaits, Qquit = rep(Qquit, length = length(ts))) 
+data$z = ifelse(data$y > Qquit, data$y, Qquit)
+  
+ggplot(data, aes(x, y)) +
+  geom_ribbon(aes(ymin = Qquit, ymax=y), fill = "#67a9cf", color = "#67a9cf") +
+  geom_ribbon(aes(ymin = Qquit, ymax=z), fill= "#ef8a62", color = "#ef8a62") +
+  geom_line(size = 1, color = "red") + geom_line(aes(x, Qquit), size = 1, color = "blue") +
+  geom_segment(aes(x = eta, xend = eta, y = 0, yend = Qquit), linetype = "dashed") +
+  scale_x_continuous(breaks = c(20), labels = c(expression(0.1~eta)), limits = c(0, max(tMaxs))) +
+  scale_y_continuous(breaks = NULL) + xlab("t") + ylab("Initial Value") +
+  myTheme
+
+ggsave('figures/expSchematics/CDF.eps', width = 3, height = 3)
+ggsave('figures/expSchematics/CDF.png', width = 3, height = 3)
+
+  
+
+

@@ -2,6 +2,7 @@ library('dplyr')
 library("tidyr")
 library("ggplot2")
 library("ggpubr")
+library("lme4")
 source("subFxs/plotThemes.R")
 source("MFAnalysis.R")
 
@@ -74,6 +75,7 @@ MFResults = MFAnalysis(isTrct = T)
 # wilcox.test(sumStats[sumStats$condition == "HP", "muWTW"],
 #             sumStats[sumStats$condition == "LP", "muWTW"],paired = F)
 sumStats = MFResults[['sumStats']]
+blockStats = MFResults[['blockStats']]
 sumStats %>% ggplot(aes(condition, muWTW)) + geom_boxplot() +
   geom_dotplot(binaxis='y', stackdir='center',
                color = themeColor, fill = "pink",
@@ -87,4 +89,15 @@ sumStats %>% ggplot(aes(condition, muWTW)) + geom_boxplot() +
   scale_y_continuous(breaks = c(0, 12, 24), limits = c(0, 26))
 ggsave("figures/MFPlot/muWTW_comparison.eps", width = 4, height = 4)
 ggsave("figures/MFPlot/muWTW_comparison.png", width = 4, height = 4)
+
+
+# mixed effect anova
+data = blockStats
+data$condition = ifelse()
+#data$condition = ifelse(blockStats$condition == "HP", 0, 1)
+fit = lm(muWTW ~  condition , blockStats)
+summary(fit)
+
+data %>% group_by(manipulation, condition) %>%
+  summarise(AUC = mean(muWTW))
 
