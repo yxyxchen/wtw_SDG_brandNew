@@ -75,7 +75,6 @@ MFResults = MFAnalysis(isTrct = T)
 # wilcox.test(sumStats[sumStats$condition == "HP", "muWTW"],
 #             sumStats[sumStats$condition == "LP", "muWTW"],paired = F)
 sumStats = MFResults[['sumStats']]
-blockStats = MFResults[['blockStats']]
 sumStats %>% ggplot(aes(condition, muWTW)) + geom_boxplot() +
   geom_dotplot(binaxis='y', stackdir='center',
                color = themeColor, fill = "pink",
@@ -92,12 +91,14 @@ ggsave("figures/MFPlot/muWTW_comparison.png", width = 4, height = 4)
 
 
 # mixed effect anova
+library("lmerTest")
+options(contrasts = c("contr.treatment", "contr.poly"))
+MFResults = MFAnalysis(isTrct = T)
+blockStats = MFResults[['blockStats']]
 data = blockStats
-data$condition = ifelse()
-#data$condition = ifelse(blockStats$condition == "HP", 0, 1)
-fit = lm(muWTW ~  condition , blockStats)
+data$manipulation = as.factor(blockStats$manipulation)
+fit = lmer(muWTW ~  condition * manipulation + (1 | id), data)
 summary(fit)
 
-data %>% group_by(manipulation, condition) %>%
-  summarise(AUC = mean(muWTW))
-
+wilcox.test(blockStats[blockStats$manipulation == 1, "muWTW"],
+            blockStats[blockStats$manipulation == 2, "muWTW"], paired = F)
