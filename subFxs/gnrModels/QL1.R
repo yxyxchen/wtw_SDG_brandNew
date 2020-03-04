@@ -17,11 +17,11 @@
 # trialEarnings : [nTrialx1 int] payment for each trial, either 10 or 0
 # timeWaited : [nTrialx1 num] waiting duration for each trial 
 # sellTime : [nTrialx1 num]  when the agent sells then token on each trial 
-# Qwaits_ : [nStepMax x nTrial num] action value of waiting for each time step at each trial
+# Qwaits_ : [nStepMax x nTrial num] action value of waiting for each time step (2<= t <= nStepMax)at each trial
 # V0_ : [nTrialx1 num] state value of the iti stage at each trial 
 
 QL1 = function(paras, condition_, scheduledWait_){
-  # extract parameter values
+  # extract learning parameter 
   alpha = paras[1]; tau = paras[2]; gamma = paras[3]; prior = paras[4]
   
   # num of trials
@@ -32,8 +32,8 @@ QL1 = function(paras, condition_, scheduledWait_){
   nStepMax = ifelse(unique(condition_) == "HP", (tMaxs[1] + iti) / stepSec, (tMaxs[2] + iti) / stepSec) # maximal number of steps in a trial
   
   # initialize action values 
-  V0 = mean(unlist(optimRewardRates)) * stepSec / (1 - 0.85) 
-  Qwaits = -0.1 * (2 : (nStepMax-1))  + prior + gamma * V0 # action values for 2 <= t < tMax
+  V0 = mean(unlist(optimRewardRates)) * stepSec / (1 - 0.85) # state value for t = 0
+  Qwaits = -0.1 * (0 : (nStepMax-1)) * stepSec + prior + gamma * V0 # action values for 0 <= t < tMax
   
   # initialize output variables
   Qwaits_ = matrix(NA, (nStepMax - 2), nTrial); Qwaits_[,1] = Qwaits 
@@ -51,18 +51,17 @@ QL1 = function(paras, condition_, scheduledWait_){
     scheduledWait = scheduledWait_[tIdx]
     
     # loop over steps until a trial ends
-    t = 0
-    while(t < nStepMax){
-      # no action during iti
-      if(t < (iti / stepSec)){
-        t = t + 1
-      }else{
+    step = 0
+    while(step <= nStepMax){
+      t = (step - 1) * stepSec # this time step [t, t + stepSec)
+      # take actions after the iti
+      if(t >= iti){
         # decide whether to wait or quit
-        pWait =  1 / sum(1  + exp((V0 - Qwaits[t])* tau))
+        pWait =  1 / sum(1  + exp((V0 - Qwaits[step])* tau))
         action = ifelse(runif(1) < pWait, 'wait', 'quit')
         
         # if a reward occurs and the agent is still waiting, the agent gets the reward
-        rewardOccur = ((scheduledWait + iti) >= (t * stepSec) && (scheduledWait + iti) < ((t + 1) * stepSec))
+        rewardOccur = ((scheduledWait + iti) >= t) & (scheduledWait + iti) < (t + stepSec)
         getReward = (action == 'wait' && rewardOccur)
         
         # a trial ends if the agent gets a reward or quits. if the trial ends, 
@@ -70,11 +69,11 @@ QL1 = function(paras, condition_, scheduledWait_){
         isTerminal = (getReward || action == "quit")
         if(isTerminal){
           # update trial-wise variables 
-          T = t + 1 # terminal state
+          T = step # terminal step
           trialEarnings = ifelse(getReward, tokenValue, 0) # payment 
-          timeWaited =  ifelse(getReward, scheduledWait, (t - 2) * stepSec) # waiting duration 
+          timeWaited =  ifelse(getReward, scheduledWait, t + stepSec - iti) # waiting duration 
           sellTime = elapsedTime + timeWaited # elapsed task time when the agent sells the token
-          elapsedTime = elapsedTime + timeWaited + iti # elapsed task time before the next trial
+          elapsedTime = elapsedTime + timeWaited + iti  # elapsed task time before the next trial
           # record trial-wise variables
           trialEarnings_[tIdx] = trialEarnings
           timeWaited_[tIdx] = timeWaited
@@ -97,6 +96,9 @@ QL1 = function(paras, condition_, scheduledWait_){
       stepRwdSignals = sapply(1 : (T-1), function(t) gamma^(T-t-1) * rwdSignal)
       # discounted reward signals for the iti state
       itiRwdSignal = rwdSignal * gamma^(T-2 + iti / stepSec)
+      
+      # update Qwaits
+      Qwaits[1 : T] = 
       
       # update Qwaits 
       if(getReward){
