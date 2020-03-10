@@ -8,9 +8,18 @@ conditions = c("HP", "LP")
 tokenValue = 10 # value of the matured token
 optimRewardRates = list( HP = 5 /6, LP = 0.930925) # unit : cent / sec
 optimWaitThresholds = list(HP = 20, LP = 2.2) # unit : sec
+
+# 
+pareto = list()
+pareto[['k']] = 3
+pareto[['mu']] = 0
+pareto[['sigma']] = 1.5
+
 # analyses parameters
 tGrid = seq(0, blockSec * nBlock - 1, by = 1) # time grid for wtw time courses, open interval 
-kmGrid = seq(0, min(tMaxs), by = 0.1) # time grid for Kaplan-Meier survival curves
+kmGrid = seq(0, min(tMaxs) - 0.2, by = 0.2) # time grid for Kaplan-Meier survival curves
+
+# save 
 save("conditions" = conditions,
      "tMaxs" = tMaxs,
      "blockMin" = blockMin,
@@ -20,6 +29,7 @@ save("conditions" = conditions,
      "tokenValue" = tokenValue,
      "optimRewardRates" = optimRewardRates,
      "optimWaitThresholds" = optimWaitThresholds,
+     "pareto" = pareto,
      'tGrid' = tGrid,
      'kmGrid' = kmGrid,
      file = "expParas.RData")

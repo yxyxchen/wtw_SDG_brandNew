@@ -1,6 +1,7 @@
 library('ggplot2')
 themeColor = '#B72627'
 expName = "Exp.1"
+conditionColors = c("#1b7837", "#762a83")
 
 # annotations for p values 
 symnum.args <- list(cutpoints = c(0,0.001, 0.01, 0.05, 1),

@@ -1,9 +1,6 @@
-# this scripts contains some supporting functions for runing the simulation
-# and transfer vaWaits and vaQuits
+# this scripts contains some supporting functions for the simulations
 drawSample = function(cond){
-  # % generates a sample from next quantile of the designated distribution
-  # % timing parameters are specified within this function
-
+  # generates a sample from the designated delay distribution
   k = pareto[['k']]
   mu = pareto[['mu']]
   sigma = pareto[['sigma']]
