@@ -106,16 +106,14 @@ data = data.frame(x = ts, y = Qwaits, Qquit = rep(Qquit, length = length(ts)))
 data$z = ifelse(data$y > Qquit, data$y, Qquit)
   
 ggplot(data, aes(x, y)) +
-  geom_ribbon(aes(ymin = Qquit, ymax=y), fill = "#67a9cf", color = "#67a9cf") +
-  geom_ribbon(aes(ymin = Qquit, ymax=z), fill= "#ef8a62", color = "#ef8a62") +
-  geom_line(size = 1, color = "red") + geom_line(aes(x, Qquit), size = 1, color = "blue") +
+  geom_line(size = 2, color = "#2166ac") + geom_line(aes(x, Qquit), size = 2, color = "#b2182b") +
   geom_segment(aes(x = eta, xend = eta, y = 0, yend = Qquit), linetype = "dashed") +
   scale_x_continuous(breaks = c(20), labels = c(expression(0.1~eta)), limits = c(0, max(tMaxs))) +
   scale_y_continuous(breaks = NULL) + xlab("t") + ylab("Initial Value") +
-  myTheme
-
-ggsave('figures/expSchematics/CDF.eps', width = 3, height = 3)
-ggsave('figures/expSchematics/CDF.png', width = 3, height = 3)
+  myTheme +
+  theme(text = element_text(size=20))
+ggsave('figures/expSchematics/prior.eps', width = 3, height = 3)
+ggsave('figures/expSchematics/prior.png', width = 3, height = 3)
 
   
 
