@@ -5,9 +5,9 @@
 # RL2: R-learning model with separate learning rates for rewards and non-rewards
 
 # inputs:
-# paras: parameter values 
-# condition_: [nTrialx1 factor] HP or LP
-# scheduledWait_ : [nTrialx1 num] delay for each trial
+# paras: learning parameters
+# condition_: HP or LP
+# scheduledWait_: trial-wise delay
 
 # outputs
 # trialNum : [nTrialx1 int] 1 : nTrial
@@ -19,9 +19,17 @@
 # Qwaits_ : [20/40 x nTrial num] value of waiting at each second in each trial
 # V0_ : [nTrialx1 num] value of entering a pre-trial iti, namely t = 0
 
-QL1 = function(paras, condition_, scheduledWait_){
+QL1 = function(paras, condition_, scheduledWait_, normResults){
+  # default settings 
+  iti = 2
+  
+  # normative analysis 
+  optimRewardRates = normResults$optimRewardRates
+  optimWaitThresholds = normResults$optimWaitThresholds
+  
   # learning parameters
   alpha = paras[1]; tau = paras[2]; gamma = paras[3]; prior = paras[4]
+  
   # num of trials
   nTrial = length(scheduledWait_) 
   # duration of a sampling interval 
@@ -31,7 +39,7 @@ QL1 = function(paras, condition_, scheduledWait_){
     
   # initialize action values 
   V0 = mean(unlist(optimRewardRates)) / (1 - 0.85) # state value for t = 0
-  tWaits = seq(iti, delayMax + iti - stepSec, by = stepSec) # decision points 
+  tWaits = seq(iti, delayMax + iti, by = stepSec) # decision points 
   tMax = max(tWaits) #  time point for the last decision point
   Qwaits = -0.1 * (tWaits) + prior + V0 # value of waiting at each decision points
   
@@ -61,7 +69,7 @@ QL1 = function(paras, condition_, scheduledWait_){
         
         # if a reward occurs and the agent is still waiting, the agent gets the reward
         alreadyWait = t - iti  # how long the agent has waited since the token appears
-        tokenMature = (scheduledWait > alreadyWait ) & (scheduledWait < (alreadyWait + stepSec)) # whether the token matures before the next decision point
+        tokenMature = (scheduledWait >= alreadyWait ) & (scheduledWait < (alreadyWait + stepSec)) # whether the token matures before the next decision point
         getToken = (action == 'wait' && tokenMature) # whether the agent obtains the matured token
         
         # a trial ends if the agent obtains the matured token or quits. 

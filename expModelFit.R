@@ -12,15 +12,17 @@ expModelFit = function(modelName, isFirstFit){
   source("subFxs/loadFxs.R")
   source("subFxs/helpFxs.R")
   source('subFxs/modelFitGroup.R')
+  source("expSchematics.R")
   
   # prepare inputs
   allData = loadAllData()
   hdrData = allData$hdrData
   trialData = allData$trialData
+  trialData = trialData[hdrData$stress == "no_stress"]
   outputDir = sprintf("genData/expModelFit/%s", modelName)
   config = list(
     nChain = 4,
-    nIter = 100,
+    nIter = 8000,
     adapt_delta = 0.99,
     max_treedepth = 11,
     warningFile = sprintf("stanWarnings/exp_%s.txt", modelName)
@@ -41,7 +43,7 @@ expModelFit = function(modelName, isFirstFit){
     # increase the num of Iterations 
     config = list(
       nChain = 4,
-      nIter = 12000,
+      nIter = 1200,
       adapt_delta = 0.99,
       max_treedepth = 11,
       warningFile = sprintf("stanWarnings/exp_refit_%s.txt", modelName)

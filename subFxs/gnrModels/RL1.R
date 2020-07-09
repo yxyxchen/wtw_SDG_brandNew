@@ -5,9 +5,9 @@
 # RL2: R-learning model with separate learning rates for rewards and non-rewards
 
 # inputs:
-# paras: parameter values 
-# condition_: [nTrialx1 factor] HP or LP
-# scheduledWait_ : [nTrialx1 num] delay for each trial
+# paras: learning parameters
+# condition_: HP or LP
+# scheduledWait_: trial-wise delay
 
 # outputs
 # trialNum : [nTrialx1 int] 1 : nTrial
@@ -16,24 +16,32 @@
 # trialEarnings : [nTrialx1 int] payment for each trial, either 10 or 0
 # timeWaited : [nTrialx1 num] how long the agent waits after the iti in each trial 
 # sellTime : [nTrialx1 num]  when the agent sells the token on each trial 
-# Qwaits_ : [20/40 x nTrial num] value of waiting at each second in each trial
+# Qwaits_ : [20/40 x nTria num] value of waiting at each second in each trial
 # V0_ : [nTrialx1 num] value of entering a pre-trial iti, namely t = 0
 
-QL1 = function(paras, condition_, scheduledWait_){
-  # extract learning parameter 
-  alpha = paras[1]; tau = paras[2]; gamma = paras[3]; prior = paras[4]
+RL1 = function(paras, condition_, scheduledWait_, normResults){
+  # default settings 
+  iti = 2
+  
+  # normative analysis 
+  optimRewardRates = normResults$optimRewardRates
+  
+  # learning parameters
+  alpha = paras[1]; tau = paras[2];  prior = paras[3]; beta = paras[4];
   
   # num of trials
-  nTrial = length(scheduledWait_) # num of trials 
-  
-  # parameters for discrete temproal states 
-  stepSec = 1 # duration of a sampling interval 
-  tMax = ifelse(unique(condition_) == "HP", tMaxs[1], tMaxs[2])
-  
+  nTrial = length(scheduledWait_) 
+  # duration of a sampling interval 
+  stepSec = 1
+  # max delay duration 
+  delayMax = ifelse(unique(condition_) == "HP", delayMaxs[1], delayMaxs[2])
+    
   # initialize action values 
-  V0 = mean(unlist(optimRewardRates)) * stepSec / (1 - 0.85) # state value for t = 0
-  tWaits = seq(2, tMax + iti - stepSec, by = stepSec) # decision points 
-  Qwaits = -0.1 * (tWaits) + prior + gamma * V0 # value of waiting at each decision points
+  V0 = 0 # state value for t = 0
+  rewardRate = mean(unlist(optimRewardRates))
+  tWaits = seq(iti, delayMax + iti, by = stepSec) # decision points 
+  tMax = max(tWaits) #  time point for the last decision point
+  Qwaits = -0.1 * (tWaits) + prior + V0 # value of waiting at each decision points
   
   # initialize output variables
   Qwaits_ = matrix(NA, length(tWaits), nTrial); Qwaits_[,1] = Qwaits 
@@ -43,16 +51,15 @@ QL1 = function(paras, condition_, scheduledWait_){
   sellTime_ = rep(0, nTrial)
   
   # track elpased time from the beginning of the task 
-  elapsedTime = 0 
+  elapsedTime = -iti # the first trial doesn't have a pre-trial ITI 
   
   # loop over trials
   for(tIdx in 1 : nTrial) {
     # current scheduledWait 
     scheduledWait = scheduledWait_[tIdx]
-    
     # sample at a temporal resolution of 1 sec until a trial ends
     t = 0
-    while(t < (tMax + iti)){
+    while(t <= tMax){
       # take actions after the iti
       if(t >= iti){
         # decide whether to wait or quit
@@ -60,20 +67,20 @@ QL1 = function(paras, condition_, scheduledWait_){
         action = ifelse(runif(1) < pWait, 'wait', 'quit')
         
         # if a reward occurs and the agent is still waiting, the agent gets the reward
-        rewardOccur = ((scheduledWait + iti) >= t) & (scheduledWait + iti) < (t + stepSec)
-        getReward = (action == 'wait' && rewardOccur)
+        alreadyWait = t - iti  # how long the agent has waited since the token appears
+        tokenMature = (scheduledWait >= alreadyWait ) & (scheduledWait < (alreadyWait + stepSec)) # whether the token matures before the next decision point
+        getToken = (action == 'wait' && tokenMature) # whether the agent obtains the matured token
         
-        # a trial ends if the agent gets a reward or quits. if the trial ends, 
-        # return to t = 0. Otherwise, proceed to t + 1.
-        isTerminal = (getReward || action == "quit")
+        # a trial ends if the agent obtains the matured token or quits. 
+        # if the trial ends,return to t = 0. Otherwise, proceed to t + 1.
+        isTerminal = (getToken || action == "quit")
         if(isTerminal){
           # update trial-wise variables 
-          T = t
-          Tidx = which(tWaits == T) # where tWaits == T
-          trialEarnings = ifelse(getReward, tokenValue, 0) 
-          timeWaited =  ifelse(getReward, scheduledWait, t + stepSec - iti) 
+          T =  ifelse(getToken, scheduledWait + iti, t) # when the trial ends
+          timeWaited =  T - iti # how long the agent waits since the token appears
+          trialEarnings = ifelse(getToken, tokenValue, 0) 
           sellTime = elapsedTime + timeWaited # elapsed task time when the agent sells the token
-          elapsedTime = elapsedTime + timeWaited + iti  # elapsed task time before the next token appears
+          elapsedTime = elapsedTime + T  # elapsed task time before the next token appears
           # record trial-wise variables
           trialEarnings_[tIdx] = trialEarnings
           timeWaited_[tIdx] = timeWaited
@@ -84,16 +91,21 @@ QL1 = function(paras, condition_, scheduledWait_){
       t = t + stepSec
     }
     
-    # update value functions at the end of each trial
+    # when the trial endes, update value functions for all time points before T in the trial
     if(tIdx < nTrial){
-      # calculate expected returns for 2 <= t <= T
-      Gts = gamma ^ (T - tWaits[1 : Tidx]) * trialEarnings + gamma ^ (T + 1 - tWaits[1 : Tidx]) * V0
+      
+      # calculate expected returns for t >= 2
+      Gts = trialEarnings - rewardRate * (T - tWaits) + V0
+      # only update value functions before time t = T
+      updateFilter = tWaits <= T 
       # update Qwaits
-      Qwaits[1 : Tidx] = Qwaits[1 : Tidx] + alpha * (Gts - Qwaits[1 : Tidx])
+      Qwaits[updateFilter] = Qwaits[updateFilter] + alpha * (Gts[updateFilter] - Qwaits[updateFilter])
       
       # calculate expected returns for t == 0 and update V0
-      Gt = gamma ^ (T - 0) * trialEarnings + gamma ^ (T + 1 - 0) * V0
-      V0 = V0 + alpha * (Gt - V0)
+      Gt =  trialEarnings - rewardRate * T + V0
+      delta0 = Gt - V0
+      V0 = V0 + alpha * delta0
+      rewardRate = rewardRate + beta * delta0
       
       # record updated values
       Qwaits_[,tIdx + 1] = Qwaits

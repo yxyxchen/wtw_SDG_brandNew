@@ -6,10 +6,17 @@ source("subFxs/loadFxs.R") # load blockData and expPara
 source("subFxs/helpFxs.R") # getparaNames
 source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 source('MFAnalysis.R')
-library("EnvStats")
+library(latex2exp)
+
+# load empirical data 
+allData = loadAllData()
+hdrData = allData$hdrData 
+trialData = allData$trialData       
+ids = hdrData$id[hdrData$stress == "no_stress"]
+nSub = length(ids)
 
 # model Name
-modelName = "QL1"
+modelName = "optim_noise_bias"
 paraNames = getParaNames(modelName)
 nPara = length(paraNames)
 
@@ -17,21 +24,6 @@ nPara = length(paraNames)
 dir.create("figures/expParaAnalysis")
 saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
 dir.create(saveDir)
-
-# read data 
-post = read.csv("genData/expModelFit/QL2/s1.txt", header = F)
-mus = apply(post[,1 : nPara], MARGIN = 2, FUN = mean)
-muData = data.frame(para = paraNames, mu = mus)
-plotData = data.frame(post) 
-names(plotData) =  c("LR", "LP", "tau", "gamma", "P", "LL")
-plotData %>% gather(key = "para", value = "value", -LL) %>%
-  mutate(para = factor(para, levels =  c("LR", "LP", "tau", "gamma", "P")),
-         mu = rep(mus, each = 16000)) %>%
-  ggplot(aes(value)) + geom_histogram() + 
-  facet_wrap(~para, scales = "free", labeller = label_parsed) +
-  myTheme + xlab("") + ylab("") + geom_vline(aes(xintercept = mu), color = "red")
-ggsave("figures/post.png", width = 10, height = 5)
-  
 
 # 
 MFResults = MFAnalysis(isTrct = T)
@@ -47,91 +39,49 @@ passCheck = checkFit(paraNames, tempt)
 expPara = merge(x=tempt[,c(paraNames, "id")],y=sumStats, by="id",all.x=TRUE)
 
 # plot hist 
-# paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
-# paraNames = c("LR", "LP", expression(tau), "P")
-paraNames = paraNames
+paraLabels = c(expression(alpha_R), expression(alpha_U), expression(tau), expression(gamma), expression("eta"))
 expPara$condition = sumStats$condition[sumStats$id %in% expPara$id]
 expPara %>% filter(passCheck ) %>% select(c(paraNames, "condition")) %>%
   gather(-c("condition"), key = "para", value = "value") %>%
-  mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>%
+  mutate(para = factor(para, levels = paraNames, labels = paraLabels ))%>%
   ggplot(aes(value)) + geom_histogram(bins = 12) +
   facet_grid( ~ para, scales = "free", labeller = label_parsed) + 
   myTheme + xlab(" ") + ylab(" ")
 fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysis", modelName)
 ggsave(fileName, width = 8, height = 4)
 
-# try model fit tau
-x = expPara$gamma
-up = 0.7
-low = 1
-breaks = seq(up, low, length.out = 10)
-sampleQts = quantile(log(x), seq(0.001, 0.999, length.out = 10))
-theoryQts = qnorm(seq(0.001, 0.999, length.out = 10), mean(log(x)), sd(log(x)))
-plot(theoryQts, sampleQts)
-abline(coef = c(0,1))
+# optimism bias
+nQuits = sapply(1 : nSub, function(i) sum(trialData[[ids[i]]]$trialEarnings == 0))
+wilcoxResults = wilcox.test(expPara$alphaR[passCheck & enoughQuits] / expPara$alphaU[passCheck & enoughQuits] - 1)
 
-breaks = seq(up, low, length.out = 20)
-hts = hist(x, breaks = breaks)
-cumprobs = plnorm(breaks, meanlog = mean(log(x)), sdlog = sd(log(x)))
-lines(hts$mids, diff(cumprobs) * nrow(expPara), col = "green")
-cumprobs = pnorm(breaks, mean(x), sd(x))
-lines(hts$mids, diff(cumprobs) * nrow(expPara), col = "red")
-# pareto distribution 
-n = nrow(expPara)
-m = min(x)
-alpha = n / sum(log(x) - log(m))
-cumprobs = ppareto(breaks, m, alpha)
-lines(hts$mids, diff(cumprobs) * nrow(expPara), col = "blue")
-# gamma distribution
-theta = var(x) / mean(x)
-k = mean(x) / theta
-cumprobs = pgamma(breaks, shape =  k, scale = theta)
-lines(hts$mids, diff(cumprobs) * nrow(expPara), col = "pink")
-# try model fit 
-
-# summary stats for expPara
-expParaInfo = expPara %>% filter(passCheck) %>% select(c(paraNames)) %>%
-  gather(key = "para", value = "value") %>%
-  mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>% 
-  group_by(para) %>% dplyr::summarise(mu = mean(value), median = median(value),
-                               se = sd(value) / sqrt(length(value)),
-                               log.mu = mean(log(value)), log.sd = sd(log(value)))
-
-
-dir.create("genData/expParaAnalysis")
-dir.create(sprintf("genData/expParaAnalysis/%s", modelName))
-save(expParaInfo, file = sprintf("genData/expParaAnalysis/%s/expParaInfo.RData", modelName))
-
-
+logOdds = log(expPara$alphaR / expPara$alphaU)
+wilcoxResults = wilcox.test(logOdds[expPara$condition == "HP"])
+wilcoxResults = wilcox.test(expPara$alphaR[expPara$condition == "HP" & expPara], expPara$alphaU[expPara$condition == "HP"])
+wilcoxResults = wilcox.test(logOdds[expPara$condition == "LP"])
 
 # optimism bias
-wilcoxResults = wilcox.test(expPara$phi_pos[passCheck] - expPara$phi_neg[passCheck])
-# we use the 1.5 x the IQR for the larger of the two values 
-# (phi_pos, phi_neg) as the criteria 
-# for exclude outliers
-junk = expPara %>% filter(passCheck) %>%
-  select(c("phi_pos", "phi_neg")) %>%
-  gather("paraName", "paraValue") %>%
-  group_by(paraName) %>% 
-  summarise(qLower = quantile(paraValue)[1],
-            qUpper = quantile(paraValue)[3],
-            IQR = qUpper - qLower,
-            limLower = qLower - IQR * 1.5,
-            limUpper = qUpper + IQR * 1.5)
-limLower = max(0, min(junk$limLower))
-limUpper = max(junk$limUpper)
-# optimism bias
-expPara %>% filter(passCheck) %>% 
-  ggplot(aes(phi_neg, phi_pos)) +
-  geom_point(color = themeColor,  fill = "#fdd49e", shape= 21, stroke = 1, size = 5) + 
-  xlim(c(limLower, limUpper)) + ylim(c(limLower, limUpper)) + 
-  geom_abline(slope = 1, intercept = 0) + 
-  annotate("text", x = 0.015, y = 0.015, label = sprintf("p = %.3f", wilcoxResults$p.value)) +
-  myTheme
+expPara %>% filter(passCheck) %>%
+  ggplot(aes(log(alphaR/alphaU))) +
+  geom_histogram(bins = 8) +
+  myTheme + facet_grid(~condition) + 
+  xlab(TeX('$log(\\alpha_r/\\alpha_u)$')) +
+  ylab("Count") +
+  geom_vline(aes(xintercept = 0), color = "red", linetype = 2)
 ggsave("figures/expParaAnalysis/optimism.eps", width = 6, height = 6)
+ggsave("figures/expParaAnalysis/optimism.png", width = 6, height = 6)
 
+# temproal discounting
+wilcoxResults = wilcox.test(expPara$gamma[expPara$condition == "HP"] - 1)
+wilcoxResults = wilcox.test(expPara$gamma[expPara$condition == "LP"] - 1)
+expPara %>% filter(passCheck) %>% ggplot(aes(gamma)) +
+  geom_histogram(bins = 8) +
+  myTheme + facet_grid(~condition) + 
+  xlab(TeX('$\\gamma$')) +
+  ylab("Count") + xlim(c(0.65, 1.05))
+ggsave("figures/expParaAnalysis/discounting.eps", width = 4, height = 4)
+ggsave("figures/expParaAnalysis/discounting.png", width = 4, height = 4)
 
-# load and merge trait data
+##### load and merge trait data
 personality = read.csv("data/hdrData.csv")
 personality = personality[personality$id %in% expPara$id,]
 personality$id = expPara$id
@@ -142,7 +92,6 @@ expPara$optimism = expPara$phi_pos /  expPara$phi_neg
 
 # 
 plot(log(expPara$tau), expPara$stdWTW)
-
 # calculate trait-para correlations
 rhoHP_ = matrix(NA, nrow = 1 + nPara, ncol = nTrait)
 rhoLP_ = matrix(NA, nrow = 1 + nPara, ncol = nTrait)

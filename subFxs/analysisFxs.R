@@ -28,7 +28,7 @@ trialPlots <- function(thisTrialData) {
     geom_point(data = thisTrialData[thisTrialData$trialEarnings == 0, ],
                aes(trialNum, scheduledWait),
                color = 'black', size = 4) +
-    xlab("Trial num") + ylab("Time (s)") + 
+    xlab("Trial") + ylab("Time (s)") + 
     myTheme 
   print(p)
   return(p)
@@ -41,12 +41,10 @@ trialPlots <- function(thisTrialData) {
 kmsc <- function(thisTrialData, tMax, plotKMSC=FALSE, grid) {
   library(survival)
   # ensure timeWaited = scheduledWait on rewarded trials
-  thisTrialData = within(thisTrialData, {timeWaited[trialEarnings!= 0] = scheduledWait[trialEarnings!= 0]})
+  thisTrialData = within(thisTrialData, {timeWaited[trialEarnings == tokenValue] = scheduledWait[trialEarnings == tokenValue]})
   # fit a kaplan-meier survival curve
-  kmfit = with(thisTrialData,{
-    survfit(Surv(timeWaited, (trialEarnings == 0), type='right') ~ 1, 
+  kmfit = survfit(Surv(thisTrialData$timeWaited, (thisTrialData$trialEarnings ==0), type='right') ~ 1, 
             type='kaplan-meier', conf.type='none', start.time=0, se.fit=FALSE)
-  })
   # extract elements of the survival curve object 
   kmT = kmfit$time # time value 
   kmF = kmfit$surv # function value

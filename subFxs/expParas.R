@@ -1,13 +1,10 @@
 # experiment design paramters
 conditions = c("HP", "LP")
-     delayMaxs = c(20, 40) # max delay durations in secs
-    nBlock = 3
- blockMin = 7 # block duration in mins
- blockSec = blockMin * 60 # block duration in secs
-       iti = 2 # iti duration in secs
+delayMaxs = c(20, 40) # max delay durations in secs
+nBlock = 3
+blockMin = 7 # block duration in mins
+blockSec = blockMin * 60 # block duration in secs
 tokenValue = 10 # value of the matured token
-optimRewardRates = list( HP = 5 /6, LP = 0.930925) # unit : cent / sec
-optimWaitThresholds = list(HP = 20, LP = 2.2) # unit : sec
 
 # 
 pareto = list()
@@ -25,10 +22,7 @@ save("conditions" = conditions,
      "blockMin" = blockMin,
      "blockSec" = blockSec,
      "nBlock" = nBlock,
-     "iti" = iti,
      "tokenValue" = tokenValue,
-     "optimRewardRates" = optimRewardRates,
-     "optimWaitThresholds" = optimWaitThresholds,
      "pareto" = pareto,
      'tGrid' = tGrid,
      'kmGrid' = kmGrid,

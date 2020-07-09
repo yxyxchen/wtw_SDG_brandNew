@@ -14,12 +14,12 @@
 # }
 
 blockStats = {
-  # id : [nSubx2 id]
-  # condition : [nSubx2  fac]
-  # nExcl : [nSubx2  int] # total number of excluded trials 
-  # muWTW : [nSubx2  num] # average willingness to wait (WTW), measured by area under the Kaplan-Meier survival curve
-  # stdWTW : [nSubx2 num] # standard deviation of WTW, measured in Kaplan-Meier survival analysis
-  # totalEarnings :  [nSubx2 num] 
+  # id : [nSubx3 id]
+  # condition : [nSubx3 fac]
+  # nExcl : [nSubx3  int] # total number of excluded trials 
+  # muWTW : [nSubx3  num] # average willingness to wait (WTW), measured by area under the Kaplan-Meier survival curve
+  # stdWTW : [nSubx3 num] # standard deviation of WTW, measured in Kaplan-Meier survival analysis
+  # totalEarnings :  [nSubx3 num] 
 }
 
 # timeWTW_ : list(nSubx1) # wtw timecourse, each element is a vector
@@ -66,7 +66,7 @@ MFAnalysis = function(isTrct){
     id = ids[sIdx]
     thisTrialData = trialData[[id]]
     if(isTrct){
-      trctLine = blockSec - max(tMaxs)
+      trctLine = blockSec - max(delayMaxs)
       # truncate trials completed after tractline in each block
       nExcl[sIdx] = sum(thisTrialData$trialStartTime > trctLine)
       thisTrialData = thisTrialData %>% filter(trialStartTime <=  trctLine )
@@ -78,19 +78,19 @@ MFAnalysis = function(isTrct){
     
     # intergrate data of 3 blocks
     thisTrialData = block2session(thisTrialData) 
-    
-    # survival analysis
-    kmscResults = kmsc(thisTrialData, min(tMaxs), F, kmGrid)
 
+    # survival analysis
+    kmscResults = kmsc(thisTrialData, min(delayMaxs), F, kmGrid)
     muWTW[sIdx] = kmscResults[['auc']]
     survCurve_[[sIdx]] = kmscResults$kmOnGrid
     stdWTW[[sIdx]] = kmscResults$stdWTW
     
     # WTW timecourse
-    wtwtsResults = wtwTS(thisTrialData, tGrid, min(tMaxs), F)
+    wtwtsResults = wtwTS(thisTrialData, tGrid, min(delayMaxs), F)
     timeWTW_[[sIdx]] = wtwtsResults$timeWTW
     trialWTW_[[sIdx]] = wtwtsResults$trialWTW
   }
+  
   sumStats = data.frame(
     id = ids,
     condition = factor(hdrData$condition[hdrData$stress == "no_stress"], levels = c("HP", "LP")),
@@ -101,10 +101,10 @@ MFAnalysis = function(isTrct){
   )
   
   # initialize outputs on the block level
-  nExcl = numeric(length = nSub * 2)
-  muWTW = numeric(length = nSub * 2) 
-  stdWTW = numeric(length = nSub * 2) 
-  totalEarnings =  numeric(length = nSub * 2) 
+  nExcl = numeric(length = nSub * 3)
+  muWTW = numeric(length = nSub * 3) 
+  stdWTW = numeric(length = nSub * 3) 
+  totalEarnings =  numeric(length = nSub * 3) 
   
   # loop over blocks 
   noIdx = 1
@@ -112,18 +112,13 @@ MFAnalysis = function(isTrct){
     # load subject ID
     id = ids[sIdx]
 
-    for(bkIdx in 1 : 2){
+    for(bkIdx in 1 : 3){
       # load trialdata
       thisTrialData = trialData[[id]]
-      if(bkIdx == 1){
-        thisTrialData = thisTrialData[thisTrialData$blockNum == 1, ]
-      }else{
-        thisTrialData = thisTrialData[thisTrialData$blockNum > 1, ]
-      }
-      
+      thisTrialData = thisTrialData[thisTrialData$blockNum == bkIdx, ]
       
       if(isTrct){
-        trctLine = blockSec - max(tMaxs)
+        trctLine = blockSec - max(delayMaxs)
         # truncate trials completed after tractline in each block
         nExcl[noIdx] = sum(thisTrialData$trialStartTime > trctLine)
         thisTrialData = thisTrialData %>% filter(trialStartTime <=  trctLine )
@@ -135,9 +130,8 @@ MFAnalysis = function(isTrct){
       totalEarnings[noIdx] =  sum(thisTrialData$trialEarnings)
       
       # survival analysis
-      kmscResults = kmsc(thisTrialData, min(tMaxs), F, kmGrid)
+      kmscResults = kmsc(thisTrialData, min(delayMaxs), F, kmGrid)
       muWTW[noIdx] = kmscResults[['auc']]
-      survCurve_[[noIdx]] = kmscResults$kmOnGrid
       stdWTW[[noIdx]] = kmscResults$stdWTW
       
       # update noIdx
@@ -145,9 +139,9 @@ MFAnalysis = function(isTrct){
     }
   }
   blockStats = data.frame(
-    id = rep(ids, each = 2),
-    condition = rep(factor(hdrData$condition[hdrData$stress == "no_stress"], levels = c("HP", "LP")), each = 2),
-    manipulation = rep(c(1,2), nSub),
+    id = rep(ids, each = 3),
+    condition = rep(factor(hdrData$condition[hdrData$stress == "no_stress"], levels = c("HP", "LP")), each = 3),
+    blockNum = rep(1:3, nSub),
     nExcl = nExcl,
     totalEarnings = totalEarnings,
     muWTW = muWTW,

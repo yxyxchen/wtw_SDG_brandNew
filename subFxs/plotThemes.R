@@ -2,13 +2,13 @@ library('ggplot2')
 themeColor = '#B72627'
 expName = "Exp.1"
 conditionColors = c("#1b7837", "#762a83")
-
+conditionColorBacks = c( "#a6dba0", "#c2a5cf")
 # annotations for p values 
 symnum.args <- list(cutpoints = c(0,0.001, 0.01, 0.05, 1),
                     symbols = c("***", "**", "*", "ns"))
 # plot theme
 myTheme = theme( panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), text=element_text(face = "bold", size = 18),
+        panel.grid.minor = element_blank(), text=element_text(face = "bold", size = 15),
         axis.line = element_line(size = 1),
         panel.background = element_rect(fill = "white"),
         strip.background = element_blank(),

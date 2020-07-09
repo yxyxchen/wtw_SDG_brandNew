@@ -6,9 +6,9 @@ drawSample = function(cond){
   sigma = pareto[['sigma']]
   
   if(cond == 'HP'){
-    sample = runif(1, min = 0, max = tMaxs[1])
+    sample = runif(1, min = 0, max = delayMaxs[1])
   }else{
-    sample = min(mu + sigma * (runif(1) ^ (-k) - 1) / k, tMaxs[2])
+    sample = min(mu + sigma * (runif(1) ^ (-k) - 1) / k, delayMaxs[2])
   }
   return(sample)
 }

@@ -13,7 +13,8 @@ expModelFit = function(encodeModel, decodeModel, isFirstFit){
   library("dplyr"); library("tidyr")
   source("subFxs/loadFxs.R")
   source("subFxs/helpFxs.R")
-  source('subFxs/modelFitGroupSim.R')
+  source('subFxs/modelFitGroup.R')
+  source("expSchematics.R")
   
   # load simulation data 
   load(sprintf("genData/simulation/%s.RData", encodeModel))
@@ -51,6 +52,6 @@ expModelFit = function(encodeModel, decodeModel, isFirstFit){
   }
   
   # fit the model for all participants
-  modelFitGroupSim(decodeModel, trialData, config, outputDir)
+  modelFitGroup(decodeModel, trialData, config, outputDir, F)
 }
 
